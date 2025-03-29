@@ -1,3 +1,4 @@
+// components/logs/LogList.tsx의 수정 사항도 동일하게 적용
 "use client";
 import React, { useState, useCallback, useMemo } from "react";
 import {
@@ -209,69 +210,47 @@ const LogList: React.FC<LogListProps> = ({
       <CardBody className="p-0">
         <div className="overflow-x-auto">
           <Table
+            isHeaderSticky
+            aria-label="로그 목록"
             bottomContent={
-              <TableRow>
-                <TableCell className="text-right" colSpan={5}>
-                  총 {filteredLogs.length}개 로그 표시 중
-                </TableCell>
-              </TableRow>
+              <div className="text-right px-2 py-2">
+                총 {filteredLogs.length}개 로그 표시 중
+              </div>
             }
+            isStriped={false}
           >
             <TableHeader>
-              <TableRow>
-                <TableColumn className="w-48">시간</TableColumn>
-                <TableColumn className="w-24">심각도</TableColumn>
-                <TableColumn className="w-32">서비스</TableColumn>
-                <TableColumn>메시지</TableColumn>
-                <TableColumn className="w-24">동작</TableColumn>
-              </TableRow>
+              <TableColumn key="time">시간</TableColumn>
+              <TableColumn key="severity">심각도</TableColumn>
+              <TableColumn key="service">서비스</TableColumn>
+              <TableColumn key="message">메시지</TableColumn>
+              <TableColumn key="actions">동작</TableColumn>
             </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell className="text-center py-8" colSpan={5}>
-                    <div className="flex justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-                    </div>
-                    <p className="mt-2 text-gray-500">로그를 불러오는 중...</p>
+            <TableBody items={filteredLogs}>
+              {(log) => (
+                <TableRow
+                  key={log.id}
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => onSelectLog(log)}
+                >
+                  <TableCell>{formatTime(log.timestamp)}</TableCell>
+                  <TableCell>
+                    <Badge className={getSeverityBadgeColor(log.severity)}>
+                      {log.severity}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="truncate max-w-[8rem]">
+                    {log.serviceName}
+                  </TableCell>
+                  <TableCell className="truncate max-w-[32rem]">
+                    {log.message}
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" onPress={() => onSelectLog(log)}>
+                      <EyeIcon className="text-gray-600" size={18} />
+                    </Button>
                   </TableCell>
                 </TableRow>
-              ) : filteredLogs.length === 0 ? (
-                <TableRow>
-                  <TableCell className="text-center py-8" colSpan={5}>
-                    <p className="text-gray-500">
-                      로그가 없거나 필터 조건에 맞는 로그가 없습니다.
-                    </p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredLogs.map((log) => (
-                  <TableRow
-                    key={log.id}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => onSelectLog(log)}
-                  >
-                    <TableCell className="whitespace-nowrap">
-                      {formatTime(log.timestamp)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getSeverityBadgeColor(log.severity)}>
-                        {log.severity}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="truncate max-w-[8rem]">
-                      {log.serviceName}
-                    </TableCell>
-                    <TableCell className="truncate max-w-[32rem]">
-                      {log.message}
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" onPress={() => onSelectLog(log)}>
-                        <EyeIcon className="text-gray-600" size={18} />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
               )}
             </TableBody>
           </Table>

@@ -1,3 +1,4 @@
+// components/traces/TraceList.tsx
 "use client";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -195,84 +196,56 @@ const TraceList: React.FC<TraceListProps> = ({
 
       {/* 트레이스 테이블 */}
       <div className="overflow-x-auto">
+        {/* 테이블 컴포넌트 수정 - HeroUI 문서 기반으로 구현 */}
         <Table
+          isHeaderSticky
+          aria-label="트레이스 목록"
           bottomContent={
-            <TableRow>
-              <TableCell className="text-right" colSpan={6}>
-                총 {filteredTraces.length}개 트레이스 표시 중
-              </TableCell>
-            </TableRow>
+            <div className="text-right px-2 py-2">
+              총 {filteredTraces.length}개 트레이스 표시 중
+            </div>
           }
+          isStriped={false}
         >
           <TableHeader>
-            <TableRow>
-              <TableColumn className="w-48">시간</TableColumn>
-              <TableColumn className="w-24">상태</TableColumn>
-              <TableColumn className="w-32">서비스</TableColumn>
-              <TableColumn>이름</TableColumn>
-              <TableColumn className="w-32">지연 시간</TableColumn>
-              <TableColumn className="w-24">동작</TableColumn>
-            </TableRow>
+            <TableColumn key="time">시간</TableColumn>
+            <TableColumn key="status">상태</TableColumn>
+            <TableColumn key="service">서비스</TableColumn>
+            <TableColumn key="name">이름</TableColumn>
+            <TableColumn key="duration">지연 시간</TableColumn>
+            <TableColumn key="actions">동작</TableColumn>
           </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell className="text-center py-8" colSpan={6}>
-                  <div className="flex justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+          <TableBody items={filteredTraces}>
+            {(trace) => (
+              <TableRow
+                key={trace.id}
+                className="hover:bg-gray-50 cursor-pointer"
+                onClick={() => onSelectTrace(trace)}
+              >
+                <TableCell>{formatTime(trace.startTime)}</TableCell>
+                <TableCell>
+                  <Badge className={getStatusBadgeColor(trace.status)}>
+                    {trace.status || "UNSET"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="truncate max-w-[8rem]">
+                  {trace.serviceName}
+                </TableCell>
+                <TableCell className="truncate max-w-[32rem]">
+                  {trace.name}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center">
+                    <Clock className="mr-1 text-gray-500" size={14} />
+                    {formatDuration(trace.duration)}
                   </div>
-                  <p className="mt-2 text-gray-500">
-                    트레이스를 불러오는 중...
-                  </p>
+                </TableCell>
+                <TableCell>
+                  <Button variant="ghost" onPress={() => onSelectTrace(trace)}>
+                    <EyeIcon className="text-gray-600" size={18} />
+                  </Button>
                 </TableCell>
               </TableRow>
-            ) : filteredTraces.length === 0 ? (
-              <TableRow>
-                <TableCell className="text-center py-8" colSpan={6}>
-                  <p className="text-gray-500">
-                    트레이스가 없거나 필터 조건에 맞는 트레이스가 없습니다.
-                  </p>
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredTraces.map((trace) => (
-                <TableRow
-                  key={trace.id}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => onSelectTrace(trace)}
-                >
-                  <TableCell className="whitespace-nowrap">
-                    {formatTime(trace.startTime)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getStatusBadgeColor(trace.status)}>
-                      {trace.status || "UNSET"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="truncate max-w-[8rem]">
-                    {trace.serviceName}
-                  </TableCell>
-                  <TableCell className="truncate max-w-[32rem]">
-                    {trace.name}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <div className="flex items-center">
-                      <Clock className="mr-1 text-gray-500" size={14} />
-                      {formatDuration(trace.duration)}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      onPress={() => {
-                        onSelectTrace(trace);
-                      }}
-                    >
-                      <EyeIcon className="text-gray-600" size={18} />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
             )}
           </TableBody>
         </Table>

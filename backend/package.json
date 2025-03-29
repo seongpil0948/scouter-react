@@ -1,0 +1,39 @@
+{
+  "name": "telemetry-backend",
+  "version": "1.0.0",
+  "description": "OpenTelemetry 데이터를 Kafka에서 수신하여 PostgreSQL에 저장하는 백엔드 애플리케이션",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "test": "jest"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "kafkajs": "^2.2.4",
+    "kafkajs-snappy": "^1.1.0",
+    "pg": "^8.14.1",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0",
+    "snappyjs": "^0.7.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/kafkajs-snappy": "^1.0.0",
+    "@types/lodash.debounce": "^4.0.9",
+    "@types/node": "^22.13.14",
+    "@types/pg": "^8.11.11",
+    "@types/react": "^19.0.12",
+    "@types/react-dom": "^19.0.4",
+    "@types/snappyjs": "^0.7.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.3.0",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.8.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

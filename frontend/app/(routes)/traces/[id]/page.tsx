@@ -2,10 +2,10 @@
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
+import { Button } from "@heroui/button";
 
 import Header from "@/components/layout/Header";
 import TraceDetail from "@/components/traces/TraceDetail";
-import { Button } from "@/components/ui/button";
 
 interface TraceDetailPageProps {
   params: {
