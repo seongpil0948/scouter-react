@@ -3,6 +3,18 @@ import { getPool } from '../db/setup';
 import logger from '../utils/logger';
 
 /**
+ * Uint8Array를 16진수 문자열로 변환하는 헬퍼 함수
+ */
+function bufferToHex(buffer: Uint8Array | any): string {
+  if (buffer instanceof Uint8Array) {
+    return Array.from(buffer)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  return buffer;
+}
+
+/**
  * 로그 데이터를 데이터베이스에 저장
  */
 export async function saveLogs(logs: any[]): Promise<void> {
@@ -17,6 +29,10 @@ export async function saveLogs(logs: any[]): Promise<void> {
     await client.query('BEGIN');
     
     for (const log of logs) {
+      // Uint8Array를 16진수 문자열로 변환
+      const traceIdHex = log.traceId ? bufferToHex(log.traceId) : null;
+      const spanIdHex = log.spanId ? bufferToHex(log.spanId) : null;
+
       await client.query(
         `INSERT INTO logs(
           id, timestamp, service_name, message, severity, 
@@ -35,8 +51,8 @@ export async function saveLogs(logs: any[]): Promise<void> {
           log.serviceName,
           log.message,
           log.severity,
-          log.traceId || null,
-          log.spanId || null,
+          traceIdHex,
+          spanIdHex,
           JSON.stringify(log.attributes)
         ]
       );

@@ -26,7 +26,8 @@ interface ServiceDetailPageProps {
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
+export default function ServiceDetailPage(p: ServiceDetailPageProps) {
+  const { params } = p;
   const router = useRouter();
   const { timeRange } = useFilterStore();
   const [activeTab, setActiveTab] = useState<string | number>("metrics");

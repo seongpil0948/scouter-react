@@ -3,6 +3,26 @@ import { getPool } from '../db/setup';
 import logger from '../utils/logger';
 
 /**
+ * Uint8Array를 16진수 문자열로 변환하는 헬퍼 함수
+ */
+function bufferToHex(buffer: Uint8Array | any): string {
+  if (buffer instanceof Uint8Array) {
+    // Explicitly assert the type to number[]
+    return Array.from(buffer as Uint8Array)
+      .map((b: number) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  
+  if (buffer && typeof buffer === 'object' && buffer.type === 'Buffer') {
+    return Array.from(buffer.data || [] as number[])
+      .map((b: any) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  
+  return buffer;
+}
+
+/**
  * 트레이스 데이터를 데이터베이스에 저장
  */
 export async function saveTraces(traces: any[]): Promise<void> {
@@ -17,6 +37,17 @@ export async function saveTraces(traces: any[]): Promise<void> {
     await client.query('BEGIN');
     
     for (const trace of traces) {
+      // Uint8Array를 16진수 문자열로 변환
+      const traceIdHex = bufferToHex(trace.traceId);
+      const spanIdHex = bufferToHex(trace.spanId);
+      const parentSpanIdHex = trace.parentSpanId ? bufferToHex(trace.parentSpanId) : null;
+
+      // 숫자 값을 정수로 변환 (밀리초이므로 정수로 충분)
+      const startTime = Math.floor(trace.startTime);
+      const endTime = Math.floor(trace.endTime);
+      // duration은 소수점까지 유지하기 위해 문자열로 변환
+      const duration = trace.duration.toString();
+
       await client.query(
         `INSERT INTO traces(
           id, trace_id, span_id, parent_span_id, name, service_name, 
@@ -32,14 +63,14 @@ export async function saveTraces(traces: any[]): Promise<void> {
           attributes = EXCLUDED.attributes`,
         [
           trace.id,
-          trace.traceId,
-          trace.spanId,
-          trace.parentSpanId || null,
+          traceIdHex,
+          spanIdHex,
+          parentSpanIdHex,
           trace.name,
           trace.serviceName,
-          trace.startTime,
-          trace.endTime,
-          trace.duration,
+          startTime,  // 정수로 변환
+          endTime,    // 정수로 변환
+          duration,   // 문자열로 변환
           trace.status,
           JSON.stringify(trace.attributes)
         ]
@@ -107,4 +138,3 @@ export async function getTraceById(traceId: string): Promise<any> {
     throw error;
   }
 }
-

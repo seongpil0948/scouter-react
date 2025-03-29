@@ -7,6 +7,14 @@ import { saveTraces } from '../services/traceService';
 import { processTraceData, processLogData } from './messageProcessor';
 import { saveLogs } from '../services/logService';
 
+// Protobuf 스키마 임포트 - CommonJS 방식으로 변경
+const proto = require("../proto/proto.js");
+const { opentelemetry } = proto;
+
+// 필요한 메시지 타입들 정의
+const { TracesData } = opentelemetry.proto.trace.v1;
+const { LogsData } = opentelemetry.proto.logs.v1;
+
 // Snappy 압축 코덱 등록
 CompressionCodecs[CompressionTypes.Snappy] = SnappyCodec;
 
@@ -24,12 +32,14 @@ let isConsumerRunning = false;
 let flushInterval: NodeJS.Timeout | null = null;
 
 // Kafka 인스턴스 가져오기
-// Kafka 인스턴스 가져오기
 function getKafkaInstance() {
   if (!kafkaInstance) {
+    // 브로커 주소를 환경 변수에서 가져오기
+    const brokers = (process.env.KAFKA_BROKERS || '10.101.91.181:9092,10.101.91.181:9093').split(',');
+    
     kafkaInstance = new Kafka({
-      clientId: 'nextjs-otlp-client',
-      brokers: ['10.101.91.181:9092', '10.101.91.181:9093'],
+      clientId: process.env.KAFKA_CLIENT_ID || 'nextjs-otlp-client',
+      brokers,
       retry: {
         initialRetryTime: 100,
         retries: 8,
@@ -38,6 +48,7 @@ function getKafkaInstance() {
   }
   return kafkaInstance;
 }
+
 // 메시지 압축 해제
 function decompressMessage(buffer: Buffer): Buffer {
   try {
@@ -102,7 +113,7 @@ export async function startKafkaConsumer() {
     await consumerInstance.connect();
     logger.info('Kafka consumer connected');
 
-    // 토픽 구독
+    // 토픽 구독 - 환경 변수 또는 기본값 사용
     const topics = [
       process.env.KAFKA_TRACE_TOPIC || 'onpremise.theshop.oltp.dev.trace',
       process.env.KAFKA_LOG_TOPIC || 'onpremise.theshop.oltp.dev.log',
@@ -129,9 +140,14 @@ export async function startKafkaConsumer() {
           // 토픽에 따른 메시지 처리
           if (topic === (process.env.KAFKA_TRACE_TOPIC || 'onpremise.theshop.oltp.dev.trace')) {
             try {
-              // 데이터 구조에 따라 처리
-              // 여기서는 JSON으로 가정하지만, 실제로는 Protobuf 등 다른 형식일 수 있음
-              const data = JSON.parse(decompressedValue.toString());
+              // Protobuf로 디코딩
+              const decoded = TracesData.decode(new Uint8Array(decompressedValue));
+              const data = TracesData.toObject(decoded, {
+                longs: String,
+                enums: String,
+                defaults: true
+              });
+              
               const processedTraces = processTraceData(data);
               
               // 버퍼에 추가
@@ -144,8 +160,14 @@ export async function startKafkaConsumer() {
             }
           } else if (topic === (process.env.KAFKA_LOG_TOPIC || 'onpremise.theshop.oltp.dev.log')) {
             try {
-              // 데이터 구조에 따라 처리
-              const data = JSON.parse(decompressedValue.toString());
+              // Protobuf로 디코딩
+              const decoded = LogsData.decode(new Uint8Array(decompressedValue));
+              const data = LogsData.toObject(decoded, {
+                longs: String,
+                enums: String,
+                defaults: true
+              });
+              
               const processedLogs = processLogData(data);
               
               // 버퍼에 추가
