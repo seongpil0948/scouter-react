@@ -101,7 +101,6 @@ export default async function ServiceDetailPage(p: ServiceDetailPageProps) {
     router.push(`/logs/${log.id}`);
   };
 
-  // 데이터 새로고침 핸들러
   const handleRefresh = () => {
     refreshService();
   };

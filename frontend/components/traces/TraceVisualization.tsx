@@ -104,7 +104,6 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   const lastProcessedTimestampRef = useRef<number>(0);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // useState 대신 useRef 사용하여 무한 렌더링 방지
   const chartDataRef = useRef<{
     timeSeriesData: DataPoint[];
     highLatencyData: DataPoint[];
@@ -114,7 +113,6 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isChartInitialized, setIsChartInitialized] = useState<boolean>(false);
 
   // 차트 테마 설정
   const getTheme = () => {
@@ -416,7 +414,6 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         }
       });
 
-      setIsChartInitialized(true);
       return chartInstance;
     }
     return null;

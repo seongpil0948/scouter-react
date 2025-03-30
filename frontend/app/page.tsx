@@ -142,7 +142,7 @@ export default function Home() {
 
         {/* 지연 시간 시각화 */}
         <div className="mb-6">
-          <div className="text-xl font-bold mb-4">
+          <div className="text-xl font-bold mb-4 text-foreground-600">
             실시간 지연 시간 모니터링
           </div>
           <TraceVisualization
@@ -154,7 +154,7 @@ export default function Home() {
 
         {/* 서비스 성능 표 */}
         <div className="mb-6">
-          <h2 className="text-xl font-bold mb-4">상위 지연 시간 서비스</h2>
+          <h2 className="text-xl font-bold mb-4 text-foreground-600">상위 지연 시간 서비스</h2>
           <Card>
             <CardBody className="p-0">
               <Table aria-label="상위 지연 시간 서비스" removeWrapper>
