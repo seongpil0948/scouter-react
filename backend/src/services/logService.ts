@@ -55,7 +55,7 @@ export async function saveLogs(logs: any[]): Promise<void> {
           attributes = EXCLUDED.attributes`,
         [
           log.id,
-          log.timestamp,
+          Math.floor(log.timestamp), // 부동 소수점을 정수로 변환
           log.serviceName,
           log.message,
           log.severity,

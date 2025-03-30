@@ -42,11 +42,12 @@ export async function saveTraces(traces: any[]): Promise<void> {
       const spanIdHex = bufferToHex(trace.spanId);
       const parentSpanIdHex = trace.parentSpanId ? bufferToHex(trace.parentSpanId) : null;
 
-      // 숫자 값을 정수로 변환 (밀리초이므로 정수로 충분)
-      const startTime = Math.floor(trace.startTime);
-      const endTime = Math.floor(trace.endTime);
-      // duration은 소수점까지 유지하기 위해 문자열로 변환
-      const duration = trace.duration.toString();
+      // 타임스탬프 값들을 정수로 변환 (부동 소수점 제거)
+      const startTime = Math.floor(Number(trace.startTime));
+      const endTime = Math.floor(Number(trace.endTime));
+      
+      // duration은 문자열로 변환하기 전에 숫자로 확실히 변환
+      const duration = Number(trace.duration).toString();
 
       await client.query(
         `INSERT INTO traces(
@@ -68,9 +69,9 @@ export async function saveTraces(traces: any[]): Promise<void> {
           parentSpanIdHex,
           trace.name,
           trace.serviceName,
-          startTime,  // 정수로 변환
-          endTime,    // 정수로 변환
-          duration,   // 문자열로 변환
+          startTime,
+          endTime,
+          duration,
           trace.status,
           JSON.stringify(trace.attributes)
         ]
