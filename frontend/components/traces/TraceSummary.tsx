@@ -2,6 +2,7 @@
 import React from "react";
 import { Badge } from "@heroui/badge";
 import { Tooltip } from "@heroui/tooltip";
+import { formatDateTime } from '@/lib/utils/dateFormatter';
 
 interface TraceData {
   traceId: string;
@@ -37,7 +38,7 @@ export const TraceSummary: React.FC<TraceSummaryProps> = React.memo(({
         <div>
           <span className="text-gray-500">시작 시간:</span>
           <span className="font-mono ml-2">
-            {formatTime(traceData.startTime)}
+            {formatDateTime(traceData.startTime)}
           </span>
         </div>
         <div>

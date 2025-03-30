@@ -14,6 +14,7 @@ import { TraceSummary } from "./TraceSummary";
 import { SpanList } from "./SpanList";
 import { addToast, useToast } from "@heroui/toast";
 import { useTraceData } from './hook/useTraceData';
+import { formatDateTime } from '@/lib/utils/dateFormatter';
 
 interface TraceDetailProps {
   traceId: string;
@@ -205,11 +206,11 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId }) => {
                     </tr>
                     <tr className="border-b">
                       <td className="py-2 px-4 bg-gray-50 font-medium">시작 시간</td>
-                      <td className="py-2 px-4">{formatTime(traceData.startTime)}</td>
+                      <td className="py-2 px-4">{formatDateTime(traceData.startTime)}</td>
                     </tr>
                     <tr className="border-b">
                       <td className="py-2 px-4 bg-gray-50 font-medium">종료 시간</td>
-                      <td className="py-2 px-4">{formatTime(traceData.endTime)}</td>
+                      <td className="py-2 px-4">{formatDateTime(traceData.endTime)}</td>
                     </tr>
                     <tr className="border-b">
                       <td className="py-2 px-4 bg-gray-50 font-medium">총 지연 시간</td>
@@ -247,7 +248,6 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId }) => {
           {activeTab === "span" && selectedSpan && (
             <SpanDetail 
               span={selectedSpan} 
-              formatTime={formatTime} 
               formatDuration={formatDuration}
             />
           )}

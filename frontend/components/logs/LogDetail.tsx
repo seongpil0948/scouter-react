@@ -1,4 +1,3 @@
-"use client";
 import React, { useCallback, useState } from "react";
 import { Button } from "@heroui/button";
 import { Badge } from "@heroui/badge";
@@ -13,6 +12,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import { LogItem } from "@/lib/store/telemetryStore";
+import { formatDateTime } from "@/lib/utils/dateFormatter"; // 유틸리티 함수 임포트
 
 interface LogDetailProps {
   log: LogItem | null;
@@ -48,11 +48,6 @@ const LogDetail: React.FC<LogDetailProps> = ({
     };
 
     return severityMap[severity] || "bg-gray-500 hover:bg-gray-600";
-  }, []);
-
-  // 날짜 포맷팅
-  const formatDateTime = useCallback((timestamp: number) => {
-    return new Date(timestamp).toLocaleString();
   }, []);
 
   // 속성값 포맷팅

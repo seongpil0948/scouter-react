@@ -1,6 +1,7 @@
 "use client";
 import React, { useCallback } from "react";
 import { Badge } from "@heroui/badge";
+import { formatDateTime } from '@/lib/utils/dateFormatter';
 
 interface Span {
   id: string;
@@ -18,13 +19,11 @@ interface Span {
 
 interface SpanDetailProps {
   span: Span;
-  formatTime: (timestamp: number) => string;
   formatDuration: (duration: number) => string;
 }
 
 export const SpanDetail: React.FC<SpanDetailProps> = React.memo(({
   span,
-  formatTime,
   formatDuration,
 }) => {
   // 속성값 포맷팅
@@ -74,11 +73,11 @@ export const SpanDetail: React.FC<SpanDetailProps> = React.memo(({
             </tr>
             <tr className="border-b">
               <td className="py-2 px-4 bg-gray-50 font-medium">시작 시간</td>
-              <td className="py-2 px-4">{formatTime(span.startTime)}</td>
+              <td className="py-2 px-4">{formatDateTime(span.startTime)}</td>
             </tr>
             <tr className="border-b">
               <td className="py-2 px-4 bg-gray-50 font-medium">종료 시간</td>
-              <td className="py-2 px-4">{formatTime(span.endTime)}</td>
+              <td className="py-2 px-4">{formatDateTime(span.endTime)}</td>
             </tr>
             <tr>
               <td className="py-2 px-4 bg-gray-50 font-medium">지연 시간</td>

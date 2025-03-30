@@ -2,9 +2,31 @@
  * 유틸리티 함수: 타임스탬프를 사람이 읽기 쉬운 날짜/시간 형식으로 변환
  */
 
+// 타임스탬프 정규화 함수
+function normalizeTimestamp(timestamp: number | string): number {
+  // 1. 문자열을 숫자로 변환
+  const ts = typeof timestamp === 'string' ? parseInt(timestamp, 10) : timestamp;
+  
+  // 2. 타임스탬프 길이 확인 (13자리가 아니면 밀리초 단위로 변환)
+  const tsStr = ts.toString();
+  if (tsStr.length === 10) {
+    // 초 단위 타임스탬프를 밀리초로 변환
+    return ts * 1000;
+  }
+  
+  return ts;
+}
+
 // 타임스탬프를 날짜 및 시간 문자열로 변환
-export function formatDateTime(timestamp: number): string {
-  const date = new Date(timestamp);
+export function formatDateTime(timestamp: number | string): string {
+  const normalizedTs = normalizeTimestamp(timestamp);
+  const date = new Date(normalizedTs);
+
+  // 날짜가 유효한지 확인
+  if (isNaN(date.getTime())) {
+    console.warn(`Invalid timestamp: ${timestamp}`);
+    return 'Invalid Date';
+  }
 
   return date.toLocaleString("ko-KR", {
     year: "numeric",
@@ -18,8 +40,15 @@ export function formatDateTime(timestamp: number): string {
 }
 
 // 타임스탬프를 날짜 문자열로 변환
-export function formatDate(timestamp: number): string {
-  const date = new Date(timestamp);
+export function formatDate(timestamp: number | string): string {
+  const normalizedTs = normalizeTimestamp(timestamp);
+  const date = new Date(normalizedTs);
+
+  // 날짜가 유효한지 확인
+  if (isNaN(date.getTime())) {
+    console.warn(`Invalid timestamp: ${timestamp}`);
+    return 'Invalid Date';
+  }
 
   return date.toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -29,10 +58,20 @@ export function formatDate(timestamp: number): string {
 }
 
 // 타임스탬프를 시간 문자열로 변환
-export function formatTime(timestamp: number): string {
-  const date = new Date(timestamp);
+export function formatTime(timestamp: number | string): string {
+  const normalizedTs = normalizeTimestamp(timestamp);
+  const date = new Date(normalizedTs);
 
-  return date.toLocaleTimeString("ko-KR", {
+  // 날짜가 유효한지 확인
+  if (isNaN(date.getTime())) {
+    console.warn(`Invalid timestamp: ${timestamp}`, new Error().stack);
+    return 'Invalid Date';
+  }
+
+  return date.toLocaleString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -61,9 +100,10 @@ export function formatDuration(ms: number): string {
 }
 
 // 현재 시간으로부터의 상대 시간 표시
-export function formatRelativeTime(timestamp: number): string {
+export function formatRelativeTime(timestamp: number | string): string {
+  const normalizedTs = normalizeTimestamp(timestamp);
   const now = Date.now();
-  const diff = now - timestamp;
+  const diff = now - normalizedTs;
 
   if (diff < 0) {
     return "미래";
@@ -96,7 +136,7 @@ export function formatRelativeTime(timestamp: number): string {
   }
 
   // 그 이상은 날짜 표시
-  return formatDate(timestamp);
+  return formatDate(normalizedTs);
 }
 
 // ISO 타임스탬프를 밀리초로 변환
@@ -105,12 +145,13 @@ export function isoToTimestamp(isoString: string): number {
 }
 
 // 타임스탬프를 ISO 문자열로 변환
-export function timestampToIso(timestamp: number): string {
-  return new Date(timestamp).toISOString();
+export function timestampToIso(timestamp: number | string): string {
+  const normalizedTs = normalizeTimestamp(timestamp);
+  return new Date(normalizedTs).toISOString();
 }
 
 // 시간 범위 문자열 생성 (시작 시간 ~ 종료 시간)
-export function formatTimeRange(startTime: number, endTime: number): string {
+export function formatTimeRange(startTime: number | string, endTime: number | string): string {
   return `${formatDateTime(startTime)} ~ ${formatDateTime(endTime)}`;
 }
 
@@ -176,4 +217,5 @@ export default {
   timestampToIso,
   formatTimeRange,
   getRelativeDateRange,
+  normalizeTimestamp,
 };
