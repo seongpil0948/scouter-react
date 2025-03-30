@@ -18,9 +18,10 @@ import { formatDateTime } from "@/lib/utils/dateFormatter";
 
 interface TraceDetailProps {
   traceId: string;
+  onBack?: () => void;
 }
 
-const TraceDetail: React.FC<TraceDetailProps> = ({ traceId }) => {
+const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
   const [selectedSpanId, setSelectedSpanId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string | number>("timeline");
   const router = useRouter();
@@ -42,6 +43,7 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId }) => {
 
   // 뒤로 가기
   const handleBack = useCallback(() => {
+    onBack?.();
     router.push("/traces");
   }, [router]);
 

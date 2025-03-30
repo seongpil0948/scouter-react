@@ -83,7 +83,7 @@ export default function TracesPage() {
 
       <div className="mt-4">
         {selectedTrace && traceData ? (
-          <TraceDetail traceId={traceData.traceId} />
+          <TraceDetail traceId={traceData.traceId} onBack={handleBack} />
         ) : (
           <TraceList
             isLoading={isLoadingTraces}
