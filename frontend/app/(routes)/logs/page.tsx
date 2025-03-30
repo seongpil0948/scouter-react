@@ -1,7 +1,9 @@
+// frontend/app/(routes)/logs/page.tsx
 "use client";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
+import { Button } from "@heroui/button";
 
 import {
   useFilterStore,
@@ -94,16 +96,16 @@ export default function LogsPage() {
       <Header title="로그 분석" />
 
       <div className="mb-4 flex justify-end">
-        <button
-          className={`px-4 py-2 rounded-md ${
-            viewMode === "list"
-              ? "bg-blue-500 text-white"
+        <Button
+          className={`px-4 py-2 ${
+            viewMode === "list" 
+              ? "bg-blue-500 text-white" 
               : "bg-gray-200 text-gray-700"
           }`}
-          onClick={toggleViewMode}
+          onPress={toggleViewMode}
         >
           {viewMode === "list" ? "차트 보기" : "목록 보기"}
-        </button>
+        </Button>
       </div>
 
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -116,9 +118,9 @@ export default function LogsPage() {
             />
           ) : (
             <LogVisualization
-              height={600}
               logData={logs}
               onDataPointClick={handleSelectLog}
+              height={600}
               title="로그 발생 패턴 시각화"
             />
           )}

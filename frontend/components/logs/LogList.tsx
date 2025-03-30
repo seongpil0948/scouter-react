@@ -1,4 +1,4 @@
-// components/logs/LogList.tsx의 수정 사항도 동일하게 적용
+// frontend/components/logs/LogList.tsx
 "use client";
 import React, { useState, useCallback, useMemo } from "react";
 import {
@@ -34,15 +34,15 @@ const LogList: React.FC<LogListProps> = ({
   // 심각도에 따른 배지 색상
   const getSeverityBadgeColor = useCallback((severity: string) => {
     const severityMap: Record<string, string> = {
-      FATAL: "bg-red-700 hover:bg-red-800",
-      ERROR: "bg-red-500 hover:bg-red-600",
-      WARN: "bg-yellow-500 hover:bg-yellow-600",
-      INFO: "bg-blue-500 hover:bg-blue-600",
-      DEBUG: "bg-gray-500 hover:bg-gray-600",
-      TRACE: "bg-gray-400 hover:bg-gray-500",
+      FATAL: "bg-red-700",
+      ERROR: "bg-red-500",
+      WARN: "bg-yellow-500",
+      INFO: "bg-blue-500",
+      DEBUG: "bg-gray-500",
+      TRACE: "bg-gray-400",
     };
 
-    return severityMap[severity] || "bg-gray-500 hover:bg-gray-600";
+    return severityMap[severity] || "bg-gray-500";
   }, []);
 
   // 필터링된 로그
@@ -120,10 +120,20 @@ const LogList: React.FC<LogListProps> = ({
     return new Date(timestamp).toLocaleString();
   }, []);
 
+  if (isLoading) {
+    return (
+      <Card>
+        <CardBody className="p-8 flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+        </CardBody>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       {/* 필터 섹션 */}
-      <h2 className="p-4 border-b">
+      <div className="p-4 border-b">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <form
             className="flex-1 w-full md:w-auto"
@@ -186,8 +196,8 @@ const LogList: React.FC<LogListProps> = ({
             <Badge
               className={`cursor-pointer flex items-center gap-1 ${
                 logFilters.hasTrace
-                  ? "bg-purple-500 hover:bg-purple-600"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  ? "bg-purple-500"
+                  : "bg-gray-200 text-gray-700"
               }`}
               onClick={toggleTraceFilter}
             >
@@ -203,14 +213,14 @@ const LogList: React.FC<LogListProps> = ({
               <Button
                 className="whitespace-nowrap"
                 size="sm"
-                onClick={resetFilters}
+                onPress={resetFilters}
               >
                 필터 초기화
               </Button>
             )}
           </div>
         </div>
-      </h2>
+      </div>
 
       {/* 로그 테이블 */}
       <CardBody className="p-0">
@@ -232,7 +242,14 @@ const LogList: React.FC<LogListProps> = ({
               <TableColumn key="message">메시지</TableColumn>
               <TableColumn key="actions">동작</TableColumn>
             </TableHeader>
-            <TableBody items={filteredLogs}>
+            <TableBody
+              items={filteredLogs}
+              emptyContent={
+                <div className="py-8 text-center text-gray-500">
+                  표시할 로그가 없습니다.
+                </div>
+              }
+            >
               {(log) => (
                 <TableRow
                   key={log.id}

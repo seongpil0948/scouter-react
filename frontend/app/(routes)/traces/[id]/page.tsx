@@ -1,3 +1,4 @@
+// frontend/app/(routes)/traces/[id]/page.tsx
 "use client";
 import { useEffect, useState } from "react";
 import useSWR from "swr";

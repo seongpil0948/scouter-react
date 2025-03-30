@@ -8,15 +8,15 @@ import { LogItem } from "@/lib/store/telemetryStore";
 interface ChartConfig {
   title?: string;
   height?: string | number;
-  theme?: "light" | "dark";
+  theme?: 'light' | 'dark';
   maxDataPoints?: number;
   autoUpdate?: boolean;
   updateInterval?: number;
   colors?: {
-    [key in "FATAL" | "ERROR" | "WARN" | "INFO" | "DEBUG" | "TRACE"]?: string;
+    [key in 'FATAL' | 'ERROR' | 'WARN' | 'INFO' | 'DEBUG' | 'TRACE']?: string;
   };
   symbolSizes?: {
-    [key in "FATAL" | "ERROR" | "WARN" | "INFO" | "DEBUG" | "TRACE"]?: number;
+    [key in 'FATAL' | 'ERROR' | 'WARN' | 'INFO' | 'DEBUG' | 'TRACE']?: number;
   };
 }
 
@@ -24,6 +24,8 @@ interface LogVisualizationProps {
   logData: LogItem[];
   onDataPointClick: (log: LogItem) => void;
   config?: ChartConfig;
+  height?: number | string; // 추가: 높이를 직접 설정할 수 있는 prop
+  title?: string; // 추가: 제목을 직접 설정할 수 있는 prop
   queryFn?: (params: any) => Promise<any>;
   queryParams?: any;
 }
@@ -32,37 +34,37 @@ type DataPoint = [number, number, string]; // [timestamp, severityValue, severit
 
 // 심각도 수준을 숫자 값으로 매핑
 const severityToValueMap: Record<string, number> = {
-  FATAL: 5,
-  ERROR: 4,
-  WARN: 3,
-  INFO: 2,
-  DEBUG: 1,
-  TRACE: 0,
+  "FATAL": 5,
+  "ERROR": 4,
+  "WARN": 3,
+  "INFO": 2,
+  "DEBUG": 1,
+  "TRACE": 0,
 };
 
 // 기본 설정 값
 const DEFAULT_CONFIG: ChartConfig = {
   title: "로그 발생 패턴 모니터링",
   height: 600,
-  theme: "light",
+  theme: 'light',
   maxDataPoints: 100,
   autoUpdate: false,
   updateInterval: 30000,
   colors: {
-    FATAL: "#9c1e1e", // 진한 빨강
-    ERROR: "#ff4d4f", // 빨강
-    WARN: "#faad14", // 노랑
-    INFO: "#1890ff", // 파랑
-    DEBUG: "#52c41a", // 초록
-    TRACE: "#d9d9d9", // 회색
+    "FATAL": "#9c1e1e", // 진한 빨강
+    "ERROR": "#ff4d4f", // 빨강
+    "WARN": "#faad14", // 노랑
+    "INFO": "#1890ff", // 파랑
+    "DEBUG": "#52c41a", // 초록
+    "TRACE": "#d9d9d9", // 회색
   },
   symbolSizes: {
-    FATAL: 20,
-    ERROR: 16,
-    WARN: 14,
-    INFO: 10,
-    DEBUG: 8,
-    TRACE: 6,
+    "FATAL": 20,
+    "ERROR": 16,
+    "WARN": 14,
+    "INFO": 10,
+    "DEBUG": 8,
+    "TRACE": 6,
   },
 };
 
@@ -76,16 +78,24 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
   logData,
   onDataPointClick,
   config = {},
+  height, // 직접 높이 prop 사용
+  title, // 직접 제목 prop 사용
   queryFn,
   queryParams = {},
 }) => {
-  // 설정 병합
-  const mergedConfig = { ...DEFAULT_CONFIG, ...config };
+  // 설정 병합 (height와 title은 별도 prop으로 받은 것이 우선)
+  const mergedConfig = { 
+    ...DEFAULT_CONFIG, 
+    ...config,
+    height: height || config.height || DEFAULT_CONFIG.height,
+    title: title || config.title || DEFAULT_CONFIG.title
+  };
+  
   const {
-    title,
-    height,
+    title: chartTitle,
+    height: chartHeight,
     theme,
-    maxDataPoints = DEFAULT_CONFIG.maxDataPoints, // added default to fix TS error
+    maxDataPoints = DEFAULT_CONFIG.maxDataPoints,
     autoUpdate,
     updateInterval,
     colors = DEFAULT_CONFIG.colors,
@@ -112,12 +122,12 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
 
   // 차트 테마 설정
   const getTheme = () => {
-    if (theme === "dark") {
+    if (theme === 'dark') {
       return {
-        backgroundColor: "#141414",
-        textStyle: { color: "#ffffff" },
-        axisLine: { lineStyle: { color: "#333" } },
-        splitLine: { lineStyle: { color: "#333" } },
+        backgroundColor: '#141414',
+        textStyle: { color: '#ffffff' },
+        axisLine: { lineStyle: { color: '#333' } },
+        splitLine: { lineStyle: { color: '#333' } },
       };
     }
     return {};
@@ -132,44 +142,36 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
       ...themeOptions,
       animation: true,
       title: {
-        text: title,
+        text: chartTitle,
         left: "center",
-        textStyle: theme === "dark" ? { color: "#fff" } : undefined,
+        textStyle: theme === 'dark' ? { color: '#fff' } : undefined,
       },
       legend: {
         data: severities,
         right: 10,
         top: 10,
-        selected: severities.reduce(
-          (acc, severity) => {
-            acc[severity] = true;
-            return acc;
-          },
-          {} as Record<string, boolean>,
-        ),
-        textStyle: theme === "dark" ? { color: "#fff" } : undefined,
+        selected: severities.reduce((acc, severity) => {
+          acc[severity] = true;
+          return acc;
+        }, {} as Record<string, boolean>),
+        textStyle: theme === 'dark' ? { color: '#fff' } : undefined,
       },
       tooltip: {
         show: true,
         trigger: "item",
-        backgroundColor:
-          theme === "dark" ? "rgba(50,50,50,0.9)" : "rgba(255,255,255,0.9)",
-        borderColor: theme === "dark" ? "#333" : "#ccc",
-        textStyle: { color: theme === "dark" ? "#fff" : "#333" },
-        extraCssText: "box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);",
+        backgroundColor: theme === 'dark' ? 'rgba(50,50,50,0.9)' : 'rgba(255,255,255,0.9)',
+        borderColor: theme === 'dark' ? '#333' : '#ccc',
+        textStyle: { color: theme === 'dark' ? '#fff' : '#333' },
+        extraCssText: 'box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);',
         formatter: function (params: any) {
           if (!params.value || params.value.length < 3) {
             return "데이터 없음";
           }
-
+          
           const timestamp = params.value[0];
           const severity = params.value[2];
           const date = new Date(timestamp);
-          const colorValue =
-            colors?.[severity as keyof typeof colors] ||
-            DEFAULT_CONFIG.colors?.[
-              severity as keyof typeof DEFAULT_CONFIG.colors
-            ];
+          const colorValue = colors?.[severity as keyof typeof colors] || DEFAULT_CONFIG.colors?.[severity as keyof typeof DEFAULT_CONFIG.colors];
 
           return `
           <div style="font-weight: bold; margin-bottom: 5px;">
@@ -190,21 +192,21 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
           dataZoom: {
             yAxisIndex: "none",
             icon: {
-              zoom: "path://M10.525 5.025a7.5 7.5 0 100 15 7.5 7.5 0 000-15zM.75 12.525a9.75 9.75 0 1119.5 0 9.75 9.75 0 01-19.5 0zm17.53 7.78a.75.75 0 011.06 0l4.5 4.5a.75.75 0 11-1.06 1.06l-4.5-4.5a.75.75 0 010-1.06z",
-              back: "path://M11.78 5.22a.75.75 0 0 1 0 1.06l-3.72 3.72h11.19a.75.75 0 0 1 0 1.5H8.06l3.72 3.72a.75.75 0 1 1-1.06 1.06l-5-5a.751.751 0 0 1 0-1.06l5-5a.75.75 0 0 1 1.06 0",
-            },
+              zoom: 'path://M10.525 5.025a7.5 7.5 0 100 15 7.5 7.5 0 000-15zM.75 12.525a9.75 9.75 0 1119.5 0 9.75 9.75 0 01-19.5 0zm17.53 7.78a.75.75 0 011.06 0l4.5 4.5a.75.75 0 11-1.06 1.06l-4.5-4.5a.75.75 0 010-1.06z',
+              back: 'path://M11.78 5.22a.75.75 0 0 1 0 1.06l-3.72 3.72h11.19a.75.75 0 0 1 0 1.5H8.06l3.72 3.72a.75.75 0 1 1-1.06 1.06l-5-5a.751.751 0 0 1 0-1.06l5-5a.75.75 0 0 1 1.06 0'
+            }
           },
           restore: {
-            icon: "path://M4.75 4a.75.75 0 0 1 .75.75v1.5h9V4.75a.75.75 0 0 1 1.5 0v1.5h2.25c.966 0 1.75.784 1.75 1.75v11.5A1.75 1.75 0 0 1 18.25 21H2.75A1.75 1.75 0 0 1 1 19.5V8c0-.966.784-1.75 1.75-1.75H5v-1.5A.75.75 0 0 1 4.75 4m13.5 7V8a.25.25 0 0 0-.25-.25H2.75A.25.25 0 0 0 2.5 8v3h15.75m0 1.5H2.5v8c0 .138.112.25.25.25h15.5a.25.25 0 0 0 .25-.25v-8",
+            icon: 'path://M4.75 4a.75.75 0 0 1 .75.75v1.5h9V4.75a.75.75 0 0 1 1.5 0v1.5h2.25c.966 0 1.75.784 1.75 1.75v11.5A1.75 1.75 0 0 1 18.25 21H2.75A1.75 1.75 0 0 1 1 19.5V8c0-.966.784-1.75 1.75-1.75H5v-1.5A.75.75 0 0 1 4.75 4m13.5 7V8a.25.25 0 0 0-.25-.25H2.75A.25.25 0 0 0 2.5 8v3h15.75m0 1.5H2.5v8c0 .138.112.25.25.25h15.5a.25.25 0 0 0 .25-.25v-8'
           },
           saveAsImage: {
-            icon: "path://M10 1.5a.75.75 0 0 1 .75.75v1h1.5a.75.75 0 0 1 0 1.5h-1.5v1a.75.75 0 0 1-1.5 0v-1h-1.5a.75.75 0 0 1 0-1.5h1.5v-1A.75.75 0 0 1 10 1.5M4 8a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zm7-1a4 4 0 1 0 0 8 4 4 0 0 0 0-8m-4 4a4 4 0 1 1 8 0 4 4 0 0 1-8 0",
-          },
+            icon: 'path://M10 1.5a.75.75 0 0 1 .75.75v1h1.5a.75.75 0 0 1 0 1.5h-1.5v1a.75.75 0 0 1-1.5 0v-1h-1.5a.75.75 0 0 1 0-1.5h1.5v-1A.75.75 0 0 1 10 1.5M4 8a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zm7-1a4 4 0 1 0 0 8 4 4 0 0 0 0-8m-4 4a4 4 0 1 1 8 0 4 4 0 0 1-8 0'
+          }
         },
         right: 10,
         iconStyle: {
-          borderColor: theme === "dark" ? "#666" : "#666",
-          color: theme === "dark" ? "#ddd" : "#333",
+          borderColor: theme === 'dark' ? '#666' : '#666',
+          color: theme === 'dark' ? '#ddd' : '#333',
         },
       },
       dataZoom: [
@@ -213,20 +215,19 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
           start: 0,
           end: 100,
           zoomLock: false,
-          filterMode: "filter",
+          filterMode: 'filter',
         },
         {
           start: 0,
           end: 100,
           bottom: 10,
           height: 20,
-          borderColor: theme === "dark" ? "#444" : "#ddd",
+          borderColor: theme === 'dark' ? '#444' : '#ddd',
           textStyle: {
-            color: theme === "dark" ? "#fff" : undefined,
+            color: theme === 'dark' ? '#fff' : undefined,
           },
-          fillerColor:
-            theme === "dark" ? "rgba(80,80,80,0.3)" : "rgba(200,200,200,0.3)",
-          filterMode: "filter",
+          fillerColor: theme === 'dark' ? 'rgba(80,80,80,0.3)' : 'rgba(200,200,200,0.3)',
+          filterMode: 'filter',
         },
       ],
       xAxis: {
@@ -236,25 +237,25 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
         nameLocation: "middle",
         nameGap: 30,
         nameTextStyle: {
-          color: theme === "dark" ? "#fff" : undefined,
+          color: theme === 'dark' ? '#fff' : undefined,
         },
         scale: true,
         axisLabel: {
           formatter: (value: number) => new Date(value).toLocaleTimeString(),
           show: true,
-          color: theme === "dark" ? "#ccc" : undefined,
+          color: theme === 'dark' ? '#ccc' : undefined,
         },
         axisLine: {
           lineStyle: {
-            color: theme === "dark" ? "#444" : "#ccc",
+            color: theme === 'dark' ? '#444' : '#ccc',
           },
         },
         splitLine: {
           show: true,
           lineStyle: {
             type: "dashed",
-            opacity: theme === "dark" ? 0.2 : 0.3,
-            color: theme === "dark" ? "#444" : "#ddd",
+            opacity: theme === 'dark' ? 0.2 : 0.3,
+            color: theme === 'dark' ? '#444' : '#ddd',
           },
         },
       },
@@ -264,30 +265,30 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
         nameLocation: "middle",
         nameGap: 40,
         nameTextStyle: {
-          color: theme === "dark" ? "#fff" : undefined,
+          color: theme === 'dark' ? '#fff' : undefined,
         },
         min: 0,
         max: 5,
         interval: 1,
         axisLabel: {
           show: true,
-          color: theme === "dark" ? "#ccc" : undefined,
+          color: theme === 'dark' ? '#ccc' : undefined,
           formatter: function (value: number) {
             const labels = ["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"];
             return labels[value] || "";
-          },
+          }
         },
         axisLine: {
           lineStyle: {
-            color: theme === "dark" ? "#444" : "#ccc",
+            color: theme === 'dark' ? '#444' : '#ccc',
           },
         },
         splitLine: {
           show: true,
           lineStyle: {
             type: "dashed",
-            opacity: theme === "dark" ? 0.2 : 0.3,
-            color: theme === "dark" ? "#444" : "#ddd",
+            opacity: theme === 'dark' ? 0.2 : 0.3,
+            color: theme === 'dark' ? '#444' : '#ddd',
           },
         },
       },
@@ -316,7 +317,7 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
             shadowColor: "rgba(156, 30, 30, 0.5)",
           },
           emphasis: {
-            scale: true,
+            scale: true
           },
           data: [],
         },
@@ -337,7 +338,7 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
             shadowColor: "rgba(255, 77, 79, 0.5)",
           },
           emphasis: {
-            scale: true,
+            scale: true
           },
           data: [],
         },
@@ -358,7 +359,7 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
             shadowColor: "rgba(250, 173, 20, 0.5)",
           },
           emphasis: {
-            scale: true,
+            scale: true
           },
           data: [],
         },
@@ -403,7 +404,12 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
         },
       ],
     };
-  }, [title, theme, colors, symbolSizes]);
+  }, [
+    chartTitle, 
+    theme, 
+    colors, 
+    symbolSizes
+  ]);
 
   // 차트 초기화 함수
   const initChart = useCallback(() => {
@@ -414,10 +420,7 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
       }
 
       // 새 차트 인스턴스 생성
-      const chartInstance = echarts.init(
-        chartRef.current,
-        theme === "dark" ? "dark" : undefined,
-      );
+      const chartInstance = echarts.init(chartRef.current, theme === 'dark' ? 'dark' : undefined);
       chartInstanceRef.current = chartInstance;
 
       // 초기 옵션 설정
@@ -455,120 +458,113 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
   }, [getInitialOption, logData, onDataPointClick, theme]);
 
   // 로그 데이터 처리 함수
-  const processLogData = useCallback(
-    (newLogs: LogItem[]) => {
-      if (!chartInstanceRef.current) {
-        return false;
-      }
+  const processLogData = useCallback((newLogs: LogItem[]) => {
+    if (!chartInstanceRef.current) {
+      return false;
+    }
+    
+    // 심각도별 데이터 준비
+    const newDataBySeverity: { [key: string]: DataPoint[] } = {
+      FATAL: [],
+      ERROR: [],
+      WARN: [],
+      INFO: [],
+      DEBUG: [],
+      TRACE: [],
+    };
+    
+    let hasNewData = false;
 
-      // 심각도별 데이터 준비
-      const newDataBySeverity: { [key: string]: DataPoint[] } = {
-        FATAL: [],
-        ERROR: [],
-        WARN: [],
-        INFO: [],
-        DEBUG: [],
-        TRACE: [],
-      };
+    // 새로운 데이터 처리
+    newLogs.forEach((log) => {
+      const timestamp = log.timestamp;
 
-      let hasNewData = false;
+      const severity = log.severity || "INFO";
+      const severityValue = severityToValueMap[severity] !== undefined 
+        ? severityToValueMap[severity] 
+        : 2; // 기본값은 INFO(2)
 
-      // 새로운 데이터 처리
-      newLogs.forEach((log) => {
-        const timestamp = log.timestamp;
+      if (timestamp) {
+        const dataPoint: DataPoint = [timestamp, severityValue, severity];
 
-        const severity = log.severity || "INFO";
-        const severityValue =
-          severityToValueMap[severity] !== undefined
-            ? severityToValueMap[severity]
-            : 2; // 기본값은 INFO(2)
-
-        if (timestamp) {
-          const dataPoint: DataPoint = [timestamp, severityValue, severity];
-
-          // 해당 심각도에 데이터 추가
-          if (newDataBySeverity[severity]) {
-            newDataBySeverity[severity].push(dataPoint);
-          } else {
-            // 알 수 없는 심각도면 INFO로 처리
-            newDataBySeverity.INFO.push([timestamp, 2, "INFO"]);
-          }
-
-          hasNewData = true;
-          lastProcessedTimestampRef.current = Math.max(
-            lastProcessedTimestampRef.current,
-            timestamp,
-          );
+        // 해당 심각도에 데이터 추가
+        if (newDataBySeverity[severity]) {
+          newDataBySeverity[severity].push(dataPoint);
+        } else {
+          // 알 수 없는 심각도면 INFO로 처리
+          newDataBySeverity.INFO.push([timestamp, 2, "INFO"]);
         }
+
+        hasNewData = true;
+        lastProcessedTimestampRef.current = Math.max(
+          lastProcessedTimestampRef.current,
+          timestamp
+        );
+      }
+    });
+
+    if (hasNewData) {
+      // 현재 데이터와 병합
+      const updatedDataBySeverity: { [key: string]: DataPoint[] } = {};
+      
+      // 심각도별로 데이터 업데이트
+      Object.keys(newDataBySeverity).forEach(severity => {
+        // 새 데이터 추가 및 정렬
+        updatedDataBySeverity[severity] = [
+          ...(chartData[severity] || []),
+          ...(newDataBySeverity[severity] || [])
+        ]
+          .sort((a, b) => a[0] - b[0])
+          .slice(-maxDataPoints!); // maxDataPoints가 undefined일 수 없다고 TypeScript에 알려줌
       });
-
-      if (hasNewData) {
-        // 현재 데이터 참조
-        const currentData = { ...chartData };
-
-        // 심각도별로 데이터 업데이트
-        const severities = ["FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
-        const updatedDataBySeverity: { [key: string]: DataPoint[] } = {};
-
-        severities.forEach((severity) => {
-          // 새 데이터 추가 및 정렬
-          updatedDataBySeverity[severity] = [
-            ...(currentData[severity] || []),
-            ...(newDataBySeverity[severity] || []),
-          ]
-            .sort((a, b) => a[0] - b[0])
-            .slice(-maxDataPoints!); // non-null assertion added here
+      
+      // 데이터 상태 업데이트
+      setChartData(updatedDataBySeverity);
+      
+      try {
+        // 시리즈 데이터 준비
+        const seriesData = Object.keys(updatedDataBySeverity).map((severity, index) => ({
+          data: updatedDataBySeverity[severity] || []
+        }));
+        
+        // ECharts 인스턴스에 직접 데이터 업데이트
+        chartInstanceRef.current.setOption({
+          series: seriesData
         });
 
-        // 데이터 참조 업데이트
-        setChartData(updatedDataBySeverity);
-
-        // 시리즈 데이터 준비
-        const seriesData = severities.map((severity) => ({
-          data: updatedDataBySeverity[severity] || [],
-        }));
-
-        try {
-          // ECharts 인스턴스에 직접 데이터 업데이트
+        // X축 범위 동적 조정
+        // 모든 데이터를 합쳐서 최소/최대 타임스탬프 찾기
+        const allDataPoints = Object.values(updatedDataBySeverity)
+          .flat()
+          .map(point => point[0]);
+        
+        if (allDataPoints.length > 0) {
+          const minTime = Math.min(...allDataPoints);
+          const maxTime = Math.max(...allDataPoints);
+          
           chartInstanceRef.current.setOption({
-            series: seriesData,
+            xAxis: {
+              min: minTime,
+              max: maxTime,
+            }
           });
-
-          // X축 범위 동적 조정
-          // 모든 데이터를 합쳐서 최소/최대 타임스탬프 찾기
-          const allDataPoints = Object.values(updatedDataBySeverity)
-            .flat()
-            .map((point) => point[0]);
-
-          if (allDataPoints.length > 0) {
-            const minTime = Math.min(...allDataPoints);
-            const maxTime = Math.max(...allDataPoints);
-
-            chartInstanceRef.current.setOption({
-              xAxis: {
-                min: minTime,
-                max: maxTime,
-              },
-            });
-          }
-        } catch (error) {
-          console.error("차트 업데이트 중 오류 발생:", error);
         }
+      } catch (error) {
+        console.error("차트 업데이트 중 오류 발생:", error);
       }
+    }
 
-      return hasNewData;
-    },
-    [chartData, maxDataPoints],
-  );
+    return hasNewData;
+  }, [chartData, maxDataPoints]);
 
   // 데이터 가져오기 함수
   const fetchData = useCallback(async () => {
     if (!queryFn) return;
-
+    
     try {
       setIsLoading(true);
       const result = await queryFn(queryParams);
-
+      
       if (result && Array.isArray(result)) {
         processLogData(result);
       }
@@ -585,11 +581,11 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
     if (autoUpdate && queryFn) {
       // 최초 데이터 로드
       fetchData();
-
+      
       // 주기적으로 데이터 업데이트
       refreshTimerRef.current = setInterval(fetchData, updateInterval);
     }
-
+    
     return () => {
       if (refreshTimerRef.current) {
         clearInterval(refreshTimerRef.current);
@@ -600,9 +596,9 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
   // 컴포넌트 마운트 시 차트 초기화
   useEffect(() => {
     const chartInstance = initChart();
-
+    
+    // 컴포넌트 언마운트 시 차트 인스턴스 정리
     return () => {
-      // 컴포넌트 언마운트 시 차트 인스턴스 정리
       if (chartInstanceRef.current) {
         chartInstanceRef.current.dispose();
       }
@@ -638,8 +634,7 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
         {logData.length === 0 && !isLoading ? (
           <div className="flex items-center justify-center h-96 text-gray-500">
             <p>
-              로그 데이터가 로드되지 않았습니다. 데이터가 수신되면 여기에
-              표시됩니다.
+              로그 데이터가 로드되지 않았습니다. 데이터가 수신되면 여기에 표시됩니다.
             </p>
           </div>
         ) : isLoading ? (
@@ -650,9 +645,12 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
             </div>
           </div>
         ) : (
-          <div
+          <div 
             ref={chartRef}
-            className="w-full log-chart" // removed inline styles; define height via external CSS
+            style={{ 
+              width: '100%', 
+              height: typeof chartHeight === 'number' ? `${chartHeight}px` : chartHeight 
+            }}
           />
         )}
       </CardBody>

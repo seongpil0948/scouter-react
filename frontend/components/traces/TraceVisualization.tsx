@@ -8,7 +8,7 @@ import { TraceItem } from "@/lib/store/telemetryStore";
 interface ChartConfig {
   title?: string;
   height?: string | number;
-  theme?: "light" | "dark";
+  theme?: 'light' | 'dark';
   maxDataPoints?: number;
   latencyThreshold?: number;
   autoUpdate?: boolean;
@@ -32,8 +32,8 @@ interface TraceVisualizationProps {
   traceData: TraceItem[];
   onDataPointClick: (trace: TraceItem) => void;
   config?: ChartConfig;
-  height?: string | number; // 기존 prop 지원
-  title?: string; // 기존 prop 지원
+  height?: string | number;
+  title?: string;
   queryFn?: (params: any) => Promise<any>;
   queryParams?: any;
 }
@@ -44,7 +44,7 @@ type DataPoint = [number, number]; // [timestamp, latency]
 const DEFAULT_CONFIG: ChartConfig = {
   title: "실시간 지연 시간 모니터링",
   height: 600,
-  theme: "light",
+  theme: 'light',
   maxDataPoints: 100,
   latencyThreshold: 300,
   autoUpdate: false,
@@ -61,7 +61,7 @@ const DEFAULT_CONFIG: ChartConfig = {
     max: 18,
     effectMin: 15,
     effectMax: 30,
-  },
+  }
 };
 
 /**
@@ -74,19 +74,19 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   traceData,
   onDataPointClick,
   config = {},
-  height, // 기존 prop 지원
-  title, // 기존 prop 지원
+  height, // 직접 높이 prop 사용
+  title, // 직접 제목 prop 사용
   queryFn,
   queryParams = {},
 }) => {
-  // 설정 병합 (기존 prop과 config 프로퍼티 모두 지원)
-  const mergedConfig = {
-    ...DEFAULT_CONFIG,
+  // 설정 병합 (height와 title은 별도 prop으로 받은 것이 우선)
+  const mergedConfig = { 
+    ...DEFAULT_CONFIG, 
     ...config,
     height: height || config.height || DEFAULT_CONFIG.height,
-    title: title || config.title || DEFAULT_CONFIG.title,
+    title: title || config.title || DEFAULT_CONFIG.title
   };
-
+  
   const {
     title: chartTitle,
     height: chartHeight,
@@ -116,12 +116,12 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
 
   // 차트 테마 설정
   const getTheme = () => {
-    if (theme === "dark") {
+    if (theme === 'dark') {
       return {
-        backgroundColor: "#141414",
-        textStyle: { color: "#ffffff" },
-        axisLine: { lineStyle: { color: "#333" } },
-        splitLine: { lineStyle: { color: "#333" } },
+        backgroundColor: '#141414',
+        textStyle: { color: '#ffffff' },
+        axisLine: { lineStyle: { color: '#333' } },
+        splitLine: { lineStyle: { color: '#333' } },
       };
     }
     return {};
@@ -137,7 +137,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
       title: {
         text: chartTitle,
         left: "center",
-        textStyle: theme === "dark" ? { color: "#fff" } : undefined,
+        textStyle: theme === 'dark' ? { color: '#fff' } : undefined,
       },
       legend: {
         data: ["일반 요청", "고지연 요청"],
@@ -145,29 +145,27 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         top: 10,
         selected: {
           "일반 요청": true,
-          "고지연 요청": true,
+          "고지연 요청": true
         },
-        textStyle: theme === "dark" ? { color: "#fff" } : undefined,
+        textStyle: theme === 'dark' ? { color: '#fff' } : undefined,
       },
       tooltip: {
         show: true,
         trigger: "item",
-        backgroundColor:
-          theme === "dark" ? "rgba(50,50,50,0.9)" : "rgba(255,255,255,0.9)",
-        borderColor: theme === "dark" ? "#333" : "#ccc",
-        textStyle: { color: theme === "dark" ? "#fff" : "#333" },
-        extraCssText: "box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);",
+        backgroundColor: theme === 'dark' ? 'rgba(50,50,50,0.9)' : 'rgba(255,255,255,0.9)',
+        borderColor: theme === 'dark' ? '#333' : '#ccc',
+        textStyle: { color: theme === 'dark' ? '#fff' : '#333' },
+        extraCssText: 'box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);',
         formatter: function (params: any) {
           if (!params.value || params.value.length < 2) {
             return "데이터 없음";
           }
-
+          
           const timestamp = params.value[0];
           const latency = params.value[1];
           const date = new Date(timestamp);
           const thresholdValue = latencyThreshold!;
-          const criticalColor =
-            colors?.critical || DEFAULT_CONFIG.colors?.critical;
+          const criticalColor = colors?.critical || DEFAULT_CONFIG.colors?.critical;
           const mediumColor = colors?.medium || DEFAULT_CONFIG.colors?.medium;
 
           return `
@@ -189,21 +187,21 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
           dataZoom: {
             yAxisIndex: "none",
             icon: {
-              zoom: "path://M10.525 5.025a7.5 7.5 0 100 15 7.5 7.5 0 000-15zM.75 12.525a9.75 9.75 0 1119.5 0 9.75 9.75 0 01-19.5 0zm17.53 7.78a.75.75 0 011.06 0l4.5 4.5a.75.75 0 11-1.06 1.06l-4.5-4.5a.75.75 0 010-1.06z",
-              back: "path://M11.78 5.22a.75.75 0 0 1 0 1.06l-3.72 3.72h11.19a.75.75 0 0 1 0 1.5H8.06l3.72 3.72a.75.75 0 1 1-1.06 1.06l-5-5a.751.751 0 0 1 0-1.06l5-5a.75.75 0 0 1 1.06 0",
-            },
+              zoom: 'path://M10.525 5.025a7.5 7.5 0 100 15 7.5 7.5 0 000-15zM.75 12.525a9.75 9.75 0 1119.5 0 9.75 9.75 0 01-19.5 0zm17.53 7.78a.75.75 0 011.06 0l4.5 4.5a.75.75 0 11-1.06 1.06l-4.5-4.5a.75.75 0 010-1.06z',
+              back: 'path://M11.78 5.22a.75.75 0 0 1 0 1.06l-3.72 3.72h11.19a.75.75 0 0 1 0 1.5H8.06l3.72 3.72a.75.75 0 1 1-1.06 1.06l-5-5a.751.751 0 0 1 0-1.06l5-5a.75.75 0 0 1 1.06 0'
+            }
           },
           restore: {
-            icon: "path://M4.75 4a.75.75 0 0 1 .75.75v1.5h9V4.75a.75.75 0 0 1 1.5 0v1.5h2.25c.966 0 1.75.784 1.75 1.75v11.5A1.75 1.75 0 0 1 18.25 21H2.75A1.75 1.75 0 0 1 1 19.5V8c0-.966.784-1.75 1.75-1.75H5v-1.5A.75.75 0 0 1 4.75 4m13.5 7V8a.25.25 0 0 0-.25-.25H2.75A.25.25 0 0 0 2.5 8v3h15.75m0 1.5H2.5v8c0 .138.112.25.25.25h15.5a.25.25 0 0 0 .25-.25v-8",
+            icon: 'path://M4.75 4a.75.75 0 0 1 .75.75v1.5h9V4.75a.75.75 0 0 1 1.5 0v1.5h2.25c.966 0 1.75.784 1.75 1.75v11.5A1.75 1.75 0 0 1 18.25 21H2.75A1.75 1.75 0 0 1 1 19.5V8c0-.966.784-1.75 1.75-1.75H5v-1.5A.75.75 0 0 1 4.75 4m13.5 7V8a.25.25 0 0 0-.25-.25H2.75A.25.25 0 0 0 2.5 8v3h15.75m0 1.5H2.5v8c0 .138.112.25.25.25h15.5a.25.25 0 0 0 .25-.25v-8'
           },
           saveAsImage: {
-            icon: "path://M10 1.5a.75.75 0 0 1 .75.75v1h1.5a.75.75 0 0 1 0 1.5h-1.5v1a.75.75 0 0 1-1.5 0v-1h-1.5a.75.75 0 0 1 0-1.5h1.5v-1A.75.75 0 0 1 10 1.5M4 8a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zm7-1a4 4 0 1 0 0 8 4 4 0 0 0 0-8m-4 4a4 4 0 1 1 8 0 4 4 0 0 1-8 0",
-          },
+            icon: 'path://M10 1.5a.75.75 0 0 1 .75.75v1h1.5a.75.75 0 0 1 0 1.5h-1.5v1a.75.75 0 0 1-1.5 0v-1h-1.5a.75.75 0 0 1 0-1.5h1.5v-1A.75.75 0 0 1 10 1.5M4 8a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zm7-1a4 4 0 1 0 0 8 4 4 0 0 0 0-8m-4 4a4 4 0 1 1 8 0 4 4 0 0 1-8 0'
+          }
         },
         right: 10,
         iconStyle: {
-          borderColor: theme === "dark" ? "#666" : "#666",
-          color: theme === "dark" ? "#ddd" : "#333",
+          borderColor: theme === 'dark' ? '#666' : '#666',
+          color: theme === 'dark' ? '#ddd' : '#333',
         },
       },
       dataZoom: [
@@ -212,20 +210,19 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
           start: 0,
           end: 100,
           zoomLock: false,
-          filterMode: "filter",
+          filterMode: 'filter',
         },
         {
           start: 0,
           end: 100,
           bottom: 10,
           height: 20,
-          borderColor: theme === "dark" ? "#444" : "#ddd",
+          borderColor: theme === 'dark' ? '#444' : '#ddd',
           textStyle: {
-            color: theme === "dark" ? "#fff" : undefined,
+            color: theme === 'dark' ? '#fff' : undefined,
           },
-          fillerColor:
-            theme === "dark" ? "rgba(80,80,80,0.3)" : "rgba(200,200,200,0.3)",
-          filterMode: "filter",
+          fillerColor: theme === 'dark' ? 'rgba(80,80,80,0.3)' : 'rgba(200,200,200,0.3)',
+          filterMode: 'filter',
         },
       ],
       xAxis: {
@@ -235,25 +232,25 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         nameLocation: "middle",
         nameGap: 30,
         nameTextStyle: {
-          color: theme === "dark" ? "#fff" : undefined,
+          color: theme === 'dark' ? '#fff' : undefined,
         },
         scale: true,
         axisLabel: {
           formatter: (value: number) => new Date(value).toLocaleTimeString(),
           show: true,
-          color: theme === "dark" ? "#ccc" : undefined,
+          color: theme === 'dark' ? '#ccc' : undefined,
         },
         axisLine: {
           lineStyle: {
-            color: theme === "dark" ? "#444" : "#ccc",
+            color: theme === 'dark' ? '#444' : '#ccc',
           },
         },
         splitLine: {
           show: true,
           lineStyle: {
             type: "dashed",
-            opacity: theme === "dark" ? 0.2 : 0.3,
-            color: theme === "dark" ? "#444" : "#ddd",
+            opacity: theme === 'dark' ? 0.2 : 0.3,
+            color: theme === 'dark' ? '#444' : '#ddd',
           },
         },
       },
@@ -263,25 +260,25 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         nameLocation: "middle",
         nameGap: 40,
         nameTextStyle: {
-          color: theme === "dark" ? "#fff" : undefined,
+          color: theme === 'dark' ? '#fff' : undefined,
         },
         min: 0,
         scale: true,
         axisLabel: {
           show: true,
-          color: theme === "dark" ? "#ccc" : undefined,
+          color: theme === 'dark' ? '#ccc' : undefined,
         },
         axisLine: {
           lineStyle: {
-            color: theme === "dark" ? "#444" : "#ccc",
+            color: theme === 'dark' ? '#444' : '#ccc',
           },
         },
         splitLine: {
           show: true,
           lineStyle: {
             type: "dashed",
-            opacity: theme === "dark" ? 0.2 : 0.3,
-            color: theme === "dark" ? "#444" : "#ddd",
+            opacity: theme === 'dark' ? 0.2 : 0.3,
+            color: theme === 'dark' ? '#444' : '#ddd',
           },
         },
       },
@@ -311,15 +308,12 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
           },
           itemStyle: {
             color: (params: any) => {
-              if (!params.value || params.value.length < 2)
-                return colors?.medium || DEFAULT_CONFIG.colors?.medium;
+              if (!params.value || params.value.length < 2) return colors?.medium || DEFAULT_CONFIG.colors?.medium;
               const latency = params.value[1];
               const lowColor = colors?.low || DEFAULT_CONFIG.colors?.low;
-              const mediumColor =
-                colors?.medium || DEFAULT_CONFIG.colors?.medium;
+              const mediumColor = colors?.medium || DEFAULT_CONFIG.colors?.medium;
               const highColor = colors?.high || DEFAULT_CONFIG.colors?.high;
-              const criticalColor =
-                colors?.critical || DEFAULT_CONFIG.colors?.critical;
+              const criticalColor = colors?.critical || DEFAULT_CONFIG.colors?.critical;
 
               if (latency < 100) return lowColor;
               if (latency < 200) return mediumColor;
@@ -334,8 +328,8 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
           emphasis: {
             itemStyle: {
               shadowBlur: 10,
-              borderWidth: 2,
-            },
+              borderWidth: 2
+            }
           },
           data: [],
         },
@@ -357,19 +351,24 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
             period: 3,
           },
           itemStyle: {
-            color:
-              colors?.effectScatter || DEFAULT_CONFIG.colors?.effectScatter,
+            color: colors?.effectScatter || DEFAULT_CONFIG.colors?.effectScatter,
             shadowBlur: 10,
             shadowColor: "rgba(255, 77, 79, 0.5)",
           },
           emphasis: {
-            scale: true,
+            scale: true
           },
           data: [],
         },
       ],
     };
-  }, [chartTitle, theme, latencyThreshold, colors, symbolSizes]);
+  }, [
+    chartTitle, 
+    theme, 
+    latencyThreshold, 
+    colors, 
+    symbolSizes
+  ]);
 
   // 차트 초기화 함수
   const initChart = useCallback(() => {
@@ -380,10 +379,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
       }
 
       // 새 차트 인스턴스 생성
-      const chartInstance = echarts.init(
-        chartRef.current,
-        theme === "dark" ? "dark" : undefined,
-      );
+      const chartInstance = echarts.init(chartRef.current, theme === 'dark' ? 'dark' : undefined);
       chartInstanceRef.current = chartInstance;
 
       // 초기 옵션 설정
@@ -421,112 +417,99 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   }, [getInitialOption, traceData, onDataPointClick, theme]);
 
   // 트레이스 데이터 처리 함수
-  const processTraceData = useCallback(
-    (newTraces: TraceItem[]) => {
-      if (!chartInstanceRef.current) {
-        return false;
+  const processTraceData = useCallback((newTraces: TraceItem[]) => {
+    if (!chartInstanceRef.current) {
+      return false;
+    }
+    
+    let newData: DataPoint[] = [];
+    let newHighLatencyData: DataPoint[] = [];
+    let hasNewData = false;
+
+    // 새로운 데이터 처리
+    newTraces.forEach((trace) => {
+      if (!trace || !trace.startTime || trace.duration === undefined) {
+        return; // 유효하지 않은 데이터는 건너뜀
       }
+      
+      const timestamp = trace.startTime;
+      const latency = trace.duration;
+      const thresholdValue = latencyThreshold || DEFAULT_CONFIG.latencyThreshold!;
 
-      let newData: DataPoint[] = [];
-      let newHighLatencyData: DataPoint[] = [];
-      let hasNewData = false;
+      // 데이터 유효성 검사
+      if (timestamp && latency !== undefined && !isNaN(timestamp) && !isNaN(latency)) {
+        const dataPoint: DataPoint = [timestamp, latency];
 
-      // 새로운 데이터 처리
-      newTraces.forEach((trace) => {
-        const timestamp = trace.startTime;
-        const latency = trace.duration;
-        const thresholdValue =
-          latencyThreshold || DEFAULT_CONFIG.latencyThreshold!;
+        newData.push(dataPoint);
 
-        // 데이터 유효성 검사
-        if (
-          timestamp &&
-          latency !== undefined &&
-          !isNaN(timestamp) &&
-          !isNaN(latency)
-        ) {
-          const dataPoint: DataPoint = [timestamp, latency];
-
-          newData.push(dataPoint);
-
-          if (latency > thresholdValue) {
-            newHighLatencyData.push(dataPoint);
-          }
-
-          hasNewData = true;
-          lastProcessedTimestampRef.current = Math.max(
-            lastProcessedTimestampRef.current,
-            timestamp,
-          );
+        if (latency > thresholdValue) {
+          newHighLatencyData.push(dataPoint);
         }
-      });
 
-      if (hasNewData) {
-        // 기존 데이터와 병합: use functional update to avoid stale state issues.
-        setChartData((prevData) => {
-          const updatedTimeSeriesData = [...prevData.timeSeriesData, ...newData]
-            .sort((a, b) => a[0] - b[0])
-            .slice(-maxDataPoints!); // non-null assertion added here
-          const updatedHighLatencyData = [
-            ...prevData.highLatencyData,
-            ...newHighLatencyData,
-          ]
-            .sort((a, b) => a[0] - b[0])
-            .slice(-maxDataPoints!); // non-null assertion added here
-
-          try {
-            // 차트 옵션 업데이트
-            chartInstanceRef.current?.setOption({
-              series: [
-                { data: updatedTimeSeriesData },
-                { data: updatedHighLatencyData },
-              ],
-            });
-
-            // 축 범위 자동 조정
-            if (
-              updatedTimeSeriesData.length > 0 ||
-              updatedHighLatencyData.length > 0
-            ) {
-              const allPoints = [
-                ...updatedTimeSeriesData,
-                ...updatedHighLatencyData,
-              ];
-              const timestamps = allPoints.map((point) => point[0]);
-              const minTime = Math.min(...timestamps);
-              const maxTime = Math.max(...timestamps);
-              const latencies = allPoints.map((point) => point[1]);
-              const maxLatency = Math.max(...latencies, 1) * 1.2;
-
-              chartInstanceRef.current?.setOption({
-                xAxis: { min: minTime, max: maxTime },
-                yAxis: { min: 0, max: maxLatency },
-              });
-            }
-          } catch (error) {
-            console.error("차트 업데이트 중 오류 발생:", error);
-          }
-
-          return {
-            timeSeriesData: updatedTimeSeriesData,
-            highLatencyData: updatedHighLatencyData,
-          };
-        });
+        hasNewData = true;
+        lastProcessedTimestampRef.current = Math.max(
+          lastProcessedTimestampRef.current,
+          timestamp
+        );
       }
+    });
 
-      return hasNewData;
-    },
-    [latencyThreshold, maxDataPoints],
-  );
+    if (hasNewData) {
+      // 기존 데이터와 병합: use functional update to avoid stale state issues.
+      setChartData(prevData => {
+        const updatedTimeSeriesData = [...prevData.timeSeriesData, ...newData]
+          .sort((a, b) => a[0] - b[0])
+          .slice(-maxDataPoints!); // maxDataPoints가 undefined일 수 없다고 TypeScript에 알려줌
+          
+        const updatedHighLatencyData = [...prevData.highLatencyData, ...newHighLatencyData]
+          .sort((a, b) => a[0] - b[0])
+          .slice(-maxDataPoints!);
+  
+        try {
+          // 차트 옵션 업데이트
+          chartInstanceRef.current?.setOption({
+            series: [
+              { data: updatedTimeSeriesData },
+              { data: updatedHighLatencyData },
+            ],
+          });
+  
+          // 축 범위 자동 조정
+          if (updatedTimeSeriesData.length > 0 || updatedHighLatencyData.length > 0) {
+            const allPoints = [...updatedTimeSeriesData, ...updatedHighLatencyData];
+            const timestamps = allPoints.map(point => point[0]);
+            const minTime = Math.min(...timestamps);
+            const maxTime = Math.max(...timestamps);
+            const latencies = allPoints.map(point => point[1]);
+            const maxLatency = Math.max(...latencies, 1) * 1.2;
+  
+            chartInstanceRef.current?.setOption({
+              xAxis: { min: minTime, max: maxTime },
+              yAxis: { min: 0, max: maxLatency },
+            });
+          }
+        } catch (error) {
+          console.error("차트 업데이트 중 오류 발생:", error);
+        }
+  
+        return { 
+          timeSeriesData: updatedTimeSeriesData, 
+          highLatencyData: updatedHighLatencyData 
+        };
+      });
+    }
+
+    return hasNewData;
+  }, [latencyThreshold, maxDataPoints]);
 
   // 데이터 가져오기 함수
   const fetchData = useCallback(async () => {
     if (!queryFn) return;
-
+    
     try {
       setIsLoading(true);
       const result = await queryFn(queryParams);
-
+      
       if (result && Array.isArray(result)) {
         processTraceData(result);
       }
@@ -543,11 +526,11 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     if (autoUpdate && queryFn) {
       // 최초 데이터 로드
       fetchData();
-
+      
       // 주기적으로 데이터 업데이트
       refreshTimerRef.current = setInterval(fetchData, updateInterval);
     }
-
+    
     return () => {
       if (refreshTimerRef.current) {
         clearInterval(refreshTimerRef.current);
@@ -559,12 +542,12 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   useEffect(() => {
     // 차트 초기화
     const chartInstance = initChart();
-
+    
     // 차트가 초기화되었으면 데이터 처리
     if (chartInstance && traceData && traceData.length > 0) {
       processTraceData(traceData);
     }
-
+    
     return () => {
       // 컴포넌트 언마운트 시 차트 인스턴스 정리
       if (chartInstanceRef.current) {
@@ -614,16 +597,12 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
             </div>
           </div>
         ) : (
-          <div
+          <div 
             ref={chartRef}
-            style={{
-              width: "100%",
-              height:
-                typeof chartHeight === "number"
-                  ? `${chartHeight}px`
-                  : chartHeight,
+            style={{ 
+              width: '100%', 
+              height: typeof chartHeight === 'number' ? `${chartHeight}px` : chartHeight 
             }}
-            className="trace-chart"
           />
         )}
       </CardBody>
