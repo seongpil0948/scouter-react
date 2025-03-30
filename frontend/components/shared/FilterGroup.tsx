@@ -68,7 +68,7 @@ const FilterGroup = <T extends string | number>({
             className="text-xs h-6 px-2 text-gray-600"
             size="sm"
             variant="ghost"
-            onClick={handleClearAll}
+            onPress={handleClearAll}
           >
             모두 지우기
           </Button>

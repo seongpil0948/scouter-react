@@ -13,6 +13,7 @@ import { Button } from "@heroui/button";
 import { Badge } from "@heroui/badge";
 import { EyeIcon, FilterIcon, SearchIcon, XIcon } from "lucide-react";
 import { Card, CardBody } from "@heroui/card";
+import { Input } from "@heroui/input";
 
 import { useFilterStore, LogItem } from "@/lib/store/telemetryStore";
 
@@ -133,18 +134,23 @@ const LogList: React.FC<LogListProps> = ({
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                 size={18}
               />
-              <input
+              <Input
                 className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 placeholder="메시지, 서비스 또는 트레이스 ID 검색..."
                 type="text"
+                aria-label="로그 검색"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
               />
               {searchInput && (
-                <button
+                <Button
                   className="absolute right-12 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   type="button"
-                  onClick={() => {
+                  color='primary'
+                  variant="ghost"
+                  aria-label="검색어 지우기"
+                  size="sm"
+                  onPress={() => {
                     setSearchInput("");
                     if (logFilters.search) {
                       setLogFilters({ search: "" });
@@ -152,7 +158,7 @@ const LogList: React.FC<LogListProps> = ({
                   }}
                 >
                   <XIcon size={16} />
-                </button>
+                </Button>
               )}
             </div>
           </form>

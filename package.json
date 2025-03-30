@@ -1,0 +1,6 @@
+{
+	"dependencies": {
+		"@heroui/card": "^2.2.15",
+		"@heroui/input": "^2.4.16"
+	}
+}

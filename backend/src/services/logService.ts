@@ -7,10 +7,18 @@ import logger from '../utils/logger';
  */
 function bufferToHex(buffer: Uint8Array | any): string {
   if (buffer instanceof Uint8Array) {
-    return Array.from(buffer)
-      .map(b => b.toString(16).padStart(2, '0'))
+    // Explicitly assert the type to number[]
+    return Array.from(buffer as Uint8Array)
+      .map((b: number) => b.toString(16).padStart(2, '0'))
       .join('');
   }
+  
+  if (buffer && typeof buffer === 'object' && buffer.type === 'Buffer') {
+    return Array.from(buffer.data || [] as number[])
+      .map((b: any) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  
   return buffer;
 }
 
@@ -62,6 +70,7 @@ export async function saveLogs(logs: any[]): Promise<void> {
     logger.info({ count: logs.length }, 'Successfully saved logs to database');
   } catch (error) {
     await client.query('ROLLBACK');
+    console.log("logs", logs[0]);
     logger.error({ error, count: logs.length }, 'Error saving logs to database');
     throw error;
   } finally {

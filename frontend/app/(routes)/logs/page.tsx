@@ -11,6 +11,7 @@ import {
 import Header from "@/components/layout/Header";
 import LogList from "@/components/logs/LogList";
 import LogDetail from "@/components/logs/LogDetail";
+import LogVisualization from "@/components/logs/LogVisualization";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -21,6 +22,7 @@ export default function LogsPage() {
   const [selectedLog, setSelectedLog] = useState<LogItem | null>(null);
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+  const [viewMode, setViewMode] = useState<"list" | "visualization">("list");
 
   // 로그 목록 가져오기
   const { data, error, isLoading } = useSWR(
@@ -82,17 +84,44 @@ export default function LogsPage() {
     }
   };
 
+  // 뷰 모드 전환 핸들러
+  const toggleViewMode = () => {
+    setViewMode(viewMode === "list" ? "visualization" : "list");
+  };
+
   return (
     <>
       <Header title="로그 분석" />
 
+      <div className="mb-4 flex justify-end">
+        <button
+          className={`px-4 py-2 rounded-md ${
+            viewMode === "list" 
+              ? "bg-blue-500 text-white" 
+              : "bg-gray-200 text-gray-700"
+          }`}
+          onClick={toggleViewMode}
+        >
+          {viewMode === "list" ? "차트 보기" : "목록 보기"}
+        </button>
+      </div>
+
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className={selectedLog ? "lg:col-span-7" : "lg:col-span-12"}>
-          <LogList
-            isLoading={isLoadingLogs}
-            logs={logs}
-            onSelectLog={handleSelectLog}
-          />
+          {viewMode === "list" ? (
+            <LogList
+              isLoading={isLoadingLogs}
+              logs={logs}
+              onSelectLog={handleSelectLog}
+            />
+          ) : (
+            <LogVisualization
+              height={600}
+              logData={logs}
+              onDataPointClick={handleSelectLog}
+              title="로그 발생 패턴 시각화"
+            />
+          )}
         </div>
 
         {selectedLog && (

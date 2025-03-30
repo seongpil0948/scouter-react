@@ -51,25 +51,26 @@ const SearchBar: React.FC<SearchBarProps> = ({
         <input
           className="w-full pl-10 pr-10 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           placeholder={placeholder}
+          aria-label='검색어를 입력하세요...'
           type="text"
           value={searchValue}
           onChange={handleChange}
         />
         {searchValue && (
-          <button
+          <Button
             className="absolute right-10 text-gray-400 hover:text-gray-600"
             type="button"
-            onClick={handleClear}
+            onPress={handleClear}
           >
             <XIcon size={18} />
-          </button>
+          </Button>
         )}
         <Button
           aria-label="검색"
           className="absolute right-1"
           size="sm"
           type="submit"
-          variant="primary"
+          color="primary"
         >
           검색
         </Button>

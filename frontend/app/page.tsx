@@ -60,6 +60,22 @@ export default function Home() {
     return `${(duration / 1000).toFixed(2)}s`;
   };
 
+  // 트레이스 시각화 설정
+  const traceVisualizationConfig = {
+    height: 400,
+    title: "실시간 요청 지연 시간",
+    latencyThreshold: 300,
+    maxDataPoints: 100,
+    autoUpdate: false,
+    colors: {
+      low: "#52c41a",      // 낮은 지연시간
+      medium: "#1890ff",   // 보통 지연시간
+      high: "#faad14",     // 높은 지연시간
+      critical: "#ff4d4f", // 임계치 초과 지연시간
+      effectScatter: "#ff4d4f", // 고지연 요청 색상
+    },
+  };
+
   return (
     <>
       <Header title="애플리케이션 성능 모니터링 대시보드" />
@@ -69,7 +85,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Card>
             <h2 className="flex flex-row items-center justify-between pb-2">
-              <h2 className="text-sm font-medium">모니터링 중인 서비스</h2>
+              <div className="text-sm font-medium">모니터링 중인 서비스</div>
               <Activity className="h-4 w-4 text-muted-foreground" />
             </h2>
             <CardBody>
@@ -79,7 +95,7 @@ export default function Home() {
 
           <Card>
             <h2 className="flex flex-row items-center justify-between pb-2">
-              <h2 className="text-sm font-medium">평균 응답 시간</h2>
+              <div className="text-sm font-medium">평균 응답 시간</div>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </h2>
             <CardBody>
@@ -91,7 +107,7 @@ export default function Home() {
 
           <Card>
             <h2 className="flex flex-row items-center justify-between pb-2">
-              <h2 className="text-sm font-medium">오류 발생 수</h2>
+              <div className="text-sm font-medium">오류 발생 수</div>
               <AlertTriangle className="h-4 w-4 text-red-500" />
             </h2>
             <CardBody>
@@ -101,7 +117,7 @@ export default function Home() {
 
           <Card>
             <h2 className="flex flex-row items-center justify-between pb-2">
-              <h2 className="text-sm font-medium">모니터링 기간</h2>
+              <div className="text-sm font-medium">모니터링 기간</div>
               <Info className="h-4 w-4 text-muted-foreground" />
             </h2>
             <CardBody>
@@ -116,12 +132,11 @@ export default function Home() {
 
         {/* 지연 시간 시각화 */}
         <div className="mb-6">
-          <h2 className="text-xl font-bold mb-4">실시간 지연 시간 모니터링</h2>
+          <div className="text-xl font-bold mb-4">실시간 지연 시간 모니터링</div>
           <TraceVisualization
-            height={400}
-            title="실시간 요청 지연 시간"
             traceData={traces}
             onDataPointClick={handleTraceClick}
+            config={traceVisualizationConfig}
           />
         </div>
 

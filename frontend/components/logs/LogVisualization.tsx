@@ -3,100 +3,93 @@ import React, { useEffect, useCallback, useRef, useState } from "react";
 import * as echarts from "echarts";
 import debounce from "lodash.debounce";
 import { Card, CardBody } from "@heroui/card";
-import { TraceItem } from "@/lib/store/telemetryStore";
+import { LogItem } from "@/lib/store/telemetryStore";
 
 interface ChartConfig {
   title?: string;
   height?: string | number;
   theme?: 'light' | 'dark';
   maxDataPoints?: number;
-  latencyThreshold?: number;
   autoUpdate?: boolean;
   updateInterval?: number;
   colors?: {
-    low?: string;
-    medium?: string;
-    high?: string;
-    critical?: string;
-    effectScatter?: string;
+    [key in 'FATAL' | 'ERROR' | 'WARN' | 'INFO' | 'DEBUG' | 'TRACE']?: string;
   };
   symbolSizes?: {
-    min?: number;
-    max?: number;
-    effectMin?: number;
-    effectMax?: number;
+    [key in 'FATAL' | 'ERROR' | 'WARN' | 'INFO' | 'DEBUG' | 'TRACE']?: number;
   };
 }
 
-interface TraceVisualizationProps {
-  traceData: TraceItem[];
-  onDataPointClick: (trace: TraceItem) => void;
+interface LogVisualizationProps {
+  logData: LogItem[];
+  onDataPointClick: (log: LogItem) => void;
   config?: ChartConfig;
-  height?: string | number; // 기존 prop 지원
-  title?: string; // 기존 prop 지원
   queryFn?: (params: any) => Promise<any>;
   queryParams?: any;
 }
 
-type DataPoint = [number, number]; // [timestamp, latency]
+type DataPoint = [number, number, string]; // [timestamp, severityValue, severity]
+
+// 심각도 수준을 숫자 값으로 매핑
+const severityToValueMap: Record<string, number> = {
+  "FATAL": 5,
+  "ERROR": 4,
+  "WARN": 3,
+  "INFO": 2,
+  "DEBUG": 1,
+  "TRACE": 0,
+};
 
 // 기본 설정 값
 const DEFAULT_CONFIG: ChartConfig = {
-  title: "실시간 지연 시간 모니터링",
+  title: "로그 발생 패턴 모니터링",
   height: 600,
   theme: 'light',
   maxDataPoints: 100,
-  latencyThreshold: 300,
   autoUpdate: false,
   updateInterval: 30000,
   colors: {
-    low: "#52c41a",
-    medium: "#1890ff",
-    high: "#faad14",
-    critical: "#ff4d4f",
-    effectScatter: "#ff4d4f",
+    "FATAL": "#9c1e1e", // 진한 빨강
+    "ERROR": "#ff4d4f", // 빨강
+    "WARN": "#faad14", // 노랑
+    "INFO": "#1890ff", // 파랑
+    "DEBUG": "#52c41a", // 초록
+    "TRACE": "#d9d9d9", // 회색
   },
   symbolSizes: {
-    min: 8,
-    max: 18,
-    effectMin: 15,
-    effectMax: 30,
-  }
+    "FATAL": 20,
+    "ERROR": 16,
+    "WARN": 14,
+    "INFO": 10,
+    "DEBUG": 8,
+    "TRACE": 6,
+  },
 };
 
 /**
- * 트레이스 시각화 컴포넌트
- * - 실시간 지연 시간 모니터링을 위한 시각화 제공
- * - 재사용 가능한 쿼리 함수 지원
- * - 고급 차트 옵션 구성 가능
+ * 로그 시각화 컴포넌트
+ * - 로그 데이터를 심각도별로 시각화
+ * - 심각도에 따라 다른 크기와 효과 적용
+ * - 커스터마이징 가능한 설정 지원
  */
-const TraceVisualization: React.FC<TraceVisualizationProps> = ({
-  traceData,
+const LogVisualization: React.FC<LogVisualizationProps> = ({
+  logData,
   onDataPointClick,
   config = {},
-  height, // 기존 prop 지원
-  title, // 기존 prop 지원
   queryFn,
   queryParams = {},
 }) => {
-  // 설정 병합 (기존 prop과 config 프로퍼티 모두 지원)
-  const mergedConfig = { 
-    ...DEFAULT_CONFIG, 
-    ...config,
-    height: height || config.height || DEFAULT_CONFIG.height,
-    title: title || config.title || DEFAULT_CONFIG.title
-  };
-  
+  // 설정 병합
+  const mergedConfig = { ...DEFAULT_CONFIG, ...config };
   const {
-    title: chartTitle,
-    height: chartHeight,
+    title,
+    height,
     theme,
-    maxDataPoints = DEFAULT_CONFIG.maxDataPoints,
-    latencyThreshold = DEFAULT_CONFIG.latencyThreshold,
+    maxDataPoints = DEFAULT_CONFIG.maxDataPoints, // added default to fix TS error
     autoUpdate,
     updateInterval,
-    colors,
-    symbolSizes,
+    colors = DEFAULT_CONFIG.colors,
+    symbolSizes = DEFAULT_CONFIG.symbolSizes,
   } = mergedConfig;
 
   const chartRef = useRef<HTMLDivElement>(null);
@@ -107,11 +100,14 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isChartInitialized, setIsChartInitialized] = useState<boolean>(false);
   const [chartData, setChartData] = useState<{
-    timeSeriesData: DataPoint[];
-    highLatencyData: DataPoint[];
+    [key: string]: DataPoint[];
   }>({
-    timeSeriesData: [],
-    highLatencyData: [],
+    FATAL: [],
+    ERROR: [],
+    WARN: [],
+    INFO: [],
+    DEBUG: [],
+    TRACE: [],
   });
 
   // 차트 테마 설정
@@ -130,23 +126,24 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   // 초기 차트 옵션 생성
   const getInitialOption = useCallback(() => {
     const themeOptions = getTheme();
+    const severities = ["FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
     return {
       ...themeOptions,
       animation: true,
       title: {
-        text: chartTitle,
+        text: title,
         left: "center",
         textStyle: theme === 'dark' ? { color: '#fff' } : undefined,
       },
       legend: {
-        data: ["일반 요청", "고지연 요청"],
+        data: severities,
         right: 10,
         top: 10,
-        selected: {
-          "일반 요청": true,
-          "고지연 요청": true
-        },
+        selected: severities.reduce((acc, severity) => {
+          acc[severity] = true;
+          return acc;
+        }, {} as Record<string, boolean>),
         textStyle: theme === 'dark' ? { color: '#fff' } : undefined,
       },
       tooltip: {
@@ -157,25 +154,23 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         textStyle: { color: theme === 'dark' ? '#fff' : '#333' },
         extraCssText: 'box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);',
         formatter: function (params: any) {
-          if (!params.value || params.value.length < 2) {
+          if (!params.value || params.value.length < 3) {
             return "데이터 없음";
           }
           
           const timestamp = params.value[0];
-          const latency = params.value[1];
+          const severity = params.value[2];
           const date = new Date(timestamp);
-          const thresholdValue = latencyThreshold!;
-          const criticalColor = colors?.critical || DEFAULT_CONFIG.colors?.critical;
-          const mediumColor = colors?.medium || DEFAULT_CONFIG.colors?.medium;
+          const colorValue = colors?.[severity as keyof typeof colors] || DEFAULT_CONFIG.colors?.[severity as keyof typeof DEFAULT_CONFIG.colors];
 
           return `
           <div style="font-weight: bold; margin-bottom: 5px;">
             ${date.toLocaleDateString()} ${date.toLocaleTimeString()}
           </div>
           <div style="display: flex; justify-content: space-between;">
-            <span>지연 시간:</span>
-            <span style="font-weight: bold; color: ${latency > thresholdValue ? criticalColor : mediumColor}">
-              ${latency.toFixed(2)}ms
+            <span>심각도:</span>
+            <span style="font-weight: bold; color: ${colorValue}">
+              ${severity}
             </span>
           </div>
         `;
@@ -256,17 +251,22 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
       },
       yAxis: {
         type: "value",
-        name: "지연 시간 (ms)",
+        name: "심각도 수준",
         nameLocation: "middle",
         nameGap: 40,
         nameTextStyle: {
           color: theme === 'dark' ? '#fff' : undefined,
         },
         min: 0,
-        scale: true,
+        max: 5,
+        interval: 1,
         axisLabel: {
           show: true,
           color: theme === 'dark' ? '#ccc' : undefined,
+          formatter: function (value: number) {
+            const labels = ["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"];
+            return labels[value] || "";
+          }
         },
         axisLine: {
           lineStyle: {
@@ -291,67 +291,39 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
       },
       series: [
         {
-          name: "일반 요청",
-          type: "scatter",
-          large: true,
-          largeThreshold: 100,
-          progressive: 400,
-          progressiveThreshold: 1000,
-          progressiveRepaint: true,
+          name: "FATAL",
+          type: "effectScatter",
           symbol: "circle",
-          symbolSize: (value: number[]) => {
-            if (!value || value.length < 2) return symbolSizes?.min || 8;
-            const latency = value[1];
-            const minSize = symbolSizes?.min || 8;
-            const maxSize = symbolSizes?.max || 18;
-            return minSize + Math.min(latency / 50, maxSize - minSize);
+          symbolSize: symbolSizes?.FATAL || DEFAULT_CONFIG.symbolSizes?.FATAL,
+          showEffectOn: "render",
+          rippleEffect: {
+            brushType: "stroke",
+            scale: 4,
+            period: 2.5,
           },
           itemStyle: {
-            color: (params: any) => {
-              if (!params.value || params.value.length < 2) return colors?.medium || DEFAULT_CONFIG.colors?.medium;
-              const latency = params.value[1];
-              const lowColor = colors?.low || DEFAULT_CONFIG.colors?.low;
-              const mediumColor = colors?.medium || DEFAULT_CONFIG.colors?.medium;
-              const highColor = colors?.high || DEFAULT_CONFIG.colors?.high;
-              const criticalColor = colors?.critical || DEFAULT_CONFIG.colors?.critical;
-
-              if (latency < 100) return lowColor;
-              if (latency < 200) return mediumColor;
-              if (latency < 300) return highColor;
-
-              return criticalColor;
-            },
-            opacity: 0.8,
-            shadowBlur: 5,
-            shadowColor: "rgba(0, 0, 0, 0.2)",
+            color: colors?.FATAL || DEFAULT_CONFIG.colors?.FATAL,
+            shadowBlur: 10,
+            shadowColor: "rgba(156, 30, 30, 0.5)",
           },
           emphasis: {
-            itemStyle: {
-              shadowBlur: 10,
-              borderWidth: 2
-            }
+            scale: true
           },
           data: [],
         },
         {
-          name: "고지연 요청",
+          name: "ERROR",
           type: "effectScatter",
           symbol: "circle",
-          symbolSize: (value: number[]) => {
-            if (!value || value.length < 2) return symbolSizes?.effectMin || 15;
-            const latency = value[1];
-            const minSize = symbolSizes?.effectMin || 15;
-            const maxSize = symbolSizes?.effectMax || 30;
-            return minSize + Math.min(latency / 50, maxSize - minSize);
-          },
+          symbolSize: symbolSizes?.ERROR || DEFAULT_CONFIG.symbolSizes?.ERROR,
           showEffectOn: "render",
           rippleEffect: {
             brushType: "stroke",
-            scale: 3,
+            scale: 3.5,
             period: 3,
           },
           itemStyle: {
-            color: colors?.effectScatter || DEFAULT_CONFIG.colors?.effectScatter,
+            color: colors?.ERROR || DEFAULT_CONFIG.colors?.ERROR,
             shadowBlur: 10,
             shadowColor: "rgba(255, 77, 79, 0.5)",
           },
@@ -360,12 +332,71 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
           },
           data: [],
         },
+        {
+          name: "WARN",
+          type: "effectScatter",
+          symbol: "circle",
+          symbolSize: symbolSizes?.WARN || DEFAULT_CONFIG.symbolSizes?.WARN,
+          showEffectOn: "render",
+          rippleEffect: {
+            brushType: "stroke",
+            scale: 3,
+            period: 4,
+          },
+          itemStyle: {
+            color: colors?.WARN || DEFAULT_CONFIG.colors?.WARN,
+            shadowBlur: 8,
+            shadowColor: "rgba(250, 173, 20, 0.5)",
+          },
+          emphasis: {
+            scale: true
+          },
+          data: [],
+        },
+        {
+          name: "INFO",
+          type: "scatter",
+          symbol: "circle",
+          symbolSize: symbolSizes?.INFO || DEFAULT_CONFIG.symbolSizes?.INFO,
+          itemStyle: {
+            color: colors?.INFO || DEFAULT_CONFIG.colors?.INFO,
+            opacity: 0.8,
+            shadowBlur: 5,
+            shadowColor: "rgba(24, 144, 255, 0.2)",
+          },
+          data: [],
+        },
+        {
+          name: "DEBUG",
+          type: "scatter",
+          symbol: "circle",
+          symbolSize: symbolSizes?.DEBUG || DEFAULT_CONFIG.symbolSizes?.DEBUG,
+          itemStyle: {
+            color: colors?.DEBUG || DEFAULT_CONFIG.colors?.DEBUG,
+            opacity: 0.7,
+            shadowBlur: 3,
+            shadowColor: "rgba(82, 196, 26, 0.2)",
+          },
+          data: [],
+        },
+        {
+          name: "TRACE",
+          type: "scatter",
+          symbol: "circle",
+          symbolSize: symbolSizes?.TRACE || DEFAULT_CONFIG.symbolSizes?.TRACE,
+          itemStyle: {
+            color: colors?.TRACE || DEFAULT_CONFIG.colors?.TRACE,
+            opacity: 0.6,
+            shadowBlur: 2,
+            shadowColor: "rgba(217, 217, 217, 0.2)",
+          },
+          data: [],
+        },
       ],
     };
   }, [
-    chartTitle, 
+    title, 
     theme, 
-    latencyThreshold, 
     colors, 
     symbolSizes
   ]);
@@ -396,16 +427,16 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         ) {
           const timestamp = params.value[0] as number;
 
-          // 클릭된 지점과 가장 가까운 트레이스 찾기
-          const closestTrace = traceData.reduce((closest, trace) => {
-            const currentDiff = Math.abs(trace.startTime - timestamp);
-            const closestDiff = Math.abs((closest?.startTime || 0) - timestamp);
+          // 클릭된 지점과 가장 가까운 로그 찾기
+          const closestLog = logData.reduce((closest, log) => {
+            const currentDiff = Math.abs(log.timestamp - timestamp);
+            const closestDiff = Math.abs((closest?.timestamp || 0) - timestamp);
 
-            return currentDiff < closestDiff ? trace : closest;
-          }, traceData[0]);
+            return currentDiff < closestDiff ? log : closest;
+          }, logData[0]);
 
-          if (closestTrace) {
-            onDataPointClick(closestTrace);
+          if (closestLog) {
+            onDataPointClick(closestLog);
           }
         }
       });
@@ -414,32 +445,44 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
       return chartInstance;
     }
     return null;
-  }, [getInitialOption, traceData, onDataPointClick, theme]);
+  }, [getInitialOption, logData, onDataPointClick, theme]);
 
-  // 트레이스 데이터 처리 함수
-  const processTraceData = useCallback((newTraces: TraceItem[]) => {
+  // 로그 데이터 처리 함수
+  const processLogData = useCallback((newLogs: LogItem[]) => {
     if (!chartInstanceRef.current) {
       return false;
     }
     
-    let newData: DataPoint[] = [];
-    let newHighLatencyData: DataPoint[] = [];
+    // 심각도별 데이터 준비
+    const newDataBySeverity: { [key: string]: DataPoint[] } = {
+      FATAL: [],
+      ERROR: [],
+      WARN: [],
+      INFO: [],
+      DEBUG: [],
+      TRACE: [],
+    };
+    
     let hasNewData = false;
 
     // 새로운 데이터 처리
-    newTraces.forEach((trace) => {
-      const timestamp = trace.startTime;
-      const latency = trace.duration;
-      const thresholdValue = latencyThreshold || DEFAULT_CONFIG.latencyThreshold!;
+    newLogs.forEach((log) => {
+      const timestamp = log.timestamp;
 
-      // 데이터 유효성 검사
-      if (timestamp && latency !== undefined && !isNaN(timestamp) && !isNaN(latency)) {
-        const dataPoint: DataPoint = [timestamp, latency];
+      const severity = log.severity || "INFO";
+      const severityValue = severityToValueMap[severity] !== undefined 
+        ? severityToValueMap[severity] 
+        : 2; // 기본값은 INFO(2)
 
-        newData.push(dataPoint);
+      if (timestamp) {
+        const dataPoint: DataPoint = [timestamp, severityValue, severity];
 
-        if (latency > thresholdValue) {
-          newHighLatencyData.push(dataPoint);
+        // 해당 심각도에 데이터 추가
+        if (newDataBySeverity[severity]) {
+          newDataBySeverity[severity].push(dataPoint);
+        } else {
+          // 알 수 없는 심각도면 INFO로 처리
+          newDataBySeverity.INFO.push([timestamp, 2, "INFO"]);
         }
 
         hasNewData = true;
@@ -451,48 +494,61 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     });
 
     if (hasNewData) {
-      // 기존 데이터와 병합: use functional update to avoid stale state issues.
-      setChartData(prevData => {
-        const updatedTimeSeriesData = [...prevData.timeSeriesData, ...newData]
+      // 현재 데이터 참조
+      const currentData = { ...chartData };
+      
+      // 심각도별로 데이터 업데이트
+      const severities = ["FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
+      const updatedDataBySeverity: { [key: string]: DataPoint[] } = {};
+      
+      severities.forEach(severity => {
+        // 새 데이터 추가 및 정렬
+        updatedDataBySeverity[severity] = [
+          ...(currentData[severity] || []),
+          ...(newDataBySeverity[severity] || [])
+        ]
           .sort((a, b) => a[0] - b[0])
           .slice(-maxDataPoints!); // non-null assertion added here
-        const updatedHighLatencyData = [...prevData.highLatencyData, ...newHighLatencyData]
-          .sort((a, b) => a[0] - b[0])
-          .slice(-maxDataPoints!); // non-null assertion added here
-  
-        try {
-          // 차트 옵션 업데이트
-          chartInstanceRef.current?.setOption({
-            series: [
-              { data: updatedTimeSeriesData },
-              { data: updatedHighLatencyData },
-            ],
-          });
-  
-          // 축 범위 자동 조정
-          if (updatedTimeSeriesData.length > 0 || updatedHighLatencyData.length > 0) {
-            const allPoints = [...updatedTimeSeriesData, ...updatedHighLatencyData];
-            const timestamps = allPoints.map(point => point[0]);
-            const minTime = Math.min(...timestamps);
-            const maxTime = Math.max(...timestamps);
-            const latencies = allPoints.map(point => point[1]);
-            const maxLatency = Math.max(...latencies, 1) * 1.2;
-  
-            chartInstanceRef.current?.setOption({
-              xAxis: { min: minTime, max: maxTime },
-              yAxis: { min: 0, max: maxLatency },
-            });
-          }
-        } catch (error) {
-          console.error("차트 업데이트 중 오류 발생:", error);
-        }
-  
-        return { timeSeriesData: updatedTimeSeriesData, highLatencyData: updatedHighLatencyData };
       });
+      
+      // 데이터 참조 업데이트
+      setChartData(updatedDataBySeverity);
+      
+      // 시리즈 데이터 준비
+      const seriesData = severities.map(severity => ({
+        data: updatedDataBySeverity[severity] || []
+      }));
+      
+      try {
+        // ECharts 인스턴스에 직접 데이터 업데이트
+        chartInstanceRef.current.setOption({
+          series: seriesData
+        });
+
+        // X축 범위 동적 조정
+        // 모든 데이터를 합쳐서 최소/최대 타임스탬프 찾기
+        const allDataPoints = Object.values(updatedDataBySeverity)
+          .flat()
+          .map(point => point[0]);
+        
+        if (allDataPoints.length > 0) {
+          const minTime = Math.min(...allDataPoints);
+          const maxTime = Math.max(...allDataPoints);
+          
+          chartInstanceRef.current.setOption({
+            xAxis: {
+              min: minTime,
+              max: maxTime,
+            }
+          });
+        }
+      } catch (error) {
+        console.error("차트 업데이트 중 오류 발생:", error);
+      }
     }
 
     return hasNewData;
-  }, [latencyThreshold, maxDataPoints]);
+  }, [chartData, maxDataPoints]);
 
   // 데이터 가져오기 함수
   const fetchData = useCallback(async () => {
@@ -503,14 +559,14 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
       const result = await queryFn(queryParams);
       
       if (result && Array.isArray(result)) {
-        processTraceData(result);
+        processLogData(result);
       }
     } catch (error) {
       console.error("데이터 가져오기 오류:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [queryFn, queryParams, processTraceData]);
+  }, [queryFn, queryParams, processLogData]);
 
   // 자동 업데이트 설정
   useEffect(() => {
@@ -530,15 +586,9 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     };
   }, [autoUpdate, updateInterval, fetchData, queryFn]);
 
-  // 차트 초기화 및 데이터 로드 시퀀스 조정
+  // 컴포넌트 마운트 시 차트 초기화
   useEffect(() => {
-    // 차트 초기화
     const chartInstance = initChart();
-    
-    // 차트가 초기화되었으면 데이터 처리
-    if (chartInstance && traceData && traceData.length > 0) {
-      processTraceData(traceData);
-    }
     
     return () => {
       // 컴포넌트 언마운트 시 차트 인스턴스 정리
@@ -546,11 +596,17 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         chartInstanceRef.current.dispose();
       }
     };
-  }, [initChart, traceData, processTraceData]);
+  }, [initChart]);
 
-  // 차트 리사이즈
+  // 로그 데이터 변경 효과
   useEffect(() => {
-    // 리사이즈 핸들러
+    if (isChartInitialized && logData.length > 0) {
+      processLogData(logData);
+    }
+  }, [logData, processLogData, isChartInitialized]);
+
+  // 리사이즈 핸들러
+  useEffect(() => {
     const handleResize = debounce(() => {
       if (chartInstanceRef.current) {
         chartInstanceRef.current.resize();
@@ -559,13 +615,6 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
 
     window.addEventListener("resize", handleResize);
 
-    // 컴포넌트 마운트 후 차트 크기 조정
-    setTimeout(() => {
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.resize();
-      }
-    }, 0);
-
     return () => {
       window.removeEventListener("resize", handleResize);
       handleResize.cancel();
@@ -573,12 +622,12 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   }, []);
 
   return (
-    <Card className="w-full">
+    <Card>
       <CardBody className="p-4">
-        {traceData.length === 0 && !isLoading ? (
+        {logData.length === 0 && !isLoading ? (
           <div className="flex items-center justify-center h-96 text-gray-500">
             <p>
-              데이터가 로드되지 않았습니다. 데이터가 수신되면 여기에 표시됩니다.
+              로그 데이터가 로드되지 않았습니다. 데이터가 수신되면 여기에 표시됩니다.
             </p>
           </div>
         ) : isLoading ? (
@@ -591,11 +640,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         ) : (
           <div 
             ref={chartRef}
-            style={{ 
-              width: '100%', 
-              height: typeof chartHeight === 'number' ? `${chartHeight}px` : chartHeight 
-            }}
-            className="trace-chart"
+            className="w-full log-chart" // removed inline styles; define height via external CSS
           />
         )}
       </CardBody>
@@ -603,4 +648,4 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   );
 };
 
-export default React.memo(TraceVisualization);
+export default React.memo(LogVisualization);
