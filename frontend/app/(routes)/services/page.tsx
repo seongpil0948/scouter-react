@@ -1,13 +1,13 @@
-'use client';
-import { useEffect, useState } from 'react';
-import useSWR from 'swr';
-import { useRouter } from 'next/navigation';
-import { Tabs, Tab } from '@heroui/tabs';
+"use client";
+import { useEffect, useState } from "react";
+import useSWR from "swr";
+import { useRouter } from "next/navigation";
+import { Tabs, Tab } from "@heroui/tabs";
 
-import { useFilterStore, ServiceMetric } from '@/lib/store/telemetryStore';
-import Header from '@/components/layout/Header';
-import ServiceList from '@/components/services/ServiceList';
-import ServiceMap from '@/components/services/ServiceMap';
+import { useFilterStore, ServiceMetric } from "@/lib/store/telemetryStore";
+import Header from "@/components/layout/Header";
+import ServiceList from "@/components/services/ServiceList";
+import ServiceMap from "@/components/services/ServiceMap";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -20,7 +20,7 @@ export default function ServicesPage() {
   const { data, error, isLoading } = useSWR(
     `/api/telemetry/services?startTime=${timeRange.startTime}&endTime=${timeRange.endTime}`,
     fetcher,
-    { refreshInterval: 30000 } // 30초마다 자동 갱신
+    { refreshInterval: 30000 }, // 30초마다 자동 갱신
   );
 
   // 데이터 처리
@@ -47,10 +47,18 @@ export default function ServicesPage() {
       <div className="mt-4">
         <Tabs className="w-full mb-4">
           <Tab key="map" title="서비스 맵">
-            <ServiceMap height={600} services={services} onSelectService={handleMapSelectService} />
+            <ServiceMap
+              height={600}
+              services={services}
+              onSelectService={handleMapSelectService}
+            />
           </Tab>
           <Tab key="list" title="서비스 목록">
-            <ServiceList isLoading={isLoading} services={services} onSelectService={handleSelectService} />
+            <ServiceList
+              isLoading={isLoading}
+              services={services}
+              onSelectService={handleSelectService}
+            />
           </Tab>
         </Tabs>
       </div>

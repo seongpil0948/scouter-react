@@ -26,7 +26,7 @@ interface TraceData {
 }
 
 // API 요청 처리 함수
-const fetcher = (url: string) => 
+const fetcher = (url: string) =>
   fetch(url)
     .then((res) => {
       if (!res.ok) {
@@ -34,34 +34,38 @@ const fetcher = (url: string) =>
       }
       return res.json();
     })
-    .catch(error => {
+    .catch((error) => {
       console.error("API 요청 오류:", error);
       throw error;
     });
 
 export const useTraceData = (traceId: string) => {
   // SWR을 사용하여 트레이스 데이터 가져오기
-  const { data: traceData, error, isLoading } = useSWR<TraceData>(
+  const {
+    data: traceData,
+    error,
+    isLoading,
+  } = useSWR<TraceData>(
     traceId ? `/api/telemetry/traces/${traceId}` : null,
     fetcher,
     {
       revalidateOnFocus: false,
       dedupingInterval: 30000, // 30초 동안 중복 요청 방지
       errorRetryCount: 3,
-    }
+    },
   );
 
   // 시간 포맷팅
   const formatTime = useCallback((timestamp: number) => {
     console.log("timestamp", timestamp);
-    return new Date(timestamp).toLocaleString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
+    return new Date(timestamp).toLocaleString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
     });
   }, []);
 
@@ -96,7 +100,7 @@ export const useTraceData = (traceId: string) => {
     });
 
     // 자식 스팬 정렬 (시작 시간순)
-    Object.keys(childrenMap).forEach(parentId => {
+    Object.keys(childrenMap).forEach((parentId) => {
       childrenMap[parentId].sort((a, b) => a.startTime - b.startTime);
     });
 
@@ -112,6 +116,6 @@ export const useTraceData = (traceId: string) => {
     isLoading,
     formatTime,
     formatDuration,
-    spanHierarchy
+    spanHierarchy,
   };
 };

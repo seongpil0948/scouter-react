@@ -5,7 +5,14 @@ import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import { Activity, AlertTriangle, Clock, Info } from "lucide-react";
 import { Card, CardBody } from "@heroui/card";
-import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from "@heroui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
+} from "@heroui/table";
 import { Badge } from "@heroui/badge";
 
 import {
@@ -71,9 +78,9 @@ export default function Home() {
     maxDataPoints: 100,
     autoUpdate: false,
     colors: {
-      low: "#52c41a",      // 낮은 지연시간
-      medium: "#1890ff",   // 보통 지연시간
-      high: "#faad14",     // 높은 지연시간
+      low: "#52c41a", // 낮은 지연시간
+      medium: "#1890ff", // 보통 지연시간
+      high: "#faad14", // 높은 지연시간
       critical: "#ff4d4f", // 임계치 초과 지연시간
       effectScatter: "#ff4d4f", // 고지연 요청 색상
     },
@@ -135,7 +142,9 @@ export default function Home() {
 
         {/* 지연 시간 시각화 */}
         <div className="mb-6">
-          <div className="text-xl font-bold mb-4">실시간 지연 시간 모니터링</div>
+          <div className="text-xl font-bold mb-4">
+            실시간 지연 시간 모니터링
+          </div>
           <TraceVisualization
             traceData={traces}
             onDataPointClick={handleTraceClick}
@@ -148,10 +157,7 @@ export default function Home() {
           <h2 className="text-xl font-bold mb-4">상위 지연 시간 서비스</h2>
           <Card>
             <CardBody className="p-0">
-              <Table
-                aria-label="상위 지연 시간 서비스"
-                removeWrapper
-              >
+              <Table aria-label="상위 지연 시간 서비스" removeWrapper>
                 <TableHeader>
                   <TableColumn>서비스</TableColumn>
                   <TableColumn>요청 수</TableColumn>
@@ -161,16 +167,13 @@ export default function Home() {
                 </TableHeader>
                 <TableBody
                   emptyContent={
-                    isLoadingMetrics ? 
-                    "데이터를 불러오는 중..." : 
-                    "서비스 데이터가 없습니다."
+                    isLoadingMetrics
+                      ? "데이터를 불러오는 중..."
+                      : "서비스 데이터가 없습니다."
                   }
                 >
                   {topServices.map((service) => (
-                    <TableRow 
-                      key={service.name} 
-                      className="hover:bg-gray-50"
-                    >
+                    <TableRow key={service.name} className="hover:bg-gray-50">
                       <TableCell>
                         <div className="font-medium text-gray-900">
                           {service.name}

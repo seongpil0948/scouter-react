@@ -77,7 +77,8 @@ const TraceList: React.FC<TraceListProps> = ({
 
         return (
           (trace.name && trace.name.toLowerCase().includes(searchLower)) ||
-          (trace.serviceName && trace.serviceName.toLowerCase().includes(searchLower)) ||
+          (trace.serviceName &&
+            trace.serviceName.toLowerCase().includes(searchLower)) ||
           (trace.traceId && trace.traceId.toLowerCase().includes(searchLower))
         );
       }
@@ -245,7 +246,7 @@ const TraceList: React.FC<TraceListProps> = ({
               <TableColumn key="duration">지연 시간</TableColumn>
               <TableColumn key="actions">동작</TableColumn>
             </TableHeader>
-            <TableBody 
+            <TableBody
               items={filteredTraces}
               emptyContent={
                 <div className="py-8 text-center text-gray-500">
@@ -278,7 +279,10 @@ const TraceList: React.FC<TraceListProps> = ({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" onPress={() => onSelectTrace(trace)}>
+                    <Button
+                      variant="ghost"
+                      onPress={() => onSelectTrace(trace)}
+                    >
                       <EyeIcon className="text-gray-600" size={18} />
                     </Button>
                   </TableCell>

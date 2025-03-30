@@ -5,15 +5,16 @@
 // 타임스탬프 정규화 함수
 function normalizeTimestamp(timestamp: number | string): number {
   // 1. 문자열을 숫자로 변환
-  const ts = typeof timestamp === 'string' ? parseInt(timestamp, 10) : timestamp;
-  
+  const ts =
+    typeof timestamp === "string" ? parseInt(timestamp, 10) : timestamp;
+
   // 2. 타임스탬프 길이 확인 (13자리가 아니면 밀리초 단위로 변환)
   const tsStr = ts.toString();
   if (tsStr.length === 10) {
     // 초 단위 타임스탬프를 밀리초로 변환
     return ts * 1000;
   }
-  
+
   return ts;
 }
 
@@ -25,7 +26,7 @@ export function formatDateTime(timestamp: number | string): string {
   // 날짜가 유효한지 확인
   if (isNaN(date.getTime())) {
     console.warn(`Invalid timestamp: ${timestamp}`);
-    return 'Invalid Date';
+    return "Invalid Date";
   }
 
   return date.toLocaleString("ko-KR", {
@@ -47,7 +48,7 @@ export function formatDate(timestamp: number | string): string {
   // 날짜가 유효한지 확인
   if (isNaN(date.getTime())) {
     console.warn(`Invalid timestamp: ${timestamp}`);
-    return 'Invalid Date';
+    return "Invalid Date";
   }
 
   return date.toLocaleDateString("ko-KR", {
@@ -65,7 +66,7 @@ export function formatTime(timestamp: number | string): string {
   // 날짜가 유효한지 확인
   if (isNaN(date.getTime())) {
     console.warn(`Invalid timestamp: ${timestamp}`, new Error().stack);
-    return 'Invalid Date';
+    return "Invalid Date";
   }
 
   return date.toLocaleString("ko-KR", {
@@ -151,7 +152,10 @@ export function timestampToIso(timestamp: number | string): string {
 }
 
 // 시간 범위 문자열 생성 (시작 시간 ~ 종료 시간)
-export function formatTimeRange(startTime: number | string, endTime: number | string): string {
+export function formatTimeRange(
+  startTime: number | string,
+  endTime: number | string,
+): string {
   return `${formatDateTime(startTime)} ~ ${formatDateTime(endTime)}`;
 }
 

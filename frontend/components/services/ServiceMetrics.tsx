@@ -16,7 +16,7 @@ const ServiceMetrics: React.FC<ServiceMetricsProps> = ({
   const chartRefLatency = useRef<HTMLDivElement>(null);
   const chartRefRequests = useRef<HTMLDivElement>(null);
   const chartRefError = useRef<HTMLDivElement>(null);
-  
+
   const chartInstanceLatency = useRef<echarts.ECharts | null>(null);
   const chartInstanceRequests = useRef<echarts.ECharts | null>(null);
   const chartInstanceError = useRef<echarts.ECharts | null>(null);
@@ -34,7 +34,7 @@ const ServiceMetrics: React.FC<ServiceMetricsProps> = ({
 
     // 시간 기준 정렬
     const sortedData = [...service.timeSeriesData].sort(
-      (a, b) => a.timestamp - b.timestamp
+      (a, b) => a.timestamp - b.timestamp,
     );
 
     const timestamps = sortedData.map((data) => new Date(data.timestamp));
@@ -74,8 +74,8 @@ const ServiceMetrics: React.FC<ServiceMetricsProps> = ({
         formatter: function (params: any) {
           const timestamp = params[0].axisValue;
           const value = params[0].data;
-          
-          return `${timestamp}<br />${value < 1000 ? value.toFixed(2) + ' ms' : (value / 1000).toFixed(2) + ' s'}`;
+
+          return `${timestamp}<br />${value < 1000 ? value.toFixed(2) + " ms" : (value / 1000).toFixed(2) + " s"}`;
         },
       },
       grid: {
@@ -102,7 +102,9 @@ const ServiceMetrics: React.FC<ServiceMetricsProps> = ({
         nameGap: 50,
         axisLabel: {
           formatter: function (value: number) {
-            return value < 1000 ? value + ' ms' : (value / 1000).toFixed(1) + ' s';
+            return value < 1000
+              ? value + " ms"
+              : (value / 1000).toFixed(1) + " s";
           },
         },
       },
@@ -143,14 +145,14 @@ const ServiceMetrics: React.FC<ServiceMetricsProps> = ({
     };
 
     chartInstance.setOption(option);
-    
+
     // 반응형 차트를 위한 리사이즈 이벤트 리스너
     const handleResize = () => {
       chartInstance.resize();
     };
-    
+
     window.addEventListener("resize", handleResize);
-    
+
     return () => {
       window.removeEventListener("resize", handleResize);
     };
@@ -180,7 +182,7 @@ const ServiceMetrics: React.FC<ServiceMetricsProps> = ({
         formatter: function (params: any) {
           const timestamp = params[0].axisValue;
           const value = params[0].data;
-          
+
           return `${timestamp}<br />${value.toLocaleString()} 요청`;
         },
       },
@@ -220,14 +222,14 @@ const ServiceMetrics: React.FC<ServiceMetricsProps> = ({
     };
 
     chartInstance.setOption(option);
-    
+
     // 반응형 차트를 위한 리사이즈 이벤트 리스너
     const handleResize = () => {
       chartInstance.resize();
     };
-    
+
     window.addEventListener("resize", handleResize);
-    
+
     return () => {
       window.removeEventListener("resize", handleResize);
     };
@@ -257,7 +259,7 @@ const ServiceMetrics: React.FC<ServiceMetricsProps> = ({
         formatter: function (params: any) {
           const timestamp = params[0].axisValue;
           const value = params[0].data;
-          
+
           return `${timestamp}<br />${value.toFixed(2)}%`;
         },
       },
@@ -327,14 +329,14 @@ const ServiceMetrics: React.FC<ServiceMetricsProps> = ({
     };
 
     chartInstance.setOption(option);
-    
+
     // 반응형 차트를 위한 리사이즈 이벤트 리스너
     const handleResize = () => {
       chartInstance.resize();
     };
-    
+
     window.addEventListener("resize", handleResize);
-    
+
     return () => {
       window.removeEventListener("resize", handleResize);
     };
@@ -357,7 +359,7 @@ const ServiceMetrics: React.FC<ServiceMetricsProps> = ({
       if (chartInstanceError.current) {
         chartInstanceError.current.dispose();
       }
-      
+
       // 리사이즈 이벤트 리스너 정리
       if (cleanupLatency) cleanupLatency();
       if (cleanupRequests) cleanupRequests();
@@ -371,26 +373,32 @@ const ServiceMetrics: React.FC<ServiceMetricsProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-sm text-gray-500 mb-1">총 요청 수</h3>
-          <p className="text-2xl font-semibold">{service.requestCount.toLocaleString()}</p>
+          <p className="text-2xl font-semibold">
+            {service.requestCount.toLocaleString()}
+          </p>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-sm text-gray-500 mb-1">평균 응답 시간</h3>
           <p className="text-2xl font-semibold">
-            {service.avgLatency < 1000 
-              ? `${service.avgLatency.toFixed(2)} ms` 
+            {service.avgLatency < 1000
+              ? `${service.avgLatency.toFixed(2)} ms`
               : `${(service.avgLatency / 1000).toFixed(2)} s`}
           </p>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-sm text-gray-500 mb-1">오류 수</h3>
-          <p className="text-2xl font-semibold">{service.errorCount.toLocaleString()}</p>
+          <p className="text-2xl font-semibold">
+            {service.errorCount.toLocaleString()}
+          </p>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-sm text-gray-500 mb-1">오류율</h3>
-          <p className={`text-2xl font-semibold ${service.errorRate > 5 ? 'text-red-500' : 'text-green-500'}`}>
+          <p
+            className={`text-2xl font-semibold ${service.errorRate > 5 ? "text-red-500" : "text-green-500"}`}
+          >
             {service.errorRate.toFixed(2)}%
           </p>
         </div>
@@ -409,22 +417,24 @@ const ServiceMetrics: React.FC<ServiceMetricsProps> = ({
     );
   };
 
-  const hasTimeSeriesData = service.timeSeriesData && service.timeSeriesData.length > 0;
+  const hasTimeSeriesData =
+    service.timeSeriesData && service.timeSeriesData.length > 0;
 
   return (
     <div>
       {/* 서비스 성능 요약 */}
       {renderServiceSummary()}
-      
+
       {/* 차트 영역 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="shadow">
           <CardBody>
             {hasTimeSeriesData ? (
-              <div 
-                ref={chartRefLatency} 
-                style={{ 
-                  height: typeof height === 'number' ? `${height / 3}px` : height 
+              <div
+                ref={chartRefLatency}
+                style={{
+                  height:
+                    typeof height === "number" ? `${height / 3}px` : height,
                 }}
               />
             ) : (
@@ -432,14 +442,15 @@ const ServiceMetrics: React.FC<ServiceMetricsProps> = ({
             )}
           </CardBody>
         </Card>
-        
+
         <Card className="shadow">
           <CardBody>
             {hasTimeSeriesData ? (
-              <div 
-                ref={chartRefRequests} 
-                style={{ 
-                  height: typeof height === 'number' ? `${height / 3}px` : height 
+              <div
+                ref={chartRefRequests}
+                style={{
+                  height:
+                    typeof height === "number" ? `${height / 3}px` : height,
                 }}
               />
             ) : (
@@ -447,14 +458,15 @@ const ServiceMetrics: React.FC<ServiceMetricsProps> = ({
             )}
           </CardBody>
         </Card>
-        
+
         <Card className="shadow">
           <CardBody>
             {hasTimeSeriesData ? (
-              <div 
-                ref={chartRefError} 
-                style={{ 
-                  height: typeof height === 'number' ? `${height / 3}px` : height 
+              <div
+                ref={chartRefError}
+                style={{
+                  height:
+                    typeof height === "number" ? `${height / 3}px` : height,
                 }}
               />
             ) : (

@@ -3,8 +3,7 @@ import Header from "@/components/layout/Header";
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
 import { Skeleton } from "@heroui/skeleton";
-import TraceDetail from '@/components/traces/TraceDetail';
-
+import TraceDetail from "@/components/traces/TraceDetail";
 
 interface TraceDetailPageProps {
   params: {
@@ -43,9 +42,11 @@ function TraceDetailSkeleton() {
   );
 }
 
-export default async function TraceDetailPage({ params }: TraceDetailPageProps) {
+export default async function TraceDetailPage({
+  params,
+}: TraceDetailPageProps) {
   const { id } = params;
-  
+
   return (
     <>
       <Header title="트레이스 상세 정보" />
