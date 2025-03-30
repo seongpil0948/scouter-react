@@ -6,9 +6,9 @@ import { Skeleton } from "@heroui/skeleton";
 import TraceDetail from "@/components/traces/TraceDetail";
 
 interface TraceDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>
 }
 
 // 스켈레톤 로딩 컴포넌트
@@ -42,9 +42,8 @@ function TraceDetailSkeleton() {
   );
 }
 
-export default async function TraceDetailPage({
-  params,
-}: TraceDetailPageProps) {
+export default async function TraceDetailPage(p: TraceDetailPageProps) {
+  const params = await p.params;
   const { id } = params;
 
   return (

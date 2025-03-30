@@ -2,15 +2,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/lib/postgres/client";
 
-interface RouteParams {
-  params: {
-    traceId: string;
-  };
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function  GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ traceId: string }> }
+)  {
   // Next.js App Router에서는 동적 라우트 매개변수를 비동기적으로 처리해야 함
-  const traceId = await Promise.resolve(params.traceId);
+  const { traceId } = await params;
 
   try {
     const pool = getPool();

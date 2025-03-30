@@ -19,15 +19,15 @@ import TraceList from "@/components/traces/TraceList";
 import LogList from "@/components/logs/LogList";
 
 interface ServiceDetailPageProps {
-  params: {
+  params: Promise<{
     name: string;
-  };
+  }>
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export default function ServiceDetailPage(p: ServiceDetailPageProps) {
-  const { params } = p;
+export default async function ServiceDetailPage(p: ServiceDetailPageProps) {
+  const params = await p.params;
   const router = useRouter();
   const { timeRange } = useFilterStore();
   const [activeTab, setActiveTab] = useState<string | number>("metrics");
