@@ -24,8 +24,8 @@ interface LogVisualizationProps {
   logData: LogItem[];
   onDataPointClick: (log: LogItem) => void;
   config?: ChartConfig;
-  height?: number | string; // 추가: 높이를 직접 설정할 수 있는 prop
-  title?: string; // 추가: 제목을 직접 설정할 수 있는 prop
+  height?: number | string;
+  title?: string;
   queryFn?: (params: any) => Promise<any>;
   queryParams?: any;
 }
@@ -78,8 +78,8 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
   logData,
   onDataPointClick,
   config = {},
-  height, // 직접 높이 prop 사용
-  title, // 직접 제목 prop 사용
+  height, 
+  title, 
   queryFn,
   queryParams = {},
 }) => {
@@ -106,10 +106,8 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
   const lastProcessedTimestampRef = useRef<number>(0);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isChartInitialized, setIsChartInitialized] = useState<boolean>(false);
-  const [chartData, setChartData] = useState<{
+  // useState를 useRef로 교체하여 무한 루프 방지
+  const chartDataRef = useRef<{
     [key: string]: DataPoint[];
   }>({
     FATAL: [],
@@ -119,6 +117,9 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
     DEBUG: [],
     TRACE: [],
   });
+
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isChartInitialized, setIsChartInitialized] = useState<boolean>(false);
 
   // 차트 테마 설정
   const getTheme = () => {
@@ -457,106 +458,115 @@ const LogVisualization: React.FC<LogVisualizationProps> = ({
     return null;
   }, [getInitialOption, logData, onDataPointClick, theme]);
 
-  // 로그 데이터 처리 함수
-  const processLogData = useCallback((newLogs: LogItem[]) => {
-    if (!chartInstanceRef.current) {
-      return false;
+const processLogData = useCallback((newLogs: LogItem[]) => {
+  if (!chartInstanceRef.current) {
+    return false;
+  }
+
+  console.log("Processing log data:", newLogs); // 디버깅 로그 추가
+  
+  // 심각도별 데이터 준비
+  const newDataBySeverity: { [key: string]: DataPoint[] } = {
+    FATAL: [],
+    ERROR: [],
+    WARN: [],
+    INFO: [],
+    DEBUG: [],
+    TRACE: [],
+  };
+  
+  let hasNewData = false;
+
+  // 새로운 데이터 처리
+  newLogs.forEach((log) => {
+    // 타임스탬프가 문자열인 경우 숫자로 변환
+    const timestamp = typeof log.timestamp === 'string' 
+      ? parseInt(log.timestamp, 10) 
+      : log.timestamp;
+
+    if (!timestamp || isNaN(timestamp)) {
+      console.warn("Invalid timestamp:", log.timestamp);
+      return; // 유효하지 않은 타임스탬프는 건너뛰기
     }
+
+    const severity = log.severity || "INFO";
+    const severityValue = severityToValueMap[severity] !== undefined 
+      ? severityToValueMap[severity] 
+      : 2; // 기본값은 INFO(2)
+
+    const dataPoint: DataPoint = [timestamp, severityValue, severity];
+
+    // 해당 심각도에 데이터 추가
+    if (newDataBySeverity[severity]) {
+      newDataBySeverity[severity].push(dataPoint);
+    } else {
+      // 알 수 없는 심각도면 INFO로 처리
+      newDataBySeverity.INFO.push([timestamp, 2, "INFO"]);
+    }
+
+    hasNewData = true;
+    lastProcessedTimestampRef.current = Math.max(
+      lastProcessedTimestampRef.current,
+      timestamp
+    );
+  });
+
+  if (hasNewData) {
+    console.log("Has new data, updating chart..."); // 디버깅 로그 추가
     
-    // 심각도별 데이터 준비
-    const newDataBySeverity: { [key: string]: DataPoint[] } = {
-      FATAL: [],
-      ERROR: [],
-      WARN: [],
-      INFO: [],
-      DEBUG: [],
-      TRACE: [],
-    };
-    
-    let hasNewData = false;
-
-    // 새로운 데이터 처리
-    newLogs.forEach((log) => {
-      const timestamp = log.timestamp;
-
-      const severity = log.severity || "INFO";
-      const severityValue = severityToValueMap[severity] !== undefined 
-        ? severityToValueMap[severity] 
-        : 2; // 기본값은 INFO(2)
-
-      if (timestamp) {
-        const dataPoint: DataPoint = [timestamp, severityValue, severity];
-
-        // 해당 심각도에 데이터 추가
-        if (newDataBySeverity[severity]) {
-          newDataBySeverity[severity].push(dataPoint);
-        } else {
-          // 알 수 없는 심각도면 INFO로 처리
-          newDataBySeverity.INFO.push([timestamp, 2, "INFO"]);
-        }
-
-        hasNewData = true;
-        lastProcessedTimestampRef.current = Math.max(
-          lastProcessedTimestampRef.current,
-          timestamp
-        );
-      }
+    // 현재 데이터와 병합 - setState 대신 Ref 사용하여 무한 루프 방지
+    Object.keys(newDataBySeverity).forEach(severity => {
+      // 새 데이터 추가 및 정렬
+      chartDataRef.current[severity] = [
+        ...(chartDataRef.current[severity] || []),
+        ...(newDataBySeverity[severity] || [])
+      ]
+        .sort((a, b) => a[0] - b[0])
+        .slice(-maxDataPoints!); // maxDataPoints가 undefined일 수 없다고 TypeScript에 알려줌
     });
-
-    if (hasNewData) {
-      // 현재 데이터와 병합
-      const updatedDataBySeverity: { [key: string]: DataPoint[] } = {};
-      
-      // 심각도별로 데이터 업데이트
-      Object.keys(newDataBySeverity).forEach(severity => {
-        // 새 데이터 추가 및 정렬
-        updatedDataBySeverity[severity] = [
-          ...(chartData[severity] || []),
-          ...(newDataBySeverity[severity] || [])
-        ]
-          .sort((a, b) => a[0] - b[0])
-          .slice(-maxDataPoints!); // maxDataPoints가 undefined일 수 없다고 TypeScript에 알려줌
+    
+    try {
+      // 시리즈 데이터 준비
+      const seriesData = Object.keys(chartDataRef.current).map((severity, index) => {
+        console.log(`Series ${severity} has ${chartDataRef.current[severity].length} points`); // 디버깅 로그 추가
+        return {
+          data: chartDataRef.current[severity] || []
+        };
       });
       
-      // 데이터 상태 업데이트
-      setChartData(updatedDataBySeverity);
+      // ECharts 인스턴스에 직접 데이터 업데이트
+      console.log("Updating chart with series data"); // 디버깅 로그 추가
+      chartInstanceRef.current.setOption({
+        series: seriesData
+      });
+
+      // X축 범위 동적 조정
+      // 모든 데이터를 합쳐서 최소/최대 타임스탬프 찾기
+      const allDataPoints = Object.values(chartDataRef.current)
+        .flat()
+        .map(point => point[0]);
       
-      try {
-        // 시리즈 데이터 준비
-        const seriesData = Object.keys(updatedDataBySeverity).map((severity, index) => ({
-          data: updatedDataBySeverity[severity] || []
-        }));
+      if (allDataPoints.length > 0) {
+        const minTime = Math.min(...allDataPoints);
+        const maxTime = Math.max(...allDataPoints);
         
-        // ECharts 인스턴스에 직접 데이터 업데이트
+        console.log(`Setting axis range: ${minTime} - ${maxTime}`); // 디버깅 로그 추가
         chartInstanceRef.current.setOption({
-          series: seriesData
+          xAxis: {
+            min: minTime,
+            max: maxTime,
+          }
         });
-
-        // X축 범위 동적 조정
-        // 모든 데이터를 합쳐서 최소/최대 타임스탬프 찾기
-        const allDataPoints = Object.values(updatedDataBySeverity)
-          .flat()
-          .map(point => point[0]);
-        
-        if (allDataPoints.length > 0) {
-          const minTime = Math.min(...allDataPoints);
-          const maxTime = Math.max(...allDataPoints);
-          
-          chartInstanceRef.current.setOption({
-            xAxis: {
-              min: minTime,
-              max: maxTime,
-            }
-          });
-        }
-      } catch (error) {
-        console.error("차트 업데이트 중 오류 발생:", error);
       }
+    } catch (error) {
+      console.error("차트 업데이트 중 오류 발생:", error);
     }
+  } else {
+    console.log("No new data found"); // 디버깅 로그 추가
+  }
 
-    return hasNewData;
-  }, [chartData, maxDataPoints]);
-
+  return hasNewData;
+}, [maxDataPoints]);
   // 데이터 가져오기 함수
   const fetchData = useCallback(async () => {
     if (!queryFn) return;

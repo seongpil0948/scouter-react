@@ -74,8 +74,8 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   traceData,
   onDataPointClick,
   config = {},
-  height, // 직접 높이 prop 사용
-  title, // 직접 제목 prop 사용
+  height,
+  title,
   queryFn,
   queryParams = {},
 }) => {
@@ -103,16 +103,18 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
   const lastProcessedTimestampRef = useRef<number>(0);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isChartInitialized, setIsChartInitialized] = useState<boolean>(false);
-  const [chartData, setChartData] = useState<{
+  
+  // useState 대신 useRef 사용하여 무한 렌더링 방지
+  const chartDataRef = useRef<{
     timeSeriesData: DataPoint[];
     highLatencyData: DataPoint[];
   }>({
     timeSeriesData: [],
     highLatencyData: [],
   });
+
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isChartInitialized, setIsChartInitialized] = useState<boolean>(false);
 
   // 차트 테마 설정
   const getTheme = () => {
@@ -416,92 +418,118 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     return null;
   }, [getInitialOption, traceData, onDataPointClick, theme]);
 
-  // 트레이스 데이터 처리 함수
-  const processTraceData = useCallback((newTraces: TraceItem[]) => {
-    if (!chartInstanceRef.current) {
-      return false;
+// TraceVisualization.tsx 타임스탬프 처리 수정 부분
+
+// 트레이스 데이터 처리 함수 수정
+const processTraceData = useCallback((newTraces: TraceItem[]) => {
+  if (!chartInstanceRef.current) {
+    return false;
+  }
+  
+  console.log("Processing trace data:", newTraces); // 디버깅 로그 추가
+  
+  let newData: DataPoint[] = [];
+  let newHighLatencyData: DataPoint[] = [];
+  let hasNewData = false;
+
+  // 새로운 데이터 처리
+  newTraces.forEach((trace) => {
+    // 유효성 검사
+    if (!trace) {
+      console.warn("Undefined trace item found");
+      return;
     }
     
-    let newData: DataPoint[] = [];
-    let newHighLatencyData: DataPoint[] = [];
-    let hasNewData = false;
-
-    // 새로운 데이터 처리
-    newTraces.forEach((trace) => {
-      if (!trace || !trace.startTime || trace.duration === undefined) {
-        return; // 유효하지 않은 데이터는 건너뜀
-      }
-      
-      const timestamp = trace.startTime;
-      const latency = trace.duration;
-      const thresholdValue = latencyThreshold || DEFAULT_CONFIG.latencyThreshold!;
-
-      // 데이터 유효성 검사
-      if (timestamp && latency !== undefined && !isNaN(timestamp) && !isNaN(latency)) {
-        const dataPoint: DataPoint = [timestamp, latency];
-
-        newData.push(dataPoint);
-
-        if (latency > thresholdValue) {
-          newHighLatencyData.push(dataPoint);
-        }
-
-        hasNewData = true;
-        lastProcessedTimestampRef.current = Math.max(
-          lastProcessedTimestampRef.current,
-          timestamp
-        );
-      }
-    });
-
-    if (hasNewData) {
-      // 기존 데이터와 병합: use functional update to avoid stale state issues.
-      setChartData(prevData => {
-        const updatedTimeSeriesData = [...prevData.timeSeriesData, ...newData]
-          .sort((a, b) => a[0] - b[0])
-          .slice(-maxDataPoints!); // maxDataPoints가 undefined일 수 없다고 TypeScript에 알려줌
-          
-        const updatedHighLatencyData = [...prevData.highLatencyData, ...newHighLatencyData]
-          .sort((a, b) => a[0] - b[0])
-          .slice(-maxDataPoints!);
-  
-        try {
-          // 차트 옵션 업데이트
-          chartInstanceRef.current?.setOption({
-            series: [
-              { data: updatedTimeSeriesData },
-              { data: updatedHighLatencyData },
-            ],
-          });
-  
-          // 축 범위 자동 조정
-          if (updatedTimeSeriesData.length > 0 || updatedHighLatencyData.length > 0) {
-            const allPoints = [...updatedTimeSeriesData, ...updatedHighLatencyData];
-            const timestamps = allPoints.map(point => point[0]);
-            const minTime = Math.min(...timestamps);
-            const maxTime = Math.max(...timestamps);
-            const latencies = allPoints.map(point => point[1]);
-            const maxLatency = Math.max(...latencies, 1) * 1.2;
-  
-            chartInstanceRef.current?.setOption({
-              xAxis: { min: minTime, max: maxTime },
-              yAxis: { min: 0, max: maxLatency },
-            });
-          }
-        } catch (error) {
-          console.error("차트 업데이트 중 오류 발생:", error);
-        }
-  
-        return { 
-          timeSeriesData: updatedTimeSeriesData, 
-          highLatencyData: updatedHighLatencyData 
-        };
-      });
+    // 타임스탬프가 문자열인 경우 숫자로 변환
+    const timestamp = typeof trace.startTime === 'string' 
+      ? parseInt(trace.startTime, 10) 
+      : trace.startTime;
+    
+    if (!timestamp || isNaN(timestamp)) {
+      console.warn("Invalid timestamp:", trace.startTime);
+      return;
+    }
+    
+    const latency = trace.duration;
+    
+    if (latency === undefined || isNaN(latency)) {
+      console.warn("Invalid latency value:", trace.duration);
+      return;
     }
 
-    return hasNewData;
-  }, [latencyThreshold, maxDataPoints]);
+    const thresholdValue = latencyThreshold || DEFAULT_CONFIG.latencyThreshold!;
 
+    // 데이터 포인트 생성
+    const dataPoint: DataPoint = [timestamp, latency];
+
+    newData.push(dataPoint);
+
+    if (latency > thresholdValue) {
+      newHighLatencyData.push(dataPoint);
+    }
+
+    hasNewData = true;
+    lastProcessedTimestampRef.current = Math.max(
+      lastProcessedTimestampRef.current,
+      timestamp
+    );
+  });
+
+  if (hasNewData) {
+    console.log("Has new trace data, updating chart..."); // 디버깅 로그 추가
+    console.log(`Time series: ${newData.length}, High latency: ${newHighLatencyData.length}`);
+    
+    // 기존 데이터와 병합 - useState가 아닌 useRef 사용
+    const updatedTimeSeriesData = [...chartDataRef.current.timeSeriesData, ...newData]
+      .sort((a, b) => a[0] - b[0])
+      .slice(-maxDataPoints!); 
+      
+    const updatedHighLatencyData = [...chartDataRef.current.highLatencyData, ...newHighLatencyData]
+      .sort((a, b) => a[0] - b[0])
+      .slice(-maxDataPoints!);
+
+    // chartDataRef 업데이트
+    chartDataRef.current = {
+      timeSeriesData: updatedTimeSeriesData,
+      highLatencyData: updatedHighLatencyData
+    };
+
+    try {
+      console.log(`Updating chart with series: normal=${updatedTimeSeriesData.length}, high=${updatedHighLatencyData.length}`);
+      
+      // 차트 옵션 업데이트
+      chartInstanceRef.current?.setOption({
+        series: [
+          { data: updatedTimeSeriesData },
+          { data: updatedHighLatencyData },
+        ],
+      });
+
+      // 축 범위 자동 조정
+      if (updatedTimeSeriesData.length > 0 || updatedHighLatencyData.length > 0) {
+        const allPoints = [...updatedTimeSeriesData, ...updatedHighLatencyData];
+        const timestamps = allPoints.map(point => point[0]);
+        const minTime = Math.min(...timestamps);
+        const maxTime = Math.max(...timestamps);
+        const latencies = allPoints.map(point => point[1]);
+        const maxLatency = Math.max(...latencies, 1) * 1.2;
+
+        console.log(`Setting axis range: x=${minTime}-${maxTime}, y=0-${maxLatency}`);
+        
+        chartInstanceRef.current?.setOption({
+          xAxis: { min: minTime, max: maxTime },
+          yAxis: { min: 0, max: maxLatency },
+        });
+      }
+    } catch (error) {
+      console.error("차트 업데이트 중 오류 발생:", error);
+    }
+  } else {
+    console.log("No new trace data found");
+  }
+
+  return hasNewData;
+}, [latencyThreshold, maxDataPoints]);
   // 데이터 가져오기 함수
   const fetchData = useCallback(async () => {
     if (!queryFn) return;
