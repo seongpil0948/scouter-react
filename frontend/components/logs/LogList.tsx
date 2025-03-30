@@ -146,7 +146,7 @@ const LogList: React.FC<LogListProps> = ({
                 <Button
                   className="absolute right-12 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   type="button"
-                  color='primary'
+                  color="primary"
                   variant="ghost"
                   aria-label="검색어 지우기"
                   size="sm"

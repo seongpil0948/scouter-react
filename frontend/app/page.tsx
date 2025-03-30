@@ -68,9 +68,9 @@ export default function Home() {
     maxDataPoints: 100,
     autoUpdate: false,
     colors: {
-      low: "#52c41a",      // 낮은 지연시간
-      medium: "#1890ff",   // 보통 지연시간
-      high: "#faad14",     // 높은 지연시간
+      low: "#52c41a", // 낮은 지연시간
+      medium: "#1890ff", // 보통 지연시간
+      high: "#faad14", // 높은 지연시간
       critical: "#ff4d4f", // 임계치 초과 지연시간
       effectScatter: "#ff4d4f", // 고지연 요청 색상
     },
@@ -132,7 +132,9 @@ export default function Home() {
 
         {/* 지연 시간 시각화 */}
         <div className="mb-6">
-          <div className="text-xl font-bold mb-4">실시간 지연 시간 모니터링</div>
+          <div className="text-xl font-bold mb-4">
+            실시간 지연 시간 모니터링
+          </div>
           <TraceVisualization
             traceData={traces}
             onDataPointClick={handleTraceClick}

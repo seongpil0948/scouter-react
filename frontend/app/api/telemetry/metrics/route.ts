@@ -1,31 +1,35 @@
 // frontend/app/api/telemetry/metrics/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { getPool } from '@/lib/postgres/client';
+import { NextRequest, NextResponse } from "next/server";
+import { getPool } from "@/lib/postgres/client";
 
 export async function GET(request: NextRequest) {
   // URL에서 파라미터 추출
   const searchParams = request.nextUrl.searchParams;
-  const startTime = searchParams.get('startTime') ? parseInt(searchParams.get('startTime')!) : Date.now() - 3600000; // 기본값: 1시간 전
-  const endTime = searchParams.get('endTime') ? parseInt(searchParams.get('endTime')!) : Date.now();
-  const serviceName = searchParams.get('serviceName') || undefined;
+  const startTime = searchParams.get("startTime")
+    ? parseInt(searchParams.get("startTime")!)
+    : Date.now() - 3600000; // 기본값: 1시간 전
+  const endTime = searchParams.get("endTime")
+    ? parseInt(searchParams.get("endTime")!)
+    : Date.now();
+  const serviceName = searchParams.get("serviceName") || undefined;
 
   try {
     const pool = getPool();
-    
+
     // 쿼리 파라미터 배열
     const queryParams: any[] = [startTime, endTime];
-    
+
     // 기본 WHERE 조건
-    let whereClause = 'start_time >= $1 AND start_time <= $2';
+    let whereClause = "start_time >= $1 AND start_time <= $2";
     let paramIndex = 3;
-    
+
     // 서비스명 필터
     if (serviceName) {
       whereClause += ` AND service_name = $${paramIndex}`;
       queryParams.push(serviceName);
       paramIndex++;
     }
-    
+
     // 서비스별 요약 통계 쿼리
     const servicesQuery = `
       SELECT 
@@ -45,7 +49,7 @@ export async function GET(request: NextRequest) {
         "avgLatency" DESC
       LIMIT 20
     `;
-    
+
     // 최근 트레이스 쿼리
     const recentTracesQuery = `
       SELECT 
@@ -66,7 +70,7 @@ export async function GET(request: NextRequest) {
         start_time DESC
       LIMIT 100
     `;
-    
+
     // 전체 요약 통계 쿼리
     const summaryQuery = `
       SELECT 
@@ -78,7 +82,7 @@ export async function GET(request: NextRequest) {
       WHERE 
         ${whereClause}
     `;
-    
+
     // 오류 발생 서비스 쿼리
     const errorServicesQuery = `
       SELECT 
@@ -94,44 +98,52 @@ export async function GET(request: NextRequest) {
         "errorCount" DESC
       LIMIT 5
     `;
-    
+
     // 병렬로 모든 쿼리 실행
-    const [servicesResult, recentTracesResult, summaryResult, errorServicesResult] = await Promise.all([
+    const [
+      servicesResult,
+      recentTracesResult,
+      summaryResult,
+      errorServicesResult,
+    ] = await Promise.all([
       pool.query(servicesQuery, queryParams),
       pool.query(recentTracesQuery, queryParams),
       pool.query(summaryQuery, queryParams),
-      pool.query(errorServicesQuery, queryParams)
+      pool.query(errorServicesQuery, queryParams),
     ]);
-    
+
     // 시계열 데이터 생성 (PostgreSQL에서는 복잡한 집계를 위해 추가 쿼리 필요)
     const timeSeriesData = [] as any[];
-    
+
     // 응답 데이터 구성
     const response = {
-      topLatencyServices: servicesResult.rows.map(service => ({
+      topLatencyServices: servicesResult.rows.map((service) => ({
         ...service,
-        errorRate: service.requestCount > 0 ? (service.errorCount / service.requestCount) * 100 : 0,
-        timeSeriesData: [] // 각 서비스별 시계열 데이터는 추가 쿼리 필요
+        errorRate:
+          service.requestCount > 0
+            ? (service.errorCount / service.requestCount) * 100
+            : 0,
+        timeSeriesData: [], // 각 서비스별 시계열 데이터는 추가 쿼리 필요
       })),
       recentTraces: recentTracesResult.rows,
       summary: summaryResult.rows[0],
       topErrorServices: errorServicesResult.rows,
       timeRange: {
         startTime,
-        endTime
-      }
+        endTime,
+      },
     };
-    
+
     return NextResponse.json(response);
   } catch (error) {
-    console.error('메트릭 API 오류:', error);
-    
+    console.error("메트릭 API 오류:", error);
+
     return NextResponse.json(
       {
-        error: '메트릭을 가져오는 중 오류가 발생했습니다',
+        error: "메트릭을 가져오는 중 오류가 발생했습니다",
         details: (error as Error).message,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
