@@ -6,20 +6,7 @@ import { DEFAULT_CONFIG } from './constant';
 import useECharts from './hook/useEchart';
 import { EChartsOption } from 'echarts';
 
-interface TraceChartProps {
-  data: {
-    timeSeriesData: DataPoint[];
-    highLatencyData: DataPoint[];
-  };
-  height?: number | string;
-  config: Partial<ChartConfig>;
-  onDataPointClick?: (timestamp: number) => void;
-  loading?: boolean;
-  legendState: {
-    normal: boolean;
-    highLatency: boolean;
-  };
-}
+
 
 const TraceChart: React.FC<TraceChartProps> = React.memo(({
   data,

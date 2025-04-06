@@ -29,4 +29,20 @@ interface TraceVisualizationProps {
   showFilters?: boolean;
 }
 
+
+interface TraceChartProps {
+  data: {
+    timeSeriesData: DataPoint[];
+    highLatencyData: DataPoint[];
+  };
+  height?: number | string;
+  config: Partial<ChartConfig>;
+  onDataPointClick?: (timestamp: number) => void;
+  loading?: boolean;
+  legendState: {
+    normal: boolean;
+    highLatency: boolean;
+  };
+}
+
 type DataPoint = [number, number]; // [timestamp, latency]
