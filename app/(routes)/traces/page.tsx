@@ -1,45 +1,49 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
-import { useFilterStore } from "@/lib/store/telemetryStore";
-import { useChartStore } from '@/lib/store/chartStore';
-import TraceVisualization from '@/components/traces/TraceVisualization';
-import DateRangePicker from "@/components/shared/DateRangePicker";
 import { ThemeSwitch } from "@/components/shared/theme-switch";
+import TraceVisualization from '@/components/traces/TraceVisualization';
+import { useChartStore, getTimeRangeForQuery } from '@/lib/store/chartStore';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function Dashboard() {
   const router = useRouter();
-  const { timeRange } = useFilterStore();
-  const { updateConfig } = useChartStore();
+  const { updateConfig, timeRange, refreshInterval, autoRefreshEnabled } = useChartStore();
+  const [isInitialized, setIsInitialized] = useState(false);
   
+  const timeRangeForQuery = getTimeRangeForQuery();
+  const { data, error, mutate } = useSWR<DtoTrace>(
+    `/api/telemetry/traces?startTime=${timeRangeForQuery.startTime}&endTime=${timeRangeForQuery.endTime}`,
+    fetcher,
+    { 
+      refreshInterval: autoRefreshEnabled ? refreshInterval : 0, // Only enable auto refresh if enabled in store
+      revalidateOnFocus: false,
+      dedupingInterval: 1000, // Prevent duplicate requests within 1 second
+    },
+  );
+
   // Initialize chart configuration
   useEffect(() => {
-    updateConfig({
-      height: 400,
-      title: "실시간 요청 지연 시간",
-      latencyThreshold: 300,
-      maxDataPoints: 100,
-      autoUpdate: false,
-      colors: {
-        low: "#52c41a", // 낮은 지연시간
-        medium: "#1890ff", // 보통 지연시간
-        high: "#faad14", // 높은 지연시간
-        critical: "#ff4d4f", // 임계치 초과 지연시간
-        error: "#ff4d4f" // 에러 상태 색상
-      }
-    });
-  }, [updateConfig]);
-
-  // Fetch trace data
-  const { data, isLoading, error, mutate } = useSWR<DtoTrace>(
-    `/api/telemetry/traces?startTime=${timeRange.startTime}&endTime=${timeRange.endTime}`,
-    fetcher,
-    { refreshInterval: 30000 }, // Auto-refresh every 30 seconds
-  );
+    if (!isInitialized) {
+      updateConfig({
+        height: 400,
+        title: "실시간 요청 지연 시간 모니터링",
+        latencyThreshold: 300,
+        maxDataPoints: 100,
+        colors: {
+          low: "#52c41a", // 낮은 지연시간
+          medium: "#1890ff", // 보통 지연시간
+          high: "#faad14", // 높은 지연시간
+          critical: "#ff4d4f", // 임계치 초과 지연시간
+          error: "#ff4d4f" // 에러 상태 색상
+        }
+      });
+      setIsInitialized(true);
+    }
+  }, [updateConfig, isInitialized]);
 
   // Handle trace item selection
   const handleTraceClick = useCallback((trace: TraceItem) => {
@@ -47,33 +51,28 @@ export default function Dashboard() {
   }, [router]);
 
   // Handle manual refresh
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     return mutate();
-  }, [mutate]);
-
-  // Handle time range changes
-  const handleTimeRangeChange = useCallback((startTime: number, endTime: number) => {
-    // Reload data when time range changes
-    mutate();
   }, [mutate]);
 
   return (
     <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
       <div className="inline-block max-w-xl text-center justify-center">
         <h1 className="text-xl font-bold">트레이스 모니터링 대시보드</h1>
+        <p className="text-gray-500 text-sm mt-1">실시간 지연 시간 및 오류 모니터링</p>
       </div>
       
       <ThemeSwitch className="absolute top-4 right-4" />
       
-      <DateRangePicker onChange={handleTimeRangeChange} />
-      
-      <TraceVisualization
-        traceData={data?.traces ?? []}
-        onDataPointClick={handleTraceClick}
-        onRefresh={handleRefresh}
-        title={error ? "데이터 로드 중 오류 발생" : undefined}
-        showFilters={true}
-      />
+      <div className="w-full max-w-7xl">
+        <TraceVisualization
+          traceData={data?.traces ?? []}
+          onDataPointClick={handleTraceClick}
+          onRefresh={handleRefresh}
+          title={error ? "데이터 로드 중 오류 발생" : undefined}
+          showFilters={true}
+        />
+      </div>
     </section>
   );
 }

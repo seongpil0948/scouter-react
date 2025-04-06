@@ -1,7 +1,6 @@
-// components/traces/TraceVisualization/index.tsx
 "use client";
 
-import React, { useMemo, useCallback, useState } from "react";
+import React, { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import { Card, CardBody } from "@heroui/card";
 import { Badge } from "@heroui/badge";
 import { Button } from "@heroui/button";
@@ -16,10 +15,19 @@ import {
 } from "lucide-react";
 
 import TraceChart from './TraceChart';
+import TimeRangeSelector from '@/components/shared/TimeRangeSelector';
 
-import { useChartStore } from '@/lib/store/chartStore';
+import { useChartStore, getTimeRangeForQuery, refreshChart } from '@/lib/store/chartStore';
 import { formatDuration } from '@/lib/utils/dateFormatter';
-import { DEFAULT_CHART_CONFIG, buildServiceThresholds, filterTraceData, calculateServiceStats, calculateLatencyStats, processTraceData, findTraceByTimestamp } from './utils';
+import { 
+  buildServiceThresholds, 
+  filterTraceData, 
+  calculateServiceStats, 
+  calculateLatencyStats, 
+  processTraceData, 
+  findTraceByTimestamp 
+} from './utils';
+import RefreshIntervalSelector from './RefreshIntervalSelector';
 
 const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   traceData,
@@ -40,12 +48,16 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     legendState,
     toggleLegend,
     dataFilters,
-    updateDataFilters
+    updateDataFilters,
+    refreshInterval,
+    autoRefreshEnabled
   } = useChartStore();
+
+  // Reference for auto-refresh interval
+  const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Merge configuration with defaults
   const mergedConfig = useMemo(() => ({
-    ...DEFAULT_CHART_CONFIG,
     ...config,
   }), [config]);
 
@@ -111,17 +123,17 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   // Handle refresh button click
   const handleRefresh = useCallback(async () => {
     if (onRefresh && !isRefreshing) {
-      setRefreshing(true);
-      try {
-        await onRefresh();
-      } catch (error) {
-        console.error('Chart refresh error:', error);
-      } finally {
-        // UI feedback delay
-        setTimeout(() => setRefreshing(false), 500);
-      }
+      await refreshChart(onRefresh);
     }
-  }, [onRefresh, isRefreshing, setRefreshing]);
+  }, [onRefresh, isRefreshing]);
+
+  // Handle time range change
+  const handleTimeRangeChange = useCallback((startTime: number, endTime: number) => {
+    if (onRefresh && !isRefreshing) {
+      // Refresh data with new time range
+      refreshChart(onRefresh);
+    }
+  }, [onRefresh, isRefreshing]);
 
   // Reset all filters
   const handleResetFilters = useCallback(() => {
@@ -147,6 +159,32 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     });
   }, [updateDataFilters]);
 
+  // Auto-refresh setup
+  useEffect(() => {
+    // Clear existing timer if any
+    if (autoRefreshTimerRef.current) {
+      clearInterval(autoRefreshTimerRef.current);
+      autoRefreshTimerRef.current = null;
+    }
+    
+    // Set up new timer if auto-refresh is enabled
+    if (autoRefreshEnabled && refreshInterval > 0 && onRefresh) {
+      autoRefreshTimerRef.current = setInterval(() => {
+        // Only refresh if not already refreshing
+        if (!isRefreshing) {
+          refreshChart(onRefresh);
+        }
+      }, refreshInterval);
+    }
+    
+    // Clean up timer on unmount
+    return () => {
+      if (autoRefreshTimerRef.current) {
+        clearInterval(autoRefreshTimerRef.current);
+      }
+    };
+  }, [autoRefreshEnabled, refreshInterval, onRefresh, isRefreshing]);
+
   // Calculate display values
   const errorCount = filteredData.filter(t => t.status === 'ERROR').length;
   const successCount = filteredData.filter(t => t.status === 'OK').length;
@@ -159,7 +197,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   return (
     <Card className="w-full">
       {/* Header Section */}
-      <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="p-4 border-b flex flex-col md:flex-row md:items-center justify-between gap-2">
         <h3 className="text-lg font-medium">
           {title || mergedConfig.title || '트레이스 시각화'}
         </h3>
@@ -184,7 +222,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
           <Button
             size="sm"
             variant="ghost"
-            startContent={<RefreshCw size={16} />}
+            startContent={<RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />}
             onPress={handleRefresh}
             isDisabled={isRefreshing}
           >
@@ -193,9 +231,17 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         </div>
       </div>
 
+      <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <TimeRangeSelector onRangeChange={handleTimeRangeChange} />
+          
+          <RefreshIntervalSelector />
+        </div>
+      </div>
+
       {/* Filters Section - Conditionally Rendered */}
       {showFilters && (
-        <div className="p-4 bg-gray-50 border-b">
+        <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex items-center gap-1">
               <Filter size={16} />
@@ -207,14 +253,14 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
               <Select
                 label="서비스"
                 placeholder="모든 서비스"
-                value={dataFilters.serviceFilter || ""}
+                selectedKeys={dataFilters.serviceFilter ? [dataFilters.serviceFilter] : [""]}
                 onSelectionChange={handleServiceFilterChange as any}
                 size="sm"
                 className="w-48"
               >
-                <SelectItem key="" >모든 서비스</SelectItem>
+                <SelectItem key="" textValue="모든 서비스">모든 서비스</SelectItem>
                 {services.map(service => (
-                  <SelectItem key={service} >{service}</SelectItem>
+                  <SelectItem key={service} textValue={service}>{service}</SelectItem>
                 )) as any}
               </Select>
               
@@ -222,24 +268,26 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
               <Select
                 label="상태"
                 placeholder="모든 상태"
-                value={dataFilters.statusFilter || ""}
+                selectedKeys={dataFilters.statusFilter ? [dataFilters.statusFilter] : [""]}
                 onSelectionChange={handleStatusFilterChange as any}
                 size="sm"
                 className="w-32"
               >
-                <SelectItem key="" >모든 상태</SelectItem>
-                <SelectItem key="OK" >성공</SelectItem>
-                <SelectItem key="ERROR">오류</SelectItem>
+                <SelectItem key="" textValue="모든 상태">모든 상태</SelectItem>
+                <SelectItem key="OK" textValue="성공">성공</SelectItem>
+                <SelectItem key="ERROR" textValue="오류">오류</SelectItem>
               </Select>
               
               {/* Reset Filters Button */}
-              <Button
-                size="sm"
-                variant="ghost"
-                onPress={handleResetFilters}
-              >
-                필터 초기화
-              </Button>
+              {hasFilters && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onPress={handleResetFilters}
+                >
+                  필터 초기화
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -294,7 +342,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                 return (
                   <Badge 
                     key={service} 
-                    className="bg-gray-100 text-gray-700"
+                    className="bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
                     title={tooltip}
                   >
                     {service}: {formatDuration(threshold)}
@@ -302,6 +350,15 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Auto-refresh Indicator - NEW */}
+        {autoRefreshEnabled && (
+          <div className="absolute top-4 right-4 z-10">
+            <Badge color="primary" variant="flat" className="animate-pulse">
+              {refreshInterval / 1000}초마다 자동 새로고침
+            </Badge>
           </div>
         )}
 
@@ -335,19 +392,19 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
               
               {/* Active Filters Display */}
               {dataFilters.serviceFilter && (
-                <Badge className="bg-blue-100 text-blue-800">
+                <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
                   서비스: {dataFilters.serviceFilter}
                 </Badge>
               )}
               
               {dataFilters.statusFilter && (
-                <Badge className={dataFilters.statusFilter === 'ERROR' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>
+                <Badge className={dataFilters.statusFilter === 'ERROR' ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100' : 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'}>
                   상태: {dataFilters.statusFilter}
                 </Badge>
               )}
               
               {(dataFilters.minDuration !== undefined || dataFilters.maxDuration !== undefined) && (
-                <Badge className="bg-gray-100 text-gray-800">
+                <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
                   지연 시간: {dataFilters.minDuration !== undefined ? formatDuration(dataFilters.minDuration) : '0ms'} ~ 
                   {dataFilters.maxDuration !== undefined ? formatDuration(dataFilters.maxDuration) : '무제한'}
                 </Badge>
@@ -356,7 +413,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
               {/* Reset Filters Link */}
               {hasFilters && (
                 <span 
-                  className="text-xs text-blue-600 cursor-pointer" 
+                  className="text-xs text-blue-600 cursor-pointer dark:text-blue-400" 
                   onClick={handleResetFilters}
                 >
                   필터 초기화
