@@ -23,9 +23,10 @@ interface ChartConfig {
 interface TraceVisualizationProps {
   traceData: TraceItem[];
   onDataPointClick: (trace: TraceItem) => void;
-  config?: ChartConfig;
-  height?: string | number;
+  config?: Partial<ChartConfig>;
+  onRefresh?: () => Promise<any>;
   title?: string;
+  showFilters?: boolean;
 }
 
 type DataPoint = [number, number]; // [timestamp, latency]
