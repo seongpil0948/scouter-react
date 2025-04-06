@@ -27,6 +27,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   onRefresh,
   title,
   showFilters = false,
+  serviceThresholds: propServiceThresholds,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -44,6 +45,31 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     ...DEFAULT_CONFIG,
     ...config,
   }), [config]);
+
+  // 서비스별 임계값 맵 생성
+  const serviceThresholds = useMemo(() => {
+    const map = new Map<string, number>();
+    
+    // props로 전달된 임계값이 있으면 사용
+    if (propServiceThresholds && propServiceThresholds.size > 0) {
+      return propServiceThresholds;
+    }
+    
+    // 모든 서비스 식별
+    traceData.forEach(trace => {
+      if (trace.serviceName && !map.has(trace.serviceName)) {
+        // Airflow 서비스는 10분
+        if (trace.serviceName.includes('Airflow')) {
+          map.set(trace.serviceName, 600000); // 10분 (밀리초)
+        } else {
+          // 그 외 서비스는 1초
+          map.set(trace.serviceName, 1000); // 1초
+        }
+      }
+    });
+    
+    return map;
+  }, [traceData, propServiceThresholds]);
 
   // 필터링된 데이터 메모이제이션
   const filteredData = useMemo(() => {
@@ -86,6 +112,31 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     return Array.from(serviceSet).sort();
   }, [traceData]);
 
+  // 서비스별 임계값 초과 통계
+  const serviceStats = useMemo(() => {
+    const stats = new Map<string, { total: number; exceeded: number }>();
+    
+    filteredData.forEach(trace => {
+      if (!trace.serviceName) return;
+      
+      const threshold = serviceThresholds.get(trace.serviceName) || 
+        (trace.serviceName.includes('Airflow') ? 600000 : 1000);
+      
+      if (!stats.has(trace.serviceName)) {
+        stats.set(trace.serviceName, { total: 0, exceeded: 0 });
+      }
+      
+      const stat = stats.get(trace.serviceName)!;
+      stat.total++;
+      
+      if (trace.duration > threshold) {
+        stat.exceeded++;
+      }
+    });
+    
+    return stats;
+  }, [filteredData, serviceThresholds]);
+
   // 지연 시간 통계 계산
   const latencyStats = useMemo(() => {
     if (filteredData.length === 0) {
@@ -103,17 +154,20 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     return { min, max, avg, p90 };
   }, [filteredData]);
 
-  // 차트 데이터 처리
+  // 차트 데이터 처리 - 서비스별 임계값 적용
   const chartData = useMemo(() => {
     setIsProcessing(true);
+    
     const result = processTraceData(
       filteredData, 
       mergedConfig.latencyThreshold || DEFAULT_CONFIG.latencyThreshold!, 
-      mergedConfig.maxDataPoints || DEFAULT_CONFIG.maxDataPoints!
+      mergedConfig.maxDataPoints || DEFAULT_CONFIG.maxDataPoints!,
+      serviceThresholds
     );
+    
     setIsProcessing(false);
     return result;
-  }, [filteredData, mergedConfig.latencyThreshold, mergedConfig.maxDataPoints]);
+  }, [filteredData, mergedConfig.latencyThreshold, mergedConfig.maxDataPoints, serviceThresholds]);
 
   // 데이터 포인트 클릭 핸들러
   const handleDataPointClick = useCallback((timestamp: number) => {
@@ -263,7 +317,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
             <div className="flex items-center">
               <AlertTriangle size={16} className="mr-1 text-orange-500" />
               <span className="text-sm">
-                고지연: {filteredData.filter(t => t.duration > (mergedConfig.latencyThreshold || 300)).length}개
+                고지연: {chartData.highLatencyData.length}개
               </span>
             </div>
             <div className="flex items-center">
@@ -281,6 +335,26 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
           </div>
         )}
 
+        {/* 서비스별 임계값 정보 */}
+        {showFilters && filteredData.length > 0 && serviceThresholds.size > 0 && (
+          <div className="mb-4 text-xs text-gray-500">
+            <div className="flex items-center mb-1">
+              <span className="font-medium">서비스별 임계값:</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {Array.from(serviceThresholds.entries()).map(([service, threshold]) => (
+                <Badge 
+                  key={service} 
+                  className="bg-gray-100 text-gray-700"
+                  title={`총 ${serviceStats.get(service)?.total || 0}개 중 ${serviceStats.get(service)?.exceeded || 0}개 초과`}
+                >
+                  {service}: {formatDuration(threshold)}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 차트 컴포넌트 */}
         <TraceChart 
           data={chartData}
@@ -289,6 +363,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
           onDataPointClick={handleDataPointClick}
           loading={isRefreshing || isProcessing}
           legendState={legendState}
+          serviceThresholds={serviceThresholds}
         />
         
         {/* 데이터 없음 표시 */}

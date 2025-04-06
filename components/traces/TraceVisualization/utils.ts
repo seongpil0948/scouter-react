@@ -7,14 +7,34 @@
 export function processTraceData(
   traces: TraceItem[],
   latencyThreshold: number = 300,
-  maxDataPoints: number = 100
+  maxDataPoints: number = 100,
+  serviceThresholds?: Map<string, number>
 ): { 
   timeSeriesData: DataPoint[]; 
   highLatencyData: DataPoint[];
+  metadataMap: Map<number, { serviceName: string; status?: string }>;
 } {
   // 중복 방지를 위한 맵 사용
   const timeSeriesMap = new Map<number, DataPoint>();
   const highLatencyMap = new Map<number, DataPoint>();
+  // 메타데이터 맵 추가
+  const metadataMap = new Map<number, { serviceName: string; status?: string }>();
+  
+  // 기본 서비스별 임계값 함수
+  const getServiceThreshold = (serviceName: string): number => {
+    // 서비스별 임계값 맵이 제공된 경우 사용
+    if (serviceThresholds?.has(serviceName)) {
+      return serviceThresholds.get(serviceName) || latencyThreshold;
+    }
+    
+    // Airflow 서비스는 10분(600,000ms)
+    if (serviceName.includes('Airflow')) {
+      return 600000; // 10분 (밀리초)
+    }
+    
+    // 그 외 서비스는 1초(1,000ms)
+    return 1000;
+  };
   
   // 데이터 처리
   traces.forEach((trace) => {
@@ -33,14 +53,23 @@ export function processTraceData(
     
     if (latency === undefined || isNaN(latency)) return;
     
+    // 메타데이터 저장
+    metadataMap.set(timestamp, {
+      serviceName: trace.serviceName || "unknown",
+      status: trace.status
+    });
+    
     // 데이터 포인트 생성
     const dataPoint: DataPoint = [timestamp, latency];
     
     // 맵에 추가
     timeSeriesMap.set(timestamp, dataPoint);
     
-    // 고지연 데이터 분류
-    if (latency > latencyThreshold) {
+    // 서비스별 임계값 적용
+    const serviceThreshold = getServiceThreshold(trace.serviceName || "unknown");
+    
+    // 고지연 데이터 분류 (서비스별 임계값 적용)
+    if (latency > serviceThreshold) {
       highLatencyMap.set(timestamp, dataPoint);
     }
   });
@@ -56,10 +85,10 @@ export function processTraceData(
   
   return {
     timeSeriesData,
-    highLatencyData
+    highLatencyData,
+    metadataMap
   };
 }
-
 /**
  * 타임스탬프로 트레이스 찾기
  */

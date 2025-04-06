@@ -19,7 +19,7 @@ interface TraceItem {
   duration: number;
   serviceName: string;
   spanCount?: number;
-  status?: string;
+  status?: 'UNSET' | 'ERROR' | 'OK';
   attributes?: Record<string, any>;
   services?: string[];
 }

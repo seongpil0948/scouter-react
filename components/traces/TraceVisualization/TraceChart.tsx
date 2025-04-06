@@ -6,15 +6,14 @@ import { DEFAULT_CONFIG } from './constant';
 import useECharts from './hook/useEchart';
 import { EChartsOption } from 'echarts';
 
-
-
 const TraceChart: React.FC<TraceChartProps> = React.memo(({
   data,
   height = 400,
   config,
   onDataPointClick,
   loading = false,
-  legendState
+  legendState,
+  serviceThresholds
 }) => {
   const { theme } = useTheme();
   const [ready, setReady] = useState(false);
@@ -36,14 +35,32 @@ const TraceChart: React.FC<TraceChartProps> = React.memo(({
     theme: theme === 'dark' ? 'dark' : undefined
   });
   
+  // 서비스별 임계값 계산 (Airflow는 10분, 그 외는 1초)
+  const getServiceThreshold = useCallback((serviceName?: string) => {
+    if (!serviceName) return 1000; // 기본값: 1초
+    
+    // 'Airflow'인 경우 10분
+    if (serviceName.includes('Airflow')) {
+      return 600000; // 10분 (밀리초)
+    }
+    
+    // 그 외 서비스는 1초
+    return 1000;
+  }, []);
+
   // 차트 설정 생성
   const getChartOptions = useCallback(() => {
     const {
       title: chartTitle,
       colors,
       symbolSizes,
-      latencyThreshold
     } = mergedConfig;
+    
+    // 기본 색상 정의
+    const errorColor = "#ff4d4f"; // 오류 상태 색상
+    const warningColor = "#faad14"; // 주황색 (임계값 초과)
+    const normalLowColor = "#52c41a"; // 낮은 지연 시간
+    const normalMediumColor = "#1890ff"; // 중간 지연 시간
     
     return {
       animation: true,
@@ -76,20 +93,46 @@ const TraceChart: React.FC<TraceChartProps> = React.memo(({
           const timestamp = params.value[0];
           const latency = params.value[1];
           const date = new Date(timestamp);
-          const thresholdValue = latencyThreshold || DEFAULT_CONFIG.latencyThreshold!;
-          const criticalColor = colors?.critical || DEFAULT_CONFIG.colors?.critical;
-          const mediumColor = colors?.medium || DEFAULT_CONFIG.colors?.medium;
+          
+          // 메타데이터 가져오기
+          const metadata = data.metadataMap?.get(timestamp);
+          const serviceName = metadata?.serviceName || "알 수 없음";
+          const status = metadata?.status;
+          
+          // 서비스별 임계값 적용
+          const serviceThreshold = getServiceThreshold(serviceName);
+          
+          // 임계값 초과 비율 계산
+          const thresholdRatio = latency / serviceThreshold;
+          const ratioText = `${(thresholdRatio * 100).toFixed(1)}%`;
+          
+          // 상태가 ERROR인 경우 빨간색, 아니면 임계값 초과 비율에 따른 색상
+          const textColor = status === "ERROR" 
+            ? errorColor 
+            : (thresholdRatio >= 1.0 ? warningColor : normalMediumColor);
 
           return `
             <div style="font-weight: bold; margin-bottom: 5px;">
               ${date.toLocaleDateString()} ${date.toLocaleTimeString()}
             </div>
+            <div style="margin-bottom: 5px;">
+              <span>서비스:</span>
+              <span style="font-weight: bold; margin-left: 4px;">${serviceName}</span>
+            </div>
             <div style="display: flex; justify-content: space-between;">
               <span>지연 시간:</span>
-              <span style="font-weight: bold; color: ${latency > thresholdValue ? criticalColor : mediumColor}">
-                ${latency.toFixed(2)}ms
+              <span style="font-weight: bold; color: ${textColor}">
+                ${latency.toFixed(2)}ms (임계값의 ${ratioText})
               </span>
             </div>
+            ${status ? `
+            <div style="margin-top: 5px;">
+              <span>상태:</span>
+              <span style="font-weight: bold; color: ${status === "ERROR" ? errorColor : "inherit"}">
+                ${status}
+              </span>
+            </div>
+            ` : ''}
           `;
         }
       },
@@ -205,27 +248,54 @@ const TraceChart: React.FC<TraceChartProps> = React.memo(({
           symbol: "circle",
           symbolSize: (value: number[]) => {
             if (!value || value.length < 2) return symbolSizes?.min || 8;
+            
+            const timestamp = value[0];
             const latency = value[1];
+            
+            // 메타데이터 가져오기
+            const metadata = data.metadataMap?.get(timestamp);
+            const serviceName = metadata?.serviceName;
+            
+            // 서비스별 임계값 적용
+            const serviceThreshold = getServiceThreshold(serviceName);
+            
+            // 임계값 대비 비율에 따라 크기 조정
+            const thresholdRatio = latency / serviceThreshold;
             const minSize = symbolSizes?.min || 8;
             const maxSize = symbolSizes?.max || 18;
-
-            return minSize + Math.min(latency / 50, maxSize - minSize);
+            
+            // 임계값 비율에 따라 크기 조정 (최대 크기까지)
+            return minSize + Math.min(thresholdRatio * 10, maxSize - minSize);
           },
           itemStyle: {
             color: (params: any) => {
               if (!params.value || params.value.length < 2)
-                return colors?.medium || DEFAULT_CONFIG.colors?.medium;
+                return normalMediumColor;
+              
+              const timestamp = params.value[0];
               const latency = params.value[1];
-              const lowColor = colors?.low || DEFAULT_CONFIG.colors?.low;
-              const mediumColor = colors?.medium || DEFAULT_CONFIG.colors?.medium;
-              const highColor = colors?.high || DEFAULT_CONFIG.colors?.high;
-              const criticalColor = colors?.critical || DEFAULT_CONFIG.colors?.critical;
-
-              if (latency < 100) return lowColor;
-              if (latency < 200) return mediumColor;
-              if (latency < 300) return highColor;
-
-              return criticalColor;
+              
+              // 메타데이터 가져오기
+              const metadata = data.metadataMap?.get(timestamp);
+              const status = metadata?.status;
+              const serviceName = metadata?.serviceName;
+              
+              // 상태가 ERROR인 경우 빨간색
+              if (status === "ERROR") {
+                return errorColor;
+              }
+              
+              // 서비스별 임계값 적용
+              const serviceThreshold = getServiceThreshold(serviceName);
+              
+              // 임계값 초과 비율에 따른 색상 결정
+              const thresholdRatio = latency / serviceThreshold;
+              
+              if (thresholdRatio < 0.5) return normalLowColor;
+              if (thresholdRatio < 0.8) return normalMediumColor;
+              if (thresholdRatio < 1.0) return "#faad14";
+              
+              return warningColor;
             },
             opacity: 0.8,
             shadowBlur: 5,
@@ -245,22 +315,61 @@ const TraceChart: React.FC<TraceChartProps> = React.memo(({
           symbol: "circle",
           symbolSize: (value: number[]) => {
             if (!value || value.length < 2) return symbolSizes?.effectMin || 15;
+            
+            const timestamp = value[0];
             const latency = value[1];
+            
+            // 메타데이터 가져오기
+            const metadata = data.metadataMap?.get(timestamp);
+            const serviceName = metadata?.serviceName;
+            
+            // 서비스별 임계값 적용
+            const serviceThreshold = getServiceThreshold(serviceName);
+            
+            // 임계값 대비 비율에 따라 크기 조정 (고지연 전용)
+            const thresholdRatio = latency / serviceThreshold;
             const minSize = symbolSizes?.effectMin || 15;
             const maxSize = symbolSizes?.effectMax || 30;
-
-            return minSize + Math.min(latency / 50, maxSize - minSize);
+            
+            // 임계값 비율에 따라 크기 조정 (최대 크기까지)
+            return minSize + Math.min(thresholdRatio * 8, maxSize - minSize);
           },
           showEffectOn: "render",
           rippleEffect: {
             brushType: "stroke",
-            scale: 3,
-            period: 3,
+            scale: 4,
+            period: 4
           },
           itemStyle: {
-            color: colors?.effectScatter || DEFAULT_CONFIG.colors?.effectScatter,
+            color: (params: any) => {
+              if (!params.value || params.value.length < 2) {
+                return warningColor;
+              }
+              
+              const timestamp = params.value[0];
+              
+              // 메타데이터 가져오기
+              const metadata = data.metadataMap?.get(timestamp);
+              const status = metadata?.status;
+              
+              // 상태가 ERROR인 경우만 빨간색, 아닌 경우 주황색
+              return status === "ERROR" ? errorColor : warningColor;
+            },
             shadowBlur: 10,
-            shadowColor: "rgba(255, 77, 79, 0.5)",
+            shadowColor: (params: any) => {
+              if (!params.value || params.value.length < 2) {
+                return "rgba(250, 173, 20, 0.5)";
+              }
+              
+              const timestamp = params.value[0];
+              const metadata = data.metadataMap?.get(timestamp);
+              const status = metadata?.status;
+              
+              // 상태가 ERROR인 경우 빨간색 그림자, 아닌 경우 주황색 그림자
+              return status === "ERROR" 
+                ? "rgba(255, 77, 79, 0.7)" 
+                : "rgba(250, 173, 20, 0.5)";
+            }
           },
           emphasis: {
             scale: true,
@@ -269,14 +378,14 @@ const TraceChart: React.FC<TraceChartProps> = React.memo(({
         },
       ],
     } as EChartsOption;
-  }, [mergedConfig, theme, data, legendState]);
+  }, [mergedConfig, theme, data, legendState, getServiceThreshold]);
   
   // 차트 옵션 업데이트
   useEffect(() => {
     if (isReady && (data.timeSeriesData.length > 0 || data.highLatencyData.length > 0)) {
       // 약간의 지연을 두고 옵션 설정
       const timer = setTimeout(() => {
-        setOption(getChartOptions() );
+        setOption(getChartOptions());
       }, 50);
       
       return () => clearTimeout(timer);
@@ -327,7 +436,7 @@ const TraceChart: React.FC<TraceChartProps> = React.memo(({
     <div className="relative w-full" style={{ height: typeof height === 'number' ? `${height}px` : height }}>
       {/* 로딩 오버레이 */}
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 dark:bg-gray-800 dark:bg-opacity-70 z-10">
           <div className="flex flex-col items-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
             <p className="mt-4">데이터를 불러오는 중...</p>
