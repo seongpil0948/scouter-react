@@ -1,80 +1,155 @@
+// lib/utils/traceUtils.ts
 
-// utils/traceDataProcessor.ts
+import { formatDuration } from '@/lib/utils/dateFormatter';
+
 
 /**
- * 트레이스 데이터를 차트 데이터로 변환하는 유틸리티
+ * Common utility functions for trace data processing and visualization
+ */
+
+// Default configuration for trace visualization
+export const DEFAULT_CHART_CONFIG: ChartConfig = {
+  title: "실시간 지연 시간 모니터링",
+  height: 600,
+  maxDataPoints: 100,
+  latencyThreshold: 300,
+  autoUpdate: false,
+  updateInterval: 30000,
+  colors: {
+    low: "#52c41a",
+    medium: "#1890ff",
+    high: "#faad14",
+    critical: "#ff4d4f",
+    effectScatter: "#ff4d4f",
+    error: "#ff4d4f"
+  },
+  symbolSizes: {
+    min: 8,
+    max: 18,
+    effectMin: 15,
+    effectMax: 30,
+  },
+};
+
+/**
+ * Calculate service-specific latency thresholds
+ * @param traces trace data to analyze
+ * @param customThresholds optional custom thresholds per service
+ * @returns Map with service name keys and threshold values
+ */
+export function buildServiceThresholds(
+  traces: TraceItem[],
+  customThresholds?: Map<string, number>
+): Map<string, number> {
+  // If custom thresholds provided, use them
+  if (customThresholds && customThresholds.size > 0) {
+    return customThresholds;
+  }
+  
+  const thresholds = new Map<string, number>();
+  
+  // Extract unique services and set appropriate thresholds
+  traces.forEach(trace => {
+    if (!trace.serviceName || thresholds.has(trace.serviceName)) return;
+    
+    // Apply service-specific rules
+    if (trace.serviceName.includes('Airflow')) {
+      thresholds.set(trace.serviceName, 600000); // 10 minutes
+    } else {
+      thresholds.set(trace.serviceName, 1000); // 1 second
+    }
+  });
+  
+  return thresholds;
+}
+
+/**
+ * Get threshold for a specific service
+ * @param serviceName service name to check
+ * @param serviceThresholds map of service thresholds
+ * @param defaultThreshold fallback threshold
+ * @returns threshold value in milliseconds
+ */
+export function getServiceThreshold(
+  serviceName?: string,
+  serviceThresholds?: Map<string, number>,
+  defaultThreshold: number = 1000
+): number {
+  if (!serviceName) return defaultThreshold;
+  
+  if (serviceThresholds?.has(serviceName)) {
+    return serviceThresholds.get(serviceName) || defaultThreshold;
+  }
+  
+  // Apply default service-specific rules
+  if (serviceName.includes('Airflow')) {
+    return 600000; // 10 minutes
+  }
+  
+  return defaultThreshold;
+}
+
+/**
+ * Process trace data for visualization
+ * @param traces raw trace data
+ * @param latencyThreshold default latency threshold
+ * @param maxDataPoints maximum number of data points to keep
+ * @param serviceThresholds service-specific thresholds
+ * @returns processed data ready for chart visualization
  */
 export function processTraceData(
   traces: TraceItem[],
   latencyThreshold: number = 300,
   maxDataPoints: number = 100,
   serviceThresholds?: Map<string, number>
-): { 
-  timeSeriesData: DataPoint[]; 
+): {
+  timeSeriesData: DataPoint[];
   highLatencyData: DataPoint[];
   metadataMap: Map<number, { serviceName: string; status?: string }>;
 } {
-  // 중복 방지를 위한 맵 사용
+  // Maps to prevent duplicates
   const timeSeriesMap = new Map<number, DataPoint>();
   const highLatencyMap = new Map<number, DataPoint>();
-  // 메타데이터 맵 추가
   const metadataMap = new Map<number, { serviceName: string; status?: string }>();
   
-  // 기본 서비스별 임계값 함수
-  const getServiceThreshold = (serviceName: string): number => {
-    // 서비스별 임계값 맵이 제공된 경우 사용
-    if (serviceThresholds?.has(serviceName)) {
-      return serviceThresholds.get(serviceName) || latencyThreshold;
-    }
-    
-    // Airflow 서비스는 10분(600,000ms)
-    if (serviceName.includes('Airflow')) {
-      return 600000; // 10분 (밀리초)
-    }
-    
-    // 그 외 서비스는 1초(1,000ms)
-    return 1000;
-  };
-  
-  // 데이터 처리
+  // Process each trace item
   traces.forEach((trace) => {
-    // 유효성 검사
     if (!trace) return;
     
-    // 타임스탬프 처리
+    // Parse timestamp if needed
     const timestamp = typeof trace.startTime === 'string' 
       ? parseInt(trace.startTime, 10) 
       : trace.startTime;
     
     if (!timestamp || isNaN(timestamp)) return;
     
-    // 지연 시간 처리
+    // Get latency
     const latency = trace.duration;
-    
     if (latency === undefined || isNaN(latency)) return;
     
-    // 메타데이터 저장
+    // Store metadata
     metadataMap.set(timestamp, {
       serviceName: trace.serviceName || "unknown",
       status: trace.status
     });
     
-    // 데이터 포인트 생성
+    // Create data point and add to time series
     const dataPoint: DataPoint = [timestamp, latency];
-    
-    // 맵에 추가
     timeSeriesMap.set(timestamp, dataPoint);
     
-    // 서비스별 임계값 적용
-    const serviceThreshold = getServiceThreshold(trace.serviceName || "unknown");
+    // Determine if this is a high-latency point
+    const threshold = getServiceThreshold(
+      trace.serviceName,
+      serviceThresholds,
+      latencyThreshold
+    );
     
-    // 고지연 데이터 분류 (서비스별 임계값 적용)
-    if (latency > serviceThreshold) {
+    if (latency > threshold) {
       highLatencyMap.set(timestamp, dataPoint);
     }
   });
   
-  // 맵을 배열로 변환, 정렬 및 제한
+  // Convert maps to sorted arrays with limits
   const timeSeriesData = Array.from(timeSeriesMap.values())
     .sort((a, b) => a[0] - b[0])
     .slice(-maxDataPoints);
@@ -89,8 +164,12 @@ export function processTraceData(
     metadataMap
   };
 }
+
 /**
- * 타임스탬프로 트레이스 찾기
+ * Find trace closest to a timestamp
+ * @param traces array of trace items to search
+ * @param timestamp target timestamp
+ * @returns closest matching trace or null
  */
 export function findTraceByTimestamp(
   traces: TraceItem[],
@@ -108,108 +187,188 @@ export function findTraceByTimestamp(
   }, null as TraceItem | null);
 }
 
-export default {
-  processTraceData,
-  findTraceByTimestamp
-};
-
 /**
- * 차트에 사용되는 유틸리티 함수와 상수 모음
+ * Calculate latency statistics from trace data
+ * @param traces array of trace items
+ * @returns statistics object with min, max, avg and percentiles
  */
-
-// 기본 차트 색상 설정
-export const DEFAULT_COLORS = {
-  low: "#52c41a",      // 낮은 지연시간
-  medium: "#1890ff",   // 보통 지연시간
-  high: "#faad14",     // 높은 지연시간
-  critical: "#ff4d4f", // 임계치 초과 지연시간
-  effectScatter: "#ff4d4f", // 고지연 요청 색상
-};
-
-// 기본 심볼 크기 설정
-export const DEFAULT_SYMBOL_SIZES = {
-  min: 8,
-  max: 18,
-  effectMin: 15,
-  effectMax: 30,
-};
-
-/**
- * 지연 시간에 따른 색상 결정
- */
-export function getLatencyColor(latency: number, colors = DEFAULT_COLORS) {
-  if (latency < 100) return colors.low;
-  if (latency < 200) return colors.medium;
-  if (latency < 300) return colors.high;
-  return colors.critical;
-}
-
-/**
- * 지연 시간에 따른 심볼 크기 계산
- */
-export function calculateSymbolSize(
-  latency: number, 
-  isHighLatency: boolean = false,
-  symbolSizes = DEFAULT_SYMBOL_SIZES
-) {
-  if (isHighLatency) {
-    const minSize = symbolSizes.effectMin;
-    const maxSize = symbolSizes.effectMax;
-    return minSize + Math.min(latency / 50, maxSize - minSize);
-  } else {
-    const minSize = symbolSizes.min;
-    const maxSize = symbolSizes.max;
-    return minSize + Math.min(latency / 50, maxSize - minSize);
+export function calculateLatencyStats(traces: TraceItem[]) {
+  if (!traces || traces.length === 0) {
+    return { min: 0, max: 0, avg: 0, p90: 0, p95: 0, p99: 0 };
   }
-}
-
-/**
- * 다크 모드 테마에 따른 차트 테마 옵션 생성
- */
-export function getChartThemeOptions(isDarkMode: boolean) {
-  if (isDarkMode) {
-    return {
-      backgroundColor: "#141414",
-      textStyle: { color: "#ffffff" },
-      axisLine: { lineStyle: { color: "#333" } },
-      splitLine: { lineStyle: { color: "#333" } },
-    };
-  }
-  return {};
-}
-
-/**
- * 시간 데이터 포인트 중복 제거 및 정렬 처리
- */
-export function processTimeSeries(data: any[], maxPoints: number = 100) {
-  // 중복 제거를 위한 Map 사용 (timestamp를 키로)
-  const uniqueDataMap = new Map();
   
-  // 기존 데이터를 Map에 추가
-  data.forEach(point => {
-    if (Array.isArray(point) && point.length >= 2) {
-      const timestamp = point[0];
-      const value = point[1];
-      
-      // 유효한 값인지 확인
-      if (!isNaN(timestamp) && !isNaN(value)) {
-        uniqueDataMap.set(timestamp, point);
-      }
+  const durations = traces.map(t => t.duration).sort((a, b) => a - b);
+  const min = durations[0];
+  const max = durations[durations.length - 1];
+  const sum = durations.reduce((a, b) => a + b, 0);
+  const avg = sum / durations.length;
+  
+  // Calculate percentiles
+  const p90Index = Math.floor(durations.length * 0.9);
+  const p95Index = Math.floor(durations.length * 0.95);
+  const p99Index = Math.floor(durations.length * 0.99);
+  
+  return {
+    min,
+    max,
+    avg,
+    p90: durations[p90Index] || 0,
+    p95: durations[p95Index] || 0,
+    p99: durations[p99Index] || 0
+  };
+}
+
+/**
+ * Calculate threshold statistics per service
+ * @param traces array of trace items
+ * @param serviceThresholds map of service-specific thresholds
+ * @returns map of service statistics
+ */
+export function calculateServiceStats(
+  traces: TraceItem[],
+  serviceThresholds: Map<string, number>
+): Map<string, { total: number; exceeded: number; errorCount: number }> {
+  const stats = new Map<string, { total: number; exceeded: number; errorCount: number }>();
+  
+  traces.forEach(trace => {
+    if (!trace.serviceName) return;
+    
+    const threshold = getServiceThreshold(trace.serviceName, serviceThresholds);
+    
+    if (!stats.has(trace.serviceName)) {
+      stats.set(trace.serviceName, { total: 0, exceeded: 0, errorCount: 0 });
+    }
+    
+    const stat = stats.get(trace.serviceName)!;
+    stat.total++;
+    
+    if (trace.duration > threshold) {
+      stat.exceeded++;
+    }
+    
+    if (trace.status === 'ERROR') {
+      stat.errorCount++;
     }
   });
   
-  // Map을 배열로 변환하고 timestamp로 정렬
-  const sortedData = Array.from(uniqueDataMap.values())
-    .sort((a, b) => a[0] - b[0]);
-  
-  // 최대 포인트 수를 초과하면 최신 데이터만 유지
-  return sortedData.slice(-maxPoints);
+  return stats;
 }
 
 /**
- * 글로벌 차트 설정 적용 (ECharts 인스턴스에 적용하기 전)
+ * Get color based on latency relative to threshold
+ * @param latency latency value
+ * @param threshold threshold value
+ * @param colors color configuration
+ * @param status trace status
+ * @returns color string
  */
-export function applyChartGlobalConfig(config: ChartConfig = {}) {
-  // 여기서 ECharts의 글로벌 설정을 수정할 수 있음
-  // 예: echarts.registerTheme(...) 등
+export function getLatencyColor(
+  latency: number,
+  threshold: number,
+  colors = DEFAULT_CHART_CONFIG.colors,
+  status?: string
+): string {
+  // Error status overrides latency colors
+  if (status === 'ERROR') {
+    return colors?.error || "#ff4d4f";
+  }
+  
+  // Calculate ratio to threshold
+  const ratio = latency / threshold;
+  
+  if (ratio < 0.5) return colors?.low || "#52c41a";
+  if (ratio < 0.8) return colors?.medium || "#1890ff";
+  if (ratio < 1.0) return colors?.high || "#faad14";
+  
+  return colors?.critical || "#ff4d4f";
 }
+
+/**
+ * Filter trace data based on criteria
+ * @param traces array of trace items
+ * @param filters filter criteria
+ * @returns filtered array of trace items
+ */
+export function filterTraceData(
+  traces: TraceItem[],
+  filters: {
+    minDuration?: number;
+    maxDuration?: number;
+    serviceFilter?: string;
+    statusFilter?: string;
+    search?: string;
+  }
+): TraceItem[] {
+  // Short-circuit if no filters
+  if (!filters.minDuration && !filters.maxDuration && 
+      !filters.serviceFilter && !filters.statusFilter && 
+      !filters.search) {
+    return traces;
+  }
+
+  return traces.filter(trace => {
+    // Duration filters
+    if (filters.minDuration && trace.duration < filters.minDuration) {
+      return false;
+    }
+    if (filters.maxDuration && trace.duration > filters.maxDuration) {
+      return false;
+    }
+    
+    // Service filter
+    if (filters.serviceFilter && trace.serviceName !== filters.serviceFilter) {
+      return false;
+    }
+    
+    // Status filter
+    if (filters.statusFilter && trace.status !== filters.statusFilter) {
+      return false;
+    }
+    
+    // Search term
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      
+      return (
+        (trace.name && trace.name.toLowerCase().includes(searchLower)) ||
+        (trace.serviceName && trace.serviceName.toLowerCase().includes(searchLower)) ||
+        (trace.traceId && trace.traceId.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    return true;
+  });
+}
+
+/**
+ * Format trace service and latency information for display
+ * @param trace trace item
+ * @param threshold service threshold
+ * @returns formatted information object
+ */
+export function formatTraceInfo(trace: TraceItem, threshold: number) {
+  const ratio = trace.duration / threshold;
+  const exceedsThreshold = ratio >= 1.0;
+  
+  return {
+    formattedDuration: formatDuration(trace.duration),
+    formattedThreshold: formatDuration(threshold),
+    thresholdRatio: ratio,
+    thresholdPercentage: `${(ratio * 100).toFixed(1)}%`,
+    exceedsThreshold,
+    hasError: trace.status === 'ERROR'
+  };
+}
+
+export default {
+  DEFAULT_CHART_CONFIG,
+  buildServiceThresholds,
+  getServiceThreshold,
+  processTraceData,
+  findTraceByTimestamp,
+  calculateLatencyStats,
+  calculateServiceStats,
+  getLatencyColor,
+  filterTraceData,
+  formatTraceInfo
+};

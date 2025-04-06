@@ -1,6 +1,7 @@
+// components/traces/TraceVisualization/index.tsx
 "use client";
 
-import React, { useMemo, useCallback, useState, useEffect } from "react";
+import React, { useMemo, useCallback, useState } from "react";
 import { Card, CardBody } from "@heroui/card";
 import { Badge } from "@heroui/badge";
 import { Button } from "@heroui/button";
@@ -15,10 +16,10 @@ import {
 } from "lucide-react";
 
 import TraceChart from './TraceChart';
-import { processTraceData, findTraceByTimestamp } from './utils';
+
 import { useChartStore } from '@/lib/store/chartStore';
 import { formatDuration } from '@/lib/utils/dateFormatter';
-import { DEFAULT_CONFIG } from './constant';
+import { DEFAULT_CHART_CONFIG, buildServiceThresholds, filterTraceData, calculateServiceStats, calculateLatencyStats, processTraceData, findTraceByTimestamp } from './utils';
 
 const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   traceData,
@@ -29,8 +30,10 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   showFilters = false,
   serviceThresholds: propServiceThresholds,
 }) => {
+  // Local state
   const [isProcessing, setIsProcessing] = useState(false);
   
+  // Store state
   const { 
     isRefreshing,
     setRefreshing,
@@ -40,68 +43,23 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     updateDataFilters
   } = useChartStore();
 
-  // 메모이제이션된 설정
+  // Merge configuration with defaults
   const mergedConfig = useMemo(() => ({
-    ...DEFAULT_CONFIG,
+    ...DEFAULT_CHART_CONFIG,
     ...config,
   }), [config]);
 
-  // 서비스별 임계값 맵 생성
-  const serviceThresholds = useMemo(() => {
-    const map = new Map<string, number>();
-    
-    // props로 전달된 임계값이 있으면 사용
-    if (propServiceThresholds && propServiceThresholds.size > 0) {
-      return propServiceThresholds;
-    }
-    
-    // 모든 서비스 식별
-    traceData.forEach(trace => {
-      if (trace.serviceName && !map.has(trace.serviceName)) {
-        // Airflow 서비스는 10분
-        if (trace.serviceName.includes('Airflow')) {
-          map.set(trace.serviceName, 600000); // 10분 (밀리초)
-        } else {
-          // 그 외 서비스는 1초
-          map.set(trace.serviceName, 1000); // 1초
-        }
-      }
-    });
-    
-    return map;
-  }, [traceData, propServiceThresholds]);
+  // Service thresholds - either from props or auto-calculated
+  const serviceThresholds = useMemo(() => 
+    buildServiceThresholds(traceData, propServiceThresholds),
+  [traceData, propServiceThresholds]);
 
-  // 필터링된 데이터 메모이제이션
-  const filteredData = useMemo(() => {
-    if (!dataFilters.minDuration && !dataFilters.maxDuration && 
-        !dataFilters.serviceFilter && !dataFilters.statusFilter) {
-      return traceData;
-    }
+  // Apply filters to trace data
+  const filteredData = useMemo(() => 
+    filterTraceData(traceData, dataFilters),
+  [traceData, dataFilters]);
 
-    return traceData.filter(trace => {
-      // 지연 시간 필터
-      if (dataFilters.minDuration && trace.duration < dataFilters.minDuration) {
-        return false;
-      }
-      if (dataFilters.maxDuration && trace.duration > dataFilters.maxDuration) {
-        return false;
-      }
-      
-      // 서비스 필터
-      if (dataFilters.serviceFilter && trace.serviceName !== dataFilters.serviceFilter) {
-        return false;
-      }
-      
-      // 상태 필터
-      if (dataFilters.statusFilter && trace.status !== dataFilters.statusFilter) {
-        return false;
-      }
-      
-      return true;
-    });
-  }, [traceData, dataFilters]);
-
-  // 서비스 목록 추출
+  // Extract unique services for filtering
   const services = useMemo(() => {
     const serviceSet = new Set<string>();
     traceData.forEach(trace => {
@@ -112,64 +70,37 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     return Array.from(serviceSet).sort();
   }, [traceData]);
 
-  // 서비스별 임계값 초과 통계
-  const serviceStats = useMemo(() => {
-    const stats = new Map<string, { total: number; exceeded: number }>();
-    
-    filteredData.forEach(trace => {
-      if (!trace.serviceName) return;
-      
-      const threshold = serviceThresholds.get(trace.serviceName) || 
-        (trace.serviceName.includes('Airflow') ? 600000 : 1000);
-      
-      if (!stats.has(trace.serviceName)) {
-        stats.set(trace.serviceName, { total: 0, exceeded: 0 });
-      }
-      
-      const stat = stats.get(trace.serviceName)!;
-      stat.total++;
-      
-      if (trace.duration > threshold) {
-        stat.exceeded++;
-      }
-    });
-    
-    return stats;
-  }, [filteredData, serviceThresholds]);
+  // Calculate service statistics
+  const serviceStats = useMemo(() => 
+    calculateServiceStats(filteredData, serviceThresholds),
+  [filteredData, serviceThresholds]);
 
-  // 지연 시간 통계 계산
-  const latencyStats = useMemo(() => {
-    if (filteredData.length === 0) {
-      return { min: 0, max: 0, avg: 0, p90: 0 };
-    }
-    
-    const durations = filteredData.map(t => t.duration).sort((a, b) => a - b);
-    const min = durations[0];
-    const max = durations[durations.length - 1];
-    const sum = durations.reduce((a, b) => a + b, 0);
-    const avg = sum / durations.length;
-    const p90Index = Math.floor(durations.length * 0.9);
-    const p90 = durations[p90Index];
-    
-    return { min, max, avg, p90 };
-  }, [filteredData]);
+  // Calculate latency statistics
+  const latencyStats = useMemo(() => 
+    calculateLatencyStats(filteredData),
+  [filteredData]);
 
-  // 차트 데이터 처리 - 서비스별 임계값 적용
+  // Process data for chart visualization
   const chartData = useMemo(() => {
     setIsProcessing(true);
     
     const result = processTraceData(
       filteredData, 
-      mergedConfig.latencyThreshold || DEFAULT_CONFIG.latencyThreshold!, 
-      mergedConfig.maxDataPoints || DEFAULT_CONFIG.maxDataPoints!,
+      mergedConfig.latencyThreshold,
+      mergedConfig.maxDataPoints,
       serviceThresholds
     );
     
     setIsProcessing(false);
     return result;
-  }, [filteredData, mergedConfig.latencyThreshold, mergedConfig.maxDataPoints, serviceThresholds]);
+  }, [
+    filteredData, 
+    mergedConfig.latencyThreshold, 
+    mergedConfig.maxDataPoints, 
+    serviceThresholds
+  ]);
 
-  // 데이터 포인트 클릭 핸들러
+  // Handle data point click
   const handleDataPointClick = useCallback((timestamp: number) => {
     const trace = findTraceByTimestamp(traceData, timestamp);
     if (trace && onDataPointClick) {
@@ -177,7 +108,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     }
   }, [traceData, onDataPointClick]);
 
-  // 새로고침 처리
+  // Handle refresh button click
   const handleRefresh = useCallback(async () => {
     if (onRefresh && !isRefreshing) {
       setRefreshing(true);
@@ -186,13 +117,13 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
       } catch (error) {
         console.error('Chart refresh error:', error);
       } finally {
-        // 새로고침 UI 효과를 위해 약간의 지연 추가
+        // UI feedback delay
         setTimeout(() => setRefreshing(false), 500);
       }
     }
   }, [onRefresh, isRefreshing, setRefreshing]);
 
-  // 필터 초기화 핸들러
+  // Reset all filters
   const handleResetFilters = useCallback(() => {
     updateDataFilters({
       minDuration: undefined,
@@ -202,27 +133,38 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     });
   }, [updateDataFilters]);
 
-  // 서비스 필터 변경 핸들러
+  // Service filter change handler
   const handleServiceFilterChange = useCallback((key: React.Key) => {
     updateDataFilters({ 
       serviceFilter: key as string === "" ? undefined : key as string 
     });
   }, [updateDataFilters]);
 
-  // 상태 필터 변경 핸들러
+  // Status filter change handler
   const handleStatusFilterChange = useCallback((key: React.Key) => {
     updateDataFilters({ 
       statusFilter: key as string === "" ? undefined : key as string 
     });
   }, [updateDataFilters]);
 
+  // Calculate display values
+  const errorCount = filteredData.filter(t => t.status === 'ERROR').length;
+  const successCount = filteredData.filter(t => t.status === 'OK').length;
+  const highLatencyCount = chartData.highLatencyData.length;
+  const hasFilters = dataFilters.serviceFilter || 
+                    dataFilters.statusFilter || 
+                    dataFilters.minDuration !== undefined || 
+                    dataFilters.maxDuration !== undefined;
+
   return (
     <Card className="w-full">
+      {/* Header Section */}
       <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <h3 className="text-lg font-medium">
           {title || mergedConfig.title || '트레이스 시각화'}
         </h3>
         <div className="flex flex-wrap items-center gap-2">
+          {/* Legend Toggles */}
           <div className="flex gap-1">
             <Badge 
               className={`cursor-pointer ${legendState.normal ? 'bg-blue-500' : 'bg-gray-300 text-gray-700'}`}
@@ -237,6 +179,8 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
               고지연 요청
             </Badge>
           </div>
+          
+          {/* Refresh Button */}
           <Button
             size="sm"
             variant="ghost"
@@ -249,7 +193,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         </div>
       </div>
 
-      {/* 필터 섹션 */}
+      {/* Filters Section - Conditionally Rendered */}
       {showFilters && (
         <div className="p-4 bg-gray-50 border-b">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -259,7 +203,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
             </div>
             
             <div className="flex flex-wrap gap-3">
-              {/* 서비스 필터 */}
+              {/* Service Filter */}
               <Select
                 label="서비스"
                 placeholder="모든 서비스"
@@ -269,13 +213,12 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                 className="w-48"
               >
                 <SelectItem key="" >모든 서비스</SelectItem>
-
                 {services.map(service => (
                   <SelectItem key={service} >{service}</SelectItem>
                 )) as any}
               </Select>
               
-              {/* 상태 필터 */}
+              {/* Status Filter */}
               <Select
                 label="상태"
                 placeholder="모든 상태"
@@ -289,7 +232,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                 <SelectItem key="ERROR">오류</SelectItem>
               </Select>
               
-              {/* 필터 초기화 */}
+              {/* Reset Filters Button */}
               <Button
                 size="sm"
                 variant="ghost"
@@ -303,7 +246,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
       )}
 
       <CardBody className="p-4">
-        {/* 차트 요약 정보 */}
+        {/* Stats Summary - Shown when data is available */}
         {filteredData.length > 0 && !isRefreshing && (
           <div className="mb-4 flex flex-wrap gap-4">
             <div className="flex items-center">
@@ -317,48 +260,55 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
             <div className="flex items-center">
               <AlertTriangle size={16} className="mr-1 text-orange-500" />
               <span className="text-sm">
-                고지연: {chartData.highLatencyData.length}개
+                고지연: {highLatencyCount}개
               </span>
             </div>
             <div className="flex items-center">
               <CheckCircle size={16} className="mr-1 text-green-500" />
               <span className="text-sm">
-                성공: {filteredData.filter(t => t.status === 'OK').length}개
+                성공: {successCount}개
               </span>
             </div>
             <div className="flex items-center">
               <AlertTriangle size={16} className="mr-1 text-red-500" />
               <span className="text-sm">
-                오류: {filteredData.filter(t => t.status === 'ERROR').length}개
+                오류: {errorCount}개
               </span>
             </div>
           </div>
         )}
 
-        {/* 서비스별 임계값 정보 */}
+        {/* Service Thresholds - Shown when filters are enabled */}
         {showFilters && filteredData.length > 0 && serviceThresholds.size > 0 && (
           <div className="mb-4 text-xs text-gray-500">
             <div className="flex items-center mb-1">
               <span className="font-medium">서비스별 임계값:</span>
             </div>
             <div className="flex flex-wrap gap-1">
-              {Array.from(serviceThresholds.entries()).map(([service, threshold]) => (
-                <Badge 
-                  key={service} 
-                  className="bg-gray-100 text-gray-700"
-                  title={`총 ${serviceStats.get(service)?.total || 0}개 중 ${serviceStats.get(service)?.exceeded || 0}개 초과`}
-                >
-                  {service}: {formatDuration(threshold)}
-                </Badge>
-              ))}
+              {Array.from(serviceThresholds.entries()).map(([service, threshold]) => {
+                const stats = serviceStats.get(service);
+                const tooltip = stats 
+                  ? `총 ${stats.total}개 중 ${stats.exceeded}개 초과`
+                  : '데이터 없음';
+                
+                return (
+                  <Badge 
+                    key={service} 
+                    className="bg-gray-100 text-gray-700"
+                    title={tooltip}
+                  >
+                    {service}: {formatDuration(threshold)}
+                  </Badge>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* 차트 컴포넌트 */}
+        {/* Chart Component */}
         <TraceChart 
           data={chartData}
-          height={mergedConfig.height || DEFAULT_CONFIG.height}
+          height={mergedConfig.height}
           config={mergedConfig}
           onDataPointClick={handleDataPointClick}
           loading={isRefreshing || isProcessing}
@@ -366,7 +316,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
           serviceThresholds={serviceThresholds}
         />
         
-        {/* 데이터 없음 표시 */}
+        {/* No Data Message */}
         {filteredData.length === 0 && !isRefreshing && (
           <div className="absolute inset-0 flex items-center justify-center text-gray-500">
             <p>
@@ -377,30 +327,38 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
           </div>
         )}
         
-        {/* 데이터 요약 */}
+        {/* Data Summary Footer */}
         {filteredData.length > 0 && !isRefreshing && (
           <div className="mt-4 text-sm text-gray-600">
             <div className="flex flex-wrap justify-between gap-2">
               <span>표시된 트레이스: {filteredData.length}개</span>
+              
+              {/* Active Filters Display */}
               {dataFilters.serviceFilter && (
                 <Badge className="bg-blue-100 text-blue-800">
                   서비스: {dataFilters.serviceFilter}
                 </Badge>
               )}
+              
               {dataFilters.statusFilter && (
                 <Badge className={dataFilters.statusFilter === 'ERROR' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>
                   상태: {dataFilters.statusFilter}
                 </Badge>
               )}
+              
               {(dataFilters.minDuration !== undefined || dataFilters.maxDuration !== undefined) && (
                 <Badge className="bg-gray-100 text-gray-800">
                   지연 시간: {dataFilters.minDuration !== undefined ? formatDuration(dataFilters.minDuration) : '0ms'} ~ 
                   {dataFilters.maxDuration !== undefined ? formatDuration(dataFilters.maxDuration) : '무제한'}
                 </Badge>
               )}
-              {(dataFilters.serviceFilter || dataFilters.statusFilter || 
-                dataFilters.minDuration !== undefined || dataFilters.maxDuration !== undefined) && (
-                <span className="text-xs text-blue-600 cursor-pointer" onClick={handleResetFilters}>
+              
+              {/* Reset Filters Link */}
+              {hasFilters && (
+                <span 
+                  className="text-xs text-blue-600 cursor-pointer" 
+                  onClick={handleResetFilters}
+                >
                   필터 초기화
                 </span>
               )}

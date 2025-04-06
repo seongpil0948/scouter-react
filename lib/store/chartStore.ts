@@ -1,29 +1,29 @@
 // lib/store/chartStore.ts
+import { DEFAULT_CHART_CONFIG } from '@/components/traces/TraceVisualization/utils';
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import { DEFAULT_CONFIG } from '@/components/traces/TraceVisualization/constant';
 
 interface ChartState {
-  // 차트 설정
+  // Chart configuration
   config: ChartConfig;
   updateConfig: (newConfig: Partial<ChartConfig>) => void;
   
-  // 선택된 트레이스
+  // Selected trace
   selectedTrace: TraceItem | null;
   setSelectedTrace: (trace: TraceItem | null) => void;
   
-  // 차트 데이터 새로고침
+  // Chart refresh state
   isRefreshing: boolean;
   setRefreshing: (isRefreshing: boolean) => void;
   
-  // 범례 상태
+  // Legend state for chart series
   legendState: {
     normal: boolean;
     highLatency: boolean;
   };
   toggleLegend: (type: 'normal' | 'highLatency') => void;
   
-  // 표시 데이터 필터링
+  // Data filters
   dataFilters: {
     minDuration?: number;
     maxDuration?: number;
@@ -34,19 +34,43 @@ interface ChartState {
   resetFilters: () => void;
 }
 
-// Zustand 스토어 생성
+/**
+ * Helper function to check if objects are deeply different
+ */
+function isDifferent(obj1: any, obj2: any): boolean {
+  if (obj1 === obj2) return false;
+  if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return true;
+  
+  const keys1 = Object.keys(obj1 || {});
+  const keys2 = Object.keys(obj2 || {});
+  
+  if (keys1.length !== keys2.length) return true;
+  
+  return keys1.some(key => {
+    const val1 = obj1[key];
+    const val2 = obj2[key];
+    
+    if (typeof val1 === 'object' && typeof val2 === 'object') {
+      return isDifferent(val1, val2);
+    }
+    
+    return val1 !== val2;
+  });
+}
+
+// Create Zustand store
 export const useChartStore = create<ChartState>()(
   devtools(
     persist(
       (set, get) => ({
-        // 차트 설정 초기화
-        config: DEFAULT_CONFIG,
+        // Chart config initialization
+        config: DEFAULT_CHART_CONFIG,
         updateConfig: (newConfig) => {
-          // 설정이 실제로 변경된 경우에만 상태 업데이트
+          // Only update state if there are actual changes
           const currentConfig = get().config;
           const hasChanges = Object.keys(newConfig).some(key => {
-            // @ts-ignore - 동적 속성 접근
-            return JSON.stringify(newConfig[key]) !== JSON.stringify(currentConfig[key]);
+            // @ts-ignore - dynamic property access
+            return isDifferent(newConfig[key], currentConfig[key]);
           });
           
           if (hasChanges) {
@@ -56,15 +80,15 @@ export const useChartStore = create<ChartState>()(
           }
         },
         
-        // 선택된 트레이스 초기화
+        // Selected trace initialization
         selectedTrace: null,
         setSelectedTrace: (trace) => set({ selectedTrace: trace }),
         
-        // 새로고침 상태 초기화
+        // Refresh state initialization
         isRefreshing: false,
         setRefreshing: (isRefreshing) => set({ isRefreshing }),
         
-        // 범례 상태 초기화
+        // Legend state initialization
         legendState: {
           normal: true,
           highLatency: true,
@@ -76,13 +100,13 @@ export const useChartStore = create<ChartState>()(
           }
         })),
         
-        // 데이터 필터 초기화
+        // Data filters initialization
         dataFilters: {},
         updateDataFilters: (filters) => {
-          // 기존 필터와 비교하여 변경된 경우에만 업데이트
+          // Check if filters actually changed before updating state
           const currentFilters = get().dataFilters;
           const hasChanges = Object.keys(filters).some(key => {
-            // @ts-ignore - 동적 속성 접근
+            // @ts-ignore - dynamic property access
             return filters[key] !== currentFilters[key];
           });
           
@@ -97,6 +121,7 @@ export const useChartStore = create<ChartState>()(
       {
         name: "chart-store",
         partialize: (state) => ({
+          // Only persist these parts of the state
           config: state.config,
           legendState: state.legendState,
           dataFilters: state.dataFilters,
@@ -106,12 +131,14 @@ export const useChartStore = create<ChartState>()(
   )
 );
 
-// 유틸리티 함수 - 비동기 새로고침 처리
+/**
+ * Utility function for async refresh operation with UI feedback
+ */
 export const refreshChart = async (callback?: () => Promise<any>) => {
-  const { setRefreshing } = useChartStore.getState();
+  const { setRefreshing, isRefreshing } = useChartStore.getState();
   
-  // 이미 새로고침 중이면 중복 실행 방지
-  if (useChartStore.getState().isRefreshing) {
+  // Prevent concurrent refreshes
+  if (isRefreshing) {
     return;
   }
   
@@ -121,12 +148,14 @@ export const refreshChart = async (callback?: () => Promise<any>) => {
     try {
       await callback();
     } catch (error) {
-      console.error('차트 데이터 새로고침 중 오류 발생:', error);
+      console.error('Chart refresh error:', error);
     }
   }
   
-  // 새로고침 UI 효과를 위해 약간의 지연 추가
+  // Add delay for UI feedback
   setTimeout(() => {
     setRefreshing(false);
   }, 500);
 };
+
+export default useChartStore;
