@@ -2,19 +2,18 @@
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 
-
 const genDefaultFilter = () => ({
   service: null,
   severity: null,
   search: "",
   hasTrace: false,
-  startTime: Date.now() - (60 * 60 * 1000) * 24, // 1일 전
+  startTime: Date.now() - 60 * 60 * 1000 * 24, // 1일 전
   endTime: Date.now(),
-})
+});
 // 기본 필터 값
 const DEFAULT_LOG_FILTERS: LogFilters = genDefaultFilter();
 
-const DEFAULT_TRACE_FILTERS: TraceFilters = genDefaultFilter()
+const DEFAULT_TRACE_FILTERS: TraceFilters = genDefaultFilter();
 
 // 필터 스토어 생성
 export const useFilterStore = create<FilterStore>()(
@@ -91,6 +90,5 @@ export const useTelemetryStore = create<TelemetryStore>()(
 
     isLoadingTraces: false,
     setIsLoadingTraces: (isLoadingTraces) => set({ isLoadingTraces }),
-
   })),
 );

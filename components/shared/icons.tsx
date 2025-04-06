@@ -1,12 +1,29 @@
-import * as React from 'react';
-import { Image } from '@heroui/image';
-import { IconSvgProps } from '@/types';
+import * as React from "react";
+import { Image } from "@heroui/image";
 
-export const LogoImage: React.FC<IconSvgProps> = ({ size, width = 36, height = 36 }) => (
-  <Image alt="The SHOP" src="/img/logo/theshop.svg" removeWrapper radius="none" height={size ?? height} width={size ?? width} />
+import { IconSvgProps } from "@/types";
+
+export const LogoImage: React.FC<IconSvgProps> = ({
+  size,
+  width = 36,
+  height = 36,
+}) => (
+  <Image
+    removeWrapper
+    alt="The SHOP"
+    height={size ?? height}
+    radius="none"
+    src="/img/logo/theshop.svg"
+    width={size ?? width}
+  />
 );
 
-export const MoonFilledIcon = ({ size = 24, width, height, ...props }: IconSvgProps) => (
+export const MoonFilledIcon = ({
+  size = 24,
+  width,
+  height,
+  ...props
+}: IconSvgProps) => (
   <svg
     aria-hidden="true"
     focusable="false"
@@ -23,7 +40,12 @@ export const MoonFilledIcon = ({ size = 24, width, height, ...props }: IconSvgPr
   </svg>
 );
 
-export const SunFilledIcon = ({ size = 24, width, height, ...props }: IconSvgProps) => (
+export const SunFilledIcon = ({
+  size = 24,
+  width,
+  height,
+  ...props
+}: IconSvgProps) => (
   <svg
     aria-hidden="true"
     focusable="false"
@@ -40,14 +62,19 @@ export const SunFilledIcon = ({ size = 24, width, height, ...props }: IconSvgPro
   </svg>
 );
 
-export const HeartFilledIcon = ({ size = 24, width, height, ...props }: IconSvgProps) => (
+export const HeartFilledIcon = ({
+  size = 24,
+  width,
+  height,
+  ...props
+}: IconSvgProps) => (
   <svg
     aria-hidden="true"
     focusable="false"
     height={size || height}
-    width={size || width}
     role="presentation"
     viewBox="0 0 24 24"
+    width={size || width}
     {...props}
   >
     <path
@@ -61,7 +88,16 @@ export const HeartFilledIcon = ({ size = 24, width, height, ...props }: IconSvgP
 );
 
 export const SearchIcon = (props: IconSvgProps) => (
-  <svg aria-hidden="true" fill="none" focusable="false" height="1em" role="presentation" viewBox="0 0 24 24" width="1em" {...props}>
+  <svg
+    aria-hidden="true"
+    fill="none"
+    focusable="false"
+    height="1em"
+    role="presentation"
+    viewBox="0 0 24 24"
+    width="1em"
+    {...props}
+  >
     <path
       d="M11.5 21C16.7467 21 21 16.7467 21 11.5C21 6.25329 16.7467 2 11.5 2C6.25329 2 2 6.25329 2 11.5C2 16.7467 6.25329 21 11.5 21Z"
       stroke="currentColor"
@@ -69,11 +105,22 @@ export const SearchIcon = (props: IconSvgProps) => (
       strokeLinejoin="round"
       strokeWidth="2"
     />
-    <path d="M22 22L20 20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+    <path
+      d="M22 22L20 20"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+    />
   </svg>
 );
 
-export const PlusIcon = ({ size = 24, width, height, ...props }: IconSvgProps) => {
+export const PlusIcon = ({
+  size = 24,
+  width,
+  height,
+  ...props
+}: IconSvgProps) => {
   return (
     <svg
       aria-hidden="true"
@@ -85,7 +132,13 @@ export const PlusIcon = ({ size = 24, width, height, ...props }: IconSvgProps) =
       width={size || width}
       {...props}
     >
-      <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}>
+      <g
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+      >
         <path d="M6 12h12" />
         <path d="M12 18V6" />
       </g>
@@ -93,7 +146,12 @@ export const PlusIcon = ({ size = 24, width, height, ...props }: IconSvgProps) =
   );
 };
 
-export const VerticalDotsIcon = ({ size = 24, width, height, ...props }: IconSvgProps) => {
+export const VerticalDotsIcon = ({
+  size = 24,
+  width,
+  height,
+  ...props
+}: IconSvgProps) => {
   return (
     <svg
       aria-hidden="true"
@@ -113,9 +171,21 @@ export const VerticalDotsIcon = ({ size = 24, width, height, ...props }: IconSvg
   );
 };
 
-export const ChevronDownIcon = ({ strokeWidth = 1.5, ...otherProps }: IconSvgProps) => {
+export const ChevronDownIcon = ({
+  strokeWidth = 1.5,
+  ...otherProps
+}: IconSvgProps) => {
   return (
-    <svg aria-hidden="true" fill="none" focusable="false" height="1em" role="presentation" viewBox="0 0 24 24" width="1em" {...otherProps}>
+    <svg
+      aria-hidden="true"
+      fill="none"
+      focusable="false"
+      height="1em"
+      role="presentation"
+      viewBox="0 0 24 24"
+      width="1em"
+      {...otherProps}
+    >
       <path
         d="m19.92 8.95-6.52 6.52c-.77.77-2.03.77-2.8 0L4.08 8.95"
         stroke="currentColor"
@@ -130,7 +200,16 @@ export const ChevronDownIcon = ({ strokeWidth = 1.5, ...otherProps }: IconSvgPro
 
 export const LockIcon = (props: IconSvgProps) => {
   return (
-    <svg aria-hidden="true" fill="none" focusable="false" height="1em" role="presentation" viewBox="0 0 24 24" width="1em" {...props}>
+    <svg
+      aria-hidden="true"
+      fill="none"
+      focusable="false"
+      height="1em"
+      role="presentation"
+      viewBox="0 0 24 24"
+      width="1em"
+      {...props}
+    >
       <path
         d="M12.0011 17.3498C12.9013 17.3498 13.6311 16.6201 13.6311 15.7198C13.6311 14.8196 12.9013 14.0898 12.0011 14.0898C11.1009 14.0898 10.3711 14.8196 10.3711 15.7198C10.3711 16.6201 11.1009 17.3498 12.0011 17.3498Z"
         fill="currentColor"
@@ -145,7 +224,16 @@ export const LockIcon = (props: IconSvgProps) => {
 
 export const MailIcon = (props: IconSvgProps) => {
   return (
-    <svg aria-hidden="true" fill="none" focusable="false" height="1em" role="presentation" viewBox="0 0 24 24" width="1em" {...props}>
+    <svg
+      aria-hidden="true"
+      fill="none"
+      focusable="false"
+      height="1em"
+      role="presentation"
+      viewBox="0 0 24 24"
+      width="1em"
+      {...props}
+    >
       <path
         d="M17 3.5H7C4 3.5 2 5 2 8.5V15.5C2 19 4 20.5 7 20.5H17C20 20.5 22 19 22 15.5V8.5C22 5 20 3.5 17 3.5ZM17.47 9.59L14.34 12.09C13.68 12.62 12.84 12.88 12 12.88C11.16 12.88 10.31 12.62 9.66 12.09L6.53 9.59C6.21 9.33 6.16 8.85 6.41 8.53C6.67 8.21 7.14 8.15 7.46 8.41L10.59 10.91C11.35 11.52 12.64 11.52 13.4 10.91L16.53 8.41C16.85 8.15 17.33 8.2 17.58 8.53C17.84 8.85 17.79 9.33 17.47 9.59Z"
         fill="currentColor"
@@ -156,7 +244,16 @@ export const MailIcon = (props: IconSvgProps) => {
 
 export const EyeSlashFilledIcon = (props: IconSvgProps) => {
   return (
-    <svg aria-hidden="true" fill="none" focusable="false" height="1em" role="presentation" viewBox="0 0 24 24" width="1em" {...props}>
+    <svg
+      aria-hidden="true"
+      fill="none"
+      focusable="false"
+      height="1em"
+      role="presentation"
+      viewBox="0 0 24 24"
+      width="1em"
+      {...props}
+    >
       <path
         d="M21.2714 9.17834C20.9814 8.71834 20.6714 8.28834 20.3514 7.88834C19.9814 7.41834 19.2814 7.37834 18.8614 7.79834L15.8614 10.7983C16.0814 11.4583 16.1214 12.2183 15.9214 13.0083C15.5714 14.4183 14.4314 15.5583 13.0214 15.9083C12.2314 16.1083 11.4714 16.0683 10.8114 15.8483C10.8114 15.8483 9.38141 17.2783 8.35141 18.3083C7.85141 18.8083 8.01141 19.6883 8.68141 19.9483C9.75141 20.3583 10.8614 20.5683 12.0014 20.5683C13.7814 20.5683 15.5114 20.0483 17.0914 19.0783C18.7014 18.0783 20.1514 16.6083 21.3214 14.7383C22.2714 13.2283 22.2214 10.6883 21.2714 9.17834Z"
         fill="currentColor"
@@ -183,7 +280,16 @@ export const EyeSlashFilledIcon = (props: IconSvgProps) => {
 
 export const EyeFilledIcon = (props: IconSvgProps) => {
   return (
-    <svg aria-hidden="true" fill="none" focusable="false" height="1em" role="presentation" viewBox="0 0 24 24" width="1em" {...props}>
+    <svg
+      aria-hidden="true"
+      fill="none"
+      focusable="false"
+      height="1em"
+      role="presentation"
+      viewBox="0 0 24 24"
+      width="1em"
+      {...props}
+    >
       <path
         d="M21.25 9.14969C18.94 5.51969 15.56 3.42969 12 3.42969C10.22 3.42969 8.49 3.94969 6.91 4.91969C5.33 5.89969 3.91 7.32969 2.75 9.14969C1.75 10.7197 1.75 13.2697 2.75 14.8397C5.06 18.4797 8.44 20.5597 12 20.5597C13.78 20.5597 15.51 20.0397 17.09 19.0697C18.67 18.0897 20.09 16.6597 21.25 14.8397C22.25 13.2797 22.25 10.7197 21.25 9.14969ZM12 16.0397C9.76 16.0397 7.96 14.2297 7.96 11.9997C7.96 9.76969 9.76 7.95969 12 7.95969C14.24 7.95969 16.04 9.76969 16.04 11.9997C16.04 14.2297 14.24 16.0397 12 16.0397Z"
         fill="currentColor"

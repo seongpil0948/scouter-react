@@ -23,7 +23,8 @@ export function getPool(): Pool {
             rejectUnauthorized: false,
           }
         : undefined,
-  }
+  };
+
   // console.debug("pg pool config", config);
   if (pgPool === null) {
     pgPool = new Pool(config);
@@ -67,6 +68,7 @@ export function checkPostgresEnvVars(): boolean {
     console.warn(
       `다음 PostgreSQL 환경 변수가 설정되지 않았습니다: ${missing.join(", ")}`,
     );
+
     return false;
   }
 

@@ -32,6 +32,7 @@ const fetcher = (url: string) =>
       if (!res.ok) {
         throw new Error(`API 요청 실패: ${res.status}`);
       }
+
       return res.json();
     })
     .catch((error) => {
@@ -58,6 +59,7 @@ export const useTraceData = (traceId: string) => {
   // 시간 포맷팅
   const formatTime = useCallback((timestamp: number) => {
     console.log("timestamp", timestamp);
+
     return new Date(timestamp).toLocaleString("ko-KR", {
       year: "numeric",
       month: "2-digit",
@@ -77,6 +79,7 @@ export const useTraceData = (traceId: string) => {
     if (duration < 1000) {
       return `${duration.toFixed(2)}ms`;
     }
+
     return `${(duration / 1000).toFixed(2)}s`;
   }, []);
 

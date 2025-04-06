@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@heroui/button";
 import { Badge } from "@heroui/badge";
-import { EyeIcon, FilterIcon, SearchIcon } from "lucide-react";
+import { EyeIcon, SearchIcon } from "lucide-react";
 import { Input } from "@heroui/input";
 import { Select, SelectItem } from "@heroui/select";
 
@@ -37,7 +37,9 @@ export const SpanList: React.FC<SpanListProps> = React.memo(
     // 서비스 목록 추출
     const services = useMemo(() => {
       const serviceSet = new Set<string>();
+
       spans.forEach((span) => serviceSet.add(span.serviceName));
+
       return Array.from(serviceSet).sort();
     }, [spans]);
 
@@ -48,6 +50,7 @@ export const SpanList: React.FC<SpanListProps> = React.memo(
       // 검색어 필터링
       if (searchTerm) {
         const lowerSearchTerm = searchTerm.toLowerCase();
+
         result = result.filter(
           (span) =>
             span.name.toLowerCase().includes(lowerSearchTerm) ||
@@ -104,6 +107,7 @@ export const SpanList: React.FC<SpanListProps> = React.memo(
       if (sortBy === field) {
         return sortOrder === "asc" ? " ↑" : " ↓";
       }
+
       return "";
     };
 
@@ -119,11 +123,11 @@ export const SpanList: React.FC<SpanListProps> = React.memo(
                 size={16}
               />
               <Input
-                type="text"
+                className="pl-10"
                 placeholder="스팬 이름 또는 서비스 검색..."
+                type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
               />
             </div>
           </div>
@@ -185,15 +189,15 @@ export const SpanList: React.FC<SpanListProps> = React.memo(
                 >
                   지연 시간{getSortIndicator("duration")}
                 </th>
-                <th className="border px-4 py-2"></th>
+                <th className="border px-4 py-2" />
               </tr>
             </thead>
             <tbody>
               {filteredSpans.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
                     className="border px-4 py-8 text-center text-gray-500"
+                    colSpan={5}
                   >
                     검색 조건에 맞는 스팬이 없습니다
                   </td>
@@ -224,9 +228,9 @@ export const SpanList: React.FC<SpanListProps> = React.memo(
                     <td className="border px-4 py-2 text-center">
                       <Button
                         size="sm"
+                        title="스팬 상세 보기"
                         variant="ghost"
                         onPress={() => setSelectedSpanId(span.spanId)}
-                        title="스팬 상세 보기"
                       >
                         <EyeIcon size={16} />
                         <span className="sr-only">상세 보기</span>

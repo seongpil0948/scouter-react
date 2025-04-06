@@ -1,12 +1,17 @@
-'use client';
-import React, { useEffect, useState } from 'react';
-import { DateRangePicker as HeroDateRangePicker } from '@heroui/date-picker';
-import { Button } from '@heroui/button';
-import { Clock } from 'lucide-react';
-import { parseDate, getLocalTimeZone, CalendarDate, today } from '@internationalized/date';
-import { RangeValue } from '@react-types/shared';
+"use client";
+import React, { useEffect, useState } from "react";
+import { DateRangePicker as HeroDateRangePicker } from "@heroui/date-picker";
+import { Button } from "@heroui/button";
+import { Clock } from "lucide-react";
+import {
+  parseDate,
+  getLocalTimeZone,
+  CalendarDate,
+  today,
+} from "@internationalized/date";
+import { RangeValue } from "@react-types/shared";
 
-import { useFilterStore } from '@/lib/store/telemetryStore';
+import { useFilterStore } from "@/lib/store/telemetryStore";
 
 interface DateRangePickerProps {
   onChange?: (startTime: number, endTime: number) => void;
@@ -17,8 +22,8 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange }) => {
 
   // Initialize with timeRange values converted to CalendarDate
   const [value, setValue] = useState<RangeValue<CalendarDate>>({
-    start: parseDate(new Date(timeRange.startTime).toISOString().split('T')[0]),
-    end: parseDate(new Date(timeRange.endTime).toISOString().split('T')[0]),
+    start: parseDate(new Date(timeRange.startTime).toISOString().split("T")[0]),
+    end: parseDate(new Date(timeRange.endTime).toISOString().split("T")[0]),
   });
 
   // Convert date changes to timestamps and update store
@@ -40,8 +45,10 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange }) => {
     const duration = timeRange.endTime - timeRange.startTime;
     const newStartTime = now - duration;
 
-    const newStartDate = parseDate(new Date(newStartTime).toISOString().split('T')[0]);
-    const newEndDate = parseDate(new Date(now).toISOString().split('T')[0]);
+    const newStartDate = parseDate(
+      new Date(newStartTime).toISOString().split("T")[0],
+    );
+    const newEndDate = parseDate(new Date(now).toISOString().split("T")[0]);
 
     const newValue = {
       start: newStartDate,
@@ -53,14 +60,15 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange }) => {
     onChange?.(newStartTime, now);
   };
 
-  useEffect(handleRefresh, [])
+  useEffect(handleRefresh, []);
 
   // setInterval(handleRefresh, 5000); // Refresh every 30 seconds
 
   // Define quick selection options
   const handleQuickSelect = (daysBack: number) => {
     const endDate = today(getLocalTimeZone());
-    const startDate = daysBack === 0 ? endDate : endDate.subtract({ days: daysBack });
+    const startDate =
+      daysBack === 0 ? endDate : endDate.subtract({ days: daysBack });
 
     const newValue = { start: startDate, end: endDate };
 
@@ -75,7 +83,11 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange }) => {
 
   return (
     <div className="flex items-center gap-2 w-full max-w-xl">
-      <HeroDateRangePicker label="데이터 조회 기간" value={value} onChange={handleValueChange} />
+      <HeroDateRangePicker
+        label="데이터 조회 기간"
+        value={value}
+        onChange={handleValueChange}
+      />
 
       <Button size="sm" variant="ghost" onPress={() => handleQuickSelect(0)}>
         오늘
@@ -90,7 +102,13 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange }) => {
         30일
       </Button>
 
-      <Button className="flex items-center gap-1" color="primary" title="새로고침" variant="ghost" onPress={handleRefresh}>
+      <Button
+        className="flex items-center gap-1"
+        color="primary"
+        title="새로고침"
+        variant="ghost"
+        onPress={handleRefresh}
+      >
         <Clock size={16} />
         <span className="hidden md:inline">새로고침</span>
       </Button>

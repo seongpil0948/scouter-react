@@ -1,6 +1,7 @@
 "use client";
 import React, { useCallback } from "react";
 import { Badge } from "@heroui/badge";
+
 import { formatDateTime } from "@/lib/utils/dateFormatter";
 
 interface Span {
@@ -28,6 +29,7 @@ export const SpanDetail: React.FC<SpanDetailProps> = React.memo(
     const formatAttributeValue = useCallback((value: any) => {
       if (value === null || value === undefined) return "-";
       if (typeof value === "object") return JSON.stringify(value, null, 2);
+
       return String(value);
     }, []);
 

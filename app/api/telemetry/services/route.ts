@@ -1,5 +1,6 @@
 // frontend/app/api/telemetry/services/route.ts
 import { NextRequest, NextResponse } from "next/server";
+
 import { getPool } from "@/lib/postgres/client";
 
 export async function GET(request: NextRequest) {
@@ -88,6 +89,7 @@ export async function GET(request: NextRequest) {
       }
 
       const serviceData = timeSeriesMap.get(serviceName)!;
+
       serviceData.push({
         timestamp: timeBucket,
         requestCount: row.request_count,

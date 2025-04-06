@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
+
 import { TraceItem } from "@/lib/store/telemetryStore";
 
 /**
@@ -57,6 +58,7 @@ export function useTraceVisualization(options: {
   const getCacheKey = useCallback(() => {
     const { startTime, endTime } = timeRange;
     const { serviceName, status, minDuration, maxDuration } = filters;
+
     return JSON.stringify({
       startTime,
       endTime,
@@ -91,6 +93,7 @@ export function useTraceVisualization(options: {
   const getQueryUrl = useCallback(() => {
     const params = getQueryParams();
     const queryString = new URLSearchParams(params).toString();
+
     return `/api/telemetry/traces?${queryString}`;
   }, [getQueryParams]);
 
@@ -108,6 +111,7 @@ export function useTraceVisualization(options: {
           now - cachedDataRef.current[cacheKey].timestamp < 5000
         ) {
           setTraceData(cachedDataRef.current[cacheKey].data);
+
           return cachedDataRef.current[cacheKey].data;
         }
 
@@ -141,7 +145,9 @@ export function useTraceVisualization(options: {
       } catch (err) {
         const error =
           err instanceof Error ? err : new Error("알 수 없는 오류 발생");
+
         setError(error);
+
         return [];
       } finally {
         setIsLoading(false);

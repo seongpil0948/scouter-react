@@ -46,6 +46,7 @@ export const SpanTree: React.FC<SpanTreeProps> = React.memo(
     const getStatusColor = useCallback((status?: string) => {
       if (status === "ERROR") return "bg-red-500";
       if (status === "OK") return "bg-green-500";
+
       return "bg-blue-500";
     }, []);
 
@@ -67,9 +68,7 @@ export const SpanTree: React.FC<SpanTreeProps> = React.memo(
         return (
           <React.Fragment key={span.spanId}>
             <div
-              className={`mb-1 cursor-pointer hover:bg-gray-50 ${
-                isSelected ? "bg-blue-50" : ""
-              }`}
+              className={`mb-1 cursor-pointer hover:bg-gray-50 ${isSelected ? "bg-blue-50" : ""}`}
               role="button"
               tabIndex={0}
               onClick={() => setSelectedSpanId(span.spanId)}
@@ -84,8 +83,8 @@ export const SpanTree: React.FC<SpanTreeProps> = React.memo(
                 <div className="w-3/12 flex items-center overflow-hidden">
                   <div style={{ marginLeft: `${depth * 16}px` }}>
                     <span
-                      className={`w-2 h-2 inline-block rounded-full mr-2 ${getStatusColor(span.status)}`}
                       aria-hidden="true"
+                      className={`w-2 h-2 inline-block rounded-full mr-2 ${getStatusColor(span.status)}`}
                     />
                     <span className="font-mono text-sm truncate">
                       {span.name}
@@ -97,6 +96,7 @@ export const SpanTree: React.FC<SpanTreeProps> = React.memo(
                 </div>
                 <div className="w-5/12 relative h-6">
                   <div
+                    aria-hidden="true"
                     className="absolute top-1/2 transform -translate-y-1/2 h-2 rounded"
                     style={{
                       width: `${Math.min(spanWidth, 100)}%`,
@@ -104,7 +104,6 @@ export const SpanTree: React.FC<SpanTreeProps> = React.memo(
                       backgroundColor: getStatusColor(span.status),
                     }}
                     title={`지연 시간: ${formatDuration(span.duration)}`}
-                    aria-hidden="true"
                   />
                 </div>
                 <div className="w-2/12 text-right font-mono text-sm">

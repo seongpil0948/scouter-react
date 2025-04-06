@@ -49,9 +49,9 @@ const SearchBar: React.FC<SearchBarProps> = ({
       <div className="relative flex items-center">
         <SearchIcon className="absolute left-3 text-gray-400" size={18} />
         <input
+          aria-label="검색어를 입력하세요..."
           className="w-full pl-10 pr-10 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           placeholder={placeholder}
-          aria-label="검색어를 입력하세요..."
           type="text"
           value={searchValue}
           onChange={handleChange}
@@ -68,9 +68,9 @@ const SearchBar: React.FC<SearchBarProps> = ({
         <Button
           aria-label="검색"
           className="absolute right-1"
+          color="primary"
           size="sm"
           type="submit"
-          color="primary"
         >
           검색
         </Button>

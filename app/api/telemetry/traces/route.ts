@@ -1,5 +1,6 @@
 // frontend/app/api/telemetry/traces/route.ts
 import { NextRequest, NextResponse } from "next/server";
+
 import { getPool } from "@/lib/postgres/client";
 
 export async function GET(request: NextRequest) {
@@ -101,19 +102,19 @@ export async function GET(request: NextRequest) {
 
     // // 트레이스 그룹 쿼리 (trace_id로 그룹화)
     // const traceGroupsQuery = `
-    //   SELECT 
+    //   SELECT
     //     trace_id AS "traceId",
     //     MIN(start_time) AS "startTime",
     //     MAX(end_time) - MIN(start_time) AS "duration",
     //     COUNT(*) AS "spanCount",
     //     json_agg(DISTINCT service_name) AS "services"
-    //   FROM 
+    //   FROM
     //     traces
-    //   WHERE 
+    //   WHERE
     //     ${whereClause}
-    //   GROUP BY 
+    //   GROUP BY
     //     trace_id
-    //   ORDER BY 
+    //   ORDER BY
     //     MIN(start_time) DESC
     //   LIMIT 100
     // `;
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
       // pool.query(countQuery, queryParams.slice(0, -2)), // limit, offset 제외
     ]);
 
-    const traces = tracesResult.rows.filter(isTraceItem)
+    const traces = tracesResult.rows.filter(isTraceItem);
     const response: DtoTrace = {
       traces,
       // traceGroups: traceGroupsResult.rows,
@@ -153,7 +154,6 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
 
 function isTraceItem(item: any): item is TraceItem {
   return (

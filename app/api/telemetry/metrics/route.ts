@@ -1,5 +1,6 @@
 // frontend/app/api/telemetry/metrics/route.ts
 import { NextRequest, NextResponse } from "next/server";
+
 import { getPool } from "@/lib/postgres/client";
 
 export async function GET(request: NextRequest) {
@@ -105,7 +106,7 @@ export async function GET(request: NextRequest) {
       summaryQuery,
       errorServicesQuery,
       queryParams,
-    })
+    });
     // 병렬로 모든 쿼리 실행
     const [
       servicesResult,

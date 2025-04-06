@@ -1,11 +1,12 @@
 // frontend/app/api/telemetry/traces/[traceId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
+
 import { getPool } from "@/lib/postgres/client";
 
-export async function  GET(
+export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ traceId: string }> }
-)  {
+  { params }: { params: Promise<{ traceId: string }> },
+) {
   // Next.js App Router에서는 동적 라우트 매개변수를 비동기적으로 처리해야 함
   const { traceId } = await params;
 
@@ -45,6 +46,7 @@ export async function  GET(
 
     // 서비스 목록 생성
     const serviceSet = new Set<string>();
+
     result.rows.forEach((span) => {
       if (span.serviceName) {
         serviceSet.add(span.serviceName);

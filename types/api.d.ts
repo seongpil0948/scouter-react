@@ -1,3 +1,3 @@
 type DtoTrace = {
   traces: TraceItem[];
-}
+};

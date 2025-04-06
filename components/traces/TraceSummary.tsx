@@ -2,6 +2,7 @@
 import React from "react";
 import { Badge } from "@heroui/badge";
 import { Tooltip } from "@heroui/tooltip";
+
 import { formatDateTime } from "@/lib/utils/dateFormatter";
 
 interface TraceData {

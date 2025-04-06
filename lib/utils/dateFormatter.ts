@@ -10,6 +10,7 @@ function normalizeTimestamp(timestamp: number | string): number {
 
   // 2. 타임스탬프 길이 확인 (13자리가 아니면 밀리초 단위로 변환)
   const tsStr = ts.toString();
+
   if (tsStr.length === 10) {
     // 초 단위 타임스탬프를 밀리초로 변환
     return ts * 1000;
@@ -26,6 +27,7 @@ export function formatDateTime(timestamp: number | string): string {
   // 날짜가 유효한지 확인
   if (isNaN(date.getTime())) {
     console.warn(`Invalid timestamp: ${timestamp}`);
+
     return "Invalid Date";
   }
 
@@ -48,6 +50,7 @@ export function formatDate(timestamp: number | string): string {
   // 날짜가 유효한지 확인
   if (isNaN(date.getTime())) {
     console.warn(`Invalid timestamp: ${timestamp}`);
+
     return "Invalid Date";
   }
 
@@ -66,6 +69,7 @@ export function formatTime(timestamp: number | string): string {
   // 날짜가 유효한지 확인
   if (isNaN(date.getTime())) {
     console.warn(`Invalid timestamp: ${timestamp}`, new Error().stack);
+
     return "Invalid Date";
   }
 
@@ -148,6 +152,7 @@ export function isoToTimestamp(isoString: string): number {
 // 타임스탬프를 ISO 문자열로 변환
 export function timestampToIso(timestamp: number | string): string {
   const normalizedTs = normalizeTimestamp(timestamp);
+
   return new Date(normalizedTs).toISOString();
 }
 

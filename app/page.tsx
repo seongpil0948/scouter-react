@@ -1,17 +1,12 @@
 // frontend/app/page.tsx
-'use client';
-import { useEffect, useState } from 'react';
-import useSWR from 'swr';
-import { useRouter } from 'next/navigation';
-import { Activity, AlertTriangle, Clock, Info } from 'lucide-react';
-import { Card, CardBody } from '@heroui/card';
-import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/table';
-import { Badge } from '@heroui/badge';
+"use client";
+import useSWR from "swr";
+import { useRouter } from "next/navigation";
 
-import TraceVisualization from '@/components/traces/TraceVisualization';
-import { useFilterStore, useTelemetryStore } from '@/lib/store/telemetryStore';
-import DateRangePicker from '@/components/shared/DateRangePicker';
-import { ThemeSwitch } from '@/components/shared/theme-switch';
+import TraceVisualization from "@/components/traces/TraceVisualization";
+import { useFilterStore } from "@/lib/store/telemetryStore";
+import DateRangePicker from "@/components/shared/DateRangePicker";
+import { ThemeSwitch } from "@/components/shared/theme-switch";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -22,32 +17,37 @@ export default function Home() {
   const { data } = useSWR<DtoTrace>(
     `/api/telemetry/traces?startTime=${timeRange.startTime}&endTime=${timeRange.endTime}`,
     fetcher,
-    { refreshInterval: 30000 } // 30초마다 자동 갱신
+    { refreshInterval: 30000 }, // 30초마다 자동 갱신
   );
 
   const traceVisualizationConfig = {
     height: 400,
-    title: '실시간 요청 지연 시간',
+    title: "실시간 요청 지연 시간",
     latencyThreshold: 300,
     maxDataPoints: 100,
     autoUpdate: false,
     colors: {
-      low: '#52c41a', // 낮은 지연시간
-      medium: '#1890ff', // 보통 지연시간
-      high: '#faad14', // 높은 지연시간
-      critical: '#ff4d4f', // 임계치 초과 지연시간
-      effectScatter: '#ff4d4f', // 고지연 요청 색상
+      low: "#52c41a", // 낮은 지연시간
+      medium: "#1890ff", // 보통 지연시간
+      high: "#faad14", // 높은 지연시간
+      critical: "#ff4d4f", // 임계치 초과 지연시간
+      effectScatter: "#ff4d4f", // 고지연 요청 색상
     },
   };
   const handleTraceClick = (trace: TraceItem) => {
     router.push(`/traces/${trace.traceId}`);
   };
+
   return (
     <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
       <div className="inline-block max-w-xl text-center justify-center">hi</div>
       <ThemeSwitch className="absolute top-4 right-4" />
       <DateRangePicker />
-      <TraceVisualization traceData={data?.traces ?? []} onDataPointClick={handleTraceClick} config={traceVisualizationConfig} />
+      <TraceVisualization
+        config={traceVisualizationConfig}
+        traceData={data?.traces ?? []}
+        onDataPointClick={handleTraceClick}
+      />
     </section>
   );
 }

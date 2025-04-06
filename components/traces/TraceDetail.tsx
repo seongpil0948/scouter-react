@@ -4,16 +4,17 @@ import { Badge } from "@heroui/badge";
 import React, { useCallback, useState, useMemo } from "react";
 import { Card, CardBody } from "@heroui/card";
 import { Tabs, Tab } from "@heroui/tabs";
-import { CopyIcon, ArrowLeft, EyeIcon } from "lucide-react";
-import useSWR from "swr";
+import { CopyIcon, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ErrorBoundary } from "react-error-boundary";
+import { addToast } from "@heroui/toast";
+
 import { SpanTree } from "./SpanTree";
 import { SpanDetail } from "./SpanDetail";
 import { TraceSummary } from "./TraceSummary";
 import { SpanList } from "./SpanList";
-import { addToast, useToast } from "@heroui/toast";
 import { useTraceData } from "./hook/useTraceData";
+
 import { formatDateTime } from "@/lib/utils/dateFormatter";
 
 interface TraceDetailProps {
@@ -38,6 +39,7 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
   // 선택된 스팬 정보
   const selectedSpan = useMemo(() => {
     if (!selectedSpanId || !traceData) return null;
+
     return traceData.spans.find((span) => span.spanId === selectedSpanId);
   }, [selectedSpanId, traceData]);
 
@@ -92,7 +94,7 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
       <Card className="bg-white rounded-lg shadow-lg overflow-hidden">
         <CardBody className="p-6">
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500" />
             <p className="ml-4 text-lg text-gray-600">
               트레이스 데이터를 불러오는 중...
             </p>
@@ -163,9 +165,9 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
           {activeTab === "timeline" && (
             <div className="mt-4">
               <TraceSummary
-                traceData={traceData}
-                formatTime={formatTime}
                 formatDuration={formatDuration}
+                formatTime={formatTime}
+                traceData={traceData}
               />
 
               <div className="overflow-x-auto">
@@ -181,12 +183,12 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
                   {/* 스팬 타임라인 */}
                   <div className="mt-2">
                     <SpanTree
-                      rootSpans={rootSpans}
                       childrenMap={childrenMap}
+                      formatDuration={formatDuration}
+                      rootSpans={rootSpans}
                       selectedSpanId={selectedSpanId}
                       setSelectedSpanId={setSelectedSpanId}
                       traceData={traceData}
-                      formatDuration={formatDuration}
                     />
                   </div>
                 </div>
@@ -207,9 +209,9 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
                       <td className="py-2 px-4 font-mono flex items-center">
                         {traceData.traceId}
                         <Button
+                          className="ml-2"
                           size="sm"
                           variant="ghost"
-                          className="ml-2"
                           onPress={() => copyToClipboard(traceData.traceId)}
                         >
                           <CopyIcon size={14} />
@@ -269,15 +271,15 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
               </div>
 
               <SpanList
-                spans={traceData.spans}
                 formatDuration={formatDuration}
                 setSelectedSpanId={setSelectedSpanId}
+                spans={traceData.spans}
               />
             </div>
           )}
 
           {activeTab === "span" && selectedSpan && (
-            <SpanDetail span={selectedSpan} formatDuration={formatDuration} />
+            <SpanDetail formatDuration={formatDuration} span={selectedSpan} />
           )}
         </ErrorBoundary>
       </CardBody>
