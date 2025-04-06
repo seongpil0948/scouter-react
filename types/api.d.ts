@@ -1,0 +1,3 @@
+type DtoTrace = {
+  traces: TraceItem[];
+}
