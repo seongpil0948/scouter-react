@@ -1,6 +1,7 @@
 // lib/store/chartStore.ts
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { DEFAULT_CONFIG } from '@/components/traces/TraceVisualization/constant';
 
 interface ChartState {
   // 차트 설정
@@ -30,39 +31,30 @@ interface ChartState {
     statusFilter?: string;
   };
   updateDataFilters: (filters: Partial<ChartState['dataFilters']>) => void;
+  resetFilters: () => void;
 }
 
-// 기본 차트 설정
-export const DEFAULT_CHART_CONFIG: ChartConfig = {
-  title: "실시간 지연 시간 모니터링",
-  height: 600,
-  maxDataPoints: 100,
-  latencyThreshold: 300,
-  autoUpdate: false,
-  updateInterval: 30000,
-  colors: {
-    low: "#52c41a",
-    medium: "#1890ff",
-    high: "#faad14",
-    critical: "#ff4d4f",
-    effectScatter: "#ff4d4f",
-  },
-  symbolSizes: {
-    min: 8,
-    max: 18,
-    effectMin: 15,
-    effectMax: 30,
-  },
-};
-
+// Zustand 스토어 생성
 export const useChartStore = create<ChartState>()(
   devtools(
     persist(
-      (set) => ({
+      (set, get) => ({
         // 차트 설정 초기화
-        config: DEFAULT_CHART_CONFIG,
-        updateConfig: (newConfig) => 
-          set((state) => ({ config: { ...state.config, ...newConfig } })),
+        config: DEFAULT_CONFIG,
+        updateConfig: (newConfig) => {
+          // 설정이 실제로 변경된 경우에만 상태 업데이트
+          const currentConfig = get().config;
+          const hasChanges = Object.keys(newConfig).some(key => {
+            // @ts-ignore - 동적 속성 접근
+            return JSON.stringify(newConfig[key]) !== JSON.stringify(currentConfig[key]);
+          });
+          
+          if (hasChanges) {
+            set((state) => ({ 
+              config: { ...state.config, ...newConfig } 
+            }));
+          }
+        },
         
         // 선택된 트레이스 초기화
         selectedTrace: null,
@@ -86,9 +78,21 @@ export const useChartStore = create<ChartState>()(
         
         // 데이터 필터 초기화
         dataFilters: {},
-        updateDataFilters: (filters) => set((state) => ({
-          dataFilters: { ...state.dataFilters, ...filters }
-        })),
+        updateDataFilters: (filters) => {
+          // 기존 필터와 비교하여 변경된 경우에만 업데이트
+          const currentFilters = get().dataFilters;
+          const hasChanges = Object.keys(filters).some(key => {
+            // @ts-ignore - 동적 속성 접근
+            return filters[key] !== currentFilters[key];
+          });
+          
+          if (hasChanges) {
+            set((state) => ({
+              dataFilters: { ...state.dataFilters, ...filters }
+            }));
+          }
+        },
+        resetFilters: () => set({ dataFilters: {} }),
       }),
       {
         name: "chart-store",
@@ -102,9 +106,14 @@ export const useChartStore = create<ChartState>()(
   )
 );
 
-// 유틸리티 함수
+// 유틸리티 함수 - 비동기 새로고침 처리
 export const refreshChart = async (callback?: () => Promise<any>) => {
   const { setRefreshing } = useChartStore.getState();
+  
+  // 이미 새로고침 중이면 중복 실행 방지
+  if (useChartStore.getState().isRefreshing) {
+    return;
+  }
   
   setRefreshing(true);
   

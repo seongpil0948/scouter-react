@@ -1,4 +1,89 @@
 
+// utils/traceDataProcessor.ts
+
+/**
+ * 트레이스 데이터를 차트 데이터로 변환하는 유틸리티
+ */
+export function processTraceData(
+  traces: TraceItem[],
+  latencyThreshold: number = 300,
+  maxDataPoints: number = 100
+): { 
+  timeSeriesData: DataPoint[]; 
+  highLatencyData: DataPoint[];
+} {
+  // 중복 방지를 위한 맵 사용
+  const timeSeriesMap = new Map<number, DataPoint>();
+  const highLatencyMap = new Map<number, DataPoint>();
+  
+  // 데이터 처리
+  traces.forEach((trace) => {
+    // 유효성 검사
+    if (!trace) return;
+    
+    // 타임스탬프 처리
+    const timestamp = typeof trace.startTime === 'string' 
+      ? parseInt(trace.startTime, 10) 
+      : trace.startTime;
+    
+    if (!timestamp || isNaN(timestamp)) return;
+    
+    // 지연 시간 처리
+    const latency = trace.duration;
+    
+    if (latency === undefined || isNaN(latency)) return;
+    
+    // 데이터 포인트 생성
+    const dataPoint: DataPoint = [timestamp, latency];
+    
+    // 맵에 추가
+    timeSeriesMap.set(timestamp, dataPoint);
+    
+    // 고지연 데이터 분류
+    if (latency > latencyThreshold) {
+      highLatencyMap.set(timestamp, dataPoint);
+    }
+  });
+  
+  // 맵을 배열로 변환, 정렬 및 제한
+  const timeSeriesData = Array.from(timeSeriesMap.values())
+    .sort((a, b) => a[0] - b[0])
+    .slice(-maxDataPoints);
+  
+  const highLatencyData = Array.from(highLatencyMap.values())
+    .sort((a, b) => a[0] - b[0])
+    .slice(-maxDataPoints);
+  
+  return {
+    timeSeriesData,
+    highLatencyData
+  };
+}
+
+/**
+ * 타임스탬프로 트레이스 찾기
+ */
+export function findTraceByTimestamp(
+  traces: TraceItem[],
+  timestamp: number
+): TraceItem | null {
+  if (!traces || !traces.length) return null;
+  
+  return traces.reduce((closest, trace) => {
+    const currentDiff = Math.abs(trace.startTime - timestamp);
+    const closestDiff = closest 
+      ? Math.abs(closest.startTime - timestamp)
+      : Infinity;
+    
+    return currentDiff < closestDiff ? trace : closest;
+  }, null as TraceItem | null);
+}
+
+export default {
+  processTraceData,
+  findTraceByTimestamp
+};
+
 /**
  * 차트에 사용되는 유틸리티 함수와 상수 모음
  */

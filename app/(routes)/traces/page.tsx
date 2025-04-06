@@ -4,8 +4,8 @@ import useSWR from "swr";
 import { useRouter } from "next/navigation";
 
 import { useFilterStore, useTelemetryStore } from "@/lib/store/telemetryStore";
-import TraceList from "@/components/traces/TraceList";
-import TraceDetail from "@/components/traces/TraceDetail";
+import TraceList from "@/components/traces/TraceDetail/TraceList";
+import TraceDetail from '@/components/traces/TraceDetail';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 

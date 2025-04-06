@@ -1,8 +1,8 @@
 "use server";
 import { Suspense } from "react";
 import { Skeleton } from "@heroui/skeleton";
+import TraceDetail from '@/components/traces/TraceDetail';
 
-import TraceDetail from "@/components/traces/TraceDetail";
 
 interface TraceDetailPageProps {
   params: Promise<{

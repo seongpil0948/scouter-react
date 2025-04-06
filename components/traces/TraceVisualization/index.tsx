@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useCallback, useEffect } from "react";
+import React, { useMemo, useCallback, useState, useEffect } from "react";
 import { Card, CardBody } from "@heroui/card";
 import { Badge } from "@heroui/badge";
 import { Button } from "@heroui/button";
@@ -14,12 +14,13 @@ import {
   BarChart2
 } from "lucide-react";
 
-import { useTraceChart } from './hooks/useTraceChart';
-import { useChartStore, refreshChart } from '@/lib/store/chartStore';
+import TraceChart from './TraceChart';
+import { processTraceData, findTraceByTimestamp } from './utils';
+import { useChartStore } from '@/lib/store/chartStore';
 import { formatDuration } from '@/lib/utils/dateFormatter';
+import { DEFAULT_CONFIG } from './constant';
 
-
-export const TraceVisualization: React.FC<TraceVisualizationProps> = ({
+const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   traceData,
   onDataPointClick,
   config = {},
@@ -27,40 +28,24 @@ export const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   title,
   showFilters = false,
 }) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+  
   const { 
-    updateConfig, 
     isRefreshing,
+    setRefreshing,
     legendState,
     toggleLegend,
     dataFilters,
     updateDataFilters
   } = useChartStore();
 
-  // 스토어 설정 업데이트
-  useEffect(() => {
-    if (Object.keys(config).length > 0) {
-      updateConfig(config);
-    }
-  }, [config, updateConfig]);
+  // 메모이제이션된 설정
+  const mergedConfig = useMemo(() => ({
+    ...DEFAULT_CONFIG,
+    ...config,
+  }), [config]);
 
-  const { chartRef, isLoading, chartHeight } = useTraceChart({
-    traceData, 
-    onDataPointClick,
-    config
-  });
-
-  // 서비스 목록 추출
-  const services = useMemo(() => {
-    const serviceSet = new Set<string>();
-    traceData.forEach(trace => {
-      if (trace.serviceName) {
-        serviceSet.add(trace.serviceName);
-      }
-    });
-    return Array.from(serviceSet).sort();
-  }, [traceData]);
-
-  // 필터링된 데이터
+  // 필터링된 데이터 메모이제이션
   const filteredData = useMemo(() => {
     if (!dataFilters.minDuration && !dataFilters.maxDuration && 
         !dataFilters.serviceFilter && !dataFilters.statusFilter) {
@@ -90,13 +75,24 @@ export const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     });
   }, [traceData, dataFilters]);
 
-  // 지연 시간 통계
+  // 서비스 목록 추출
+  const services = useMemo(() => {
+    const serviceSet = new Set<string>();
+    traceData.forEach(trace => {
+      if (trace.serviceName) {
+        serviceSet.add(trace.serviceName);
+      }
+    });
+    return Array.from(serviceSet).sort();
+  }, [traceData]);
+
+  // 지연 시간 통계 계산
   const latencyStats = useMemo(() => {
-    if (traceData.length === 0) {
+    if (filteredData.length === 0) {
       return { min: 0, max: 0, avg: 0, p90: 0 };
     }
     
-    const durations = traceData.map(t => t.duration).sort((a, b) => a - b);
+    const durations = filteredData.map(t => t.duration).sort((a, b) => a - b);
     const min = durations[0];
     const max = durations[durations.length - 1];
     const sum = durations.reduce((a, b) => a + b, 0);
@@ -105,20 +101,72 @@ export const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     const p90 = durations[p90Index];
     
     return { min, max, avg, p90 };
-  }, [traceData]);
+  }, [filteredData]);
+
+  // 차트 데이터 처리
+  const chartData = useMemo(() => {
+    setIsProcessing(true);
+    const result = processTraceData(
+      filteredData, 
+      mergedConfig.latencyThreshold || DEFAULT_CONFIG.latencyThreshold!, 
+      mergedConfig.maxDataPoints || DEFAULT_CONFIG.maxDataPoints!
+    );
+    setIsProcessing(false);
+    return result;
+  }, [filteredData, mergedConfig.latencyThreshold, mergedConfig.maxDataPoints]);
+
+  // 데이터 포인트 클릭 핸들러
+  const handleDataPointClick = useCallback((timestamp: number) => {
+    const trace = findTraceByTimestamp(traceData, timestamp);
+    if (trace && onDataPointClick) {
+      onDataPointClick(trace);
+    }
+  }, [traceData, onDataPointClick]);
 
   // 새로고침 처리
   const handleRefresh = useCallback(async () => {
-    if (onRefresh) {
-      await refreshChart(onRefresh);
+    if (onRefresh && !isRefreshing) {
+      setRefreshing(true);
+      try {
+        await onRefresh();
+      } catch (error) {
+        console.error('Chart refresh error:', error);
+      } finally {
+        // 새로고침 UI 효과를 위해 약간의 지연 추가
+        setTimeout(() => setRefreshing(false), 500);
+      }
     }
-  }, [onRefresh]);
+  }, [onRefresh, isRefreshing, setRefreshing]);
+
+  // 필터 초기화 핸들러
+  const handleResetFilters = useCallback(() => {
+    updateDataFilters({
+      minDuration: undefined,
+      maxDuration: undefined,
+      serviceFilter: undefined,
+      statusFilter: undefined
+    });
+  }, [updateDataFilters]);
+
+  // 서비스 필터 변경 핸들러
+  const handleServiceFilterChange = useCallback((key: React.Key) => {
+    updateDataFilters({ 
+      serviceFilter: key as string === "" ? undefined : key as string 
+    });
+  }, [updateDataFilters]);
+
+  // 상태 필터 변경 핸들러
+  const handleStatusFilterChange = useCallback((key: React.Key) => {
+    updateDataFilters({ 
+      statusFilter: key as string === "" ? undefined : key as string 
+    });
+  }, [updateDataFilters]);
 
   return (
     <Card className="w-full">
       <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <h3 className="text-lg font-medium">
-          {title || config.title || '트레이스 시각화'}
+          {title || mergedConfig.title || '트레이스 시각화'}
         </h3>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex gap-1">
@@ -162,9 +210,7 @@ export const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                 label="서비스"
                 placeholder="모든 서비스"
                 value={dataFilters.serviceFilter || ""}
-                onSelectionChange={(key) => updateDataFilters({ 
-                  serviceFilter: key as string === "" ? undefined : key as string 
-                })}
+                onSelectionChange={handleServiceFilterChange as any}
                 size="sm"
                 className="w-48"
               >
@@ -180,9 +226,7 @@ export const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                 label="상태"
                 placeholder="모든 상태"
                 value={dataFilters.statusFilter || ""}
-                onSelectionChange={(key) => updateDataFilters({ 
-                  statusFilter: key as string === "" ? undefined : key as string 
-                })}
+                onSelectionChange={handleStatusFilterChange as any}
                 size="sm"
                 className="w-32"
               >
@@ -195,12 +239,7 @@ export const TraceVisualization: React.FC<TraceVisualizationProps> = ({
               <Button
                 size="sm"
                 variant="ghost"
-                onPress={() => updateDataFilters({
-                  minDuration: undefined,
-                  maxDuration: undefined,
-                  serviceFilter: undefined,
-                  statusFilter: undefined
-                })}
+                onPress={handleResetFilters}
               >
                 필터 초기화
               </Button>
@@ -211,7 +250,7 @@ export const TraceVisualization: React.FC<TraceVisualizationProps> = ({
 
       <CardBody className="p-4">
         {/* 차트 요약 정보 */}
-        {traceData.length > 0 && !isLoading && !isRefreshing && (
+        {filteredData.length > 0 && !isRefreshing && (
           <div className="mb-4 flex flex-wrap gap-4">
             <div className="flex items-center">
               <Clock size={16} className="mr-1 text-blue-500" />
@@ -224,51 +263,47 @@ export const TraceVisualization: React.FC<TraceVisualizationProps> = ({
             <div className="flex items-center">
               <AlertTriangle size={16} className="mr-1 text-orange-500" />
               <span className="text-sm">
-                고지연: {traceData.filter(t => t.duration > (config.latencyThreshold || 300)).length}개
+                고지연: {filteredData.filter(t => t.duration > (mergedConfig.latencyThreshold || 300)).length}개
               </span>
             </div>
             <div className="flex items-center">
               <CheckCircle size={16} className="mr-1 text-green-500" />
               <span className="text-sm">
-                성공: {traceData.filter(t => t.status === 'OK').length}개
+                성공: {filteredData.filter(t => t.status === 'OK').length}개
               </span>
             </div>
             <div className="flex items-center">
               <AlertTriangle size={16} className="mr-1 text-red-500" />
               <span className="text-sm">
-                오류: {traceData.filter(t => t.status === 'ERROR').length}개
+                오류: {filteredData.filter(t => t.status === 'ERROR').length}개
               </span>
             </div>
           </div>
         )}
 
-        {filteredData.length === 0 && !isLoading && !isRefreshing ? (
-          <div className="flex items-center justify-center h-96 text-gray-500">
+        {/* 차트 컴포넌트 */}
+        <TraceChart 
+          data={chartData}
+          height={mergedConfig.height || DEFAULT_CONFIG.height}
+          config={mergedConfig}
+          onDataPointClick={handleDataPointClick}
+          loading={isRefreshing || isProcessing}
+          legendState={legendState}
+        />
+        
+        {/* 데이터 없음 표시 */}
+        {filteredData.length === 0 && !isRefreshing && (
+          <div className="absolute inset-0 flex items-center justify-center text-gray-500">
             <p>
               {traceData.length > 0 
                 ? '필터 조건에 맞는 데이터가 없습니다.' 
                 : '데이터가 로드되지 않았습니다. 데이터가 수신되면 여기에 표시됩니다.'}
             </p>
           </div>
-        ) : (isLoading || isRefreshing) ? (
-          <div className="flex items-center justify-center h-96 text-gray-500">
-            <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-              <p className="mt-4">데이터를 불러오는 중...</p>
-            </div>
-          </div>
-        ) : (
-          <div
-            ref={chartRef}
-            style={{
-              width: "100%",
-              height: typeof chartHeight === "number" ? `${chartHeight}px` : chartHeight,
-            }}
-          />
         )}
         
         {/* 데이터 요약 */}
-        {filteredData.length > 0 && !isLoading && !isRefreshing && (
+        {filteredData.length > 0 && !isRefreshing && (
           <div className="mt-4 text-sm text-gray-600">
             <div className="flex flex-wrap justify-between gap-2">
               <span>표시된 트레이스: {filteredData.length}개</span>
@@ -290,12 +325,7 @@ export const TraceVisualization: React.FC<TraceVisualizationProps> = ({
               )}
               {(dataFilters.serviceFilter || dataFilters.statusFilter || 
                 dataFilters.minDuration !== undefined || dataFilters.maxDuration !== undefined) && (
-                <span className="text-xs text-blue-600 cursor-pointer" onClick={() => updateDataFilters({
-                  minDuration: undefined,
-                  maxDuration: undefined,
-                  serviceFilter: undefined,
-                  statusFilter: undefined
-                })}>
+                <span className="text-xs text-blue-600 cursor-pointer" onClick={handleResetFilters}>
                   필터 초기화
                 </span>
               )}
@@ -306,3 +336,7 @@ export const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     </Card>
   );
 };
+
+TraceVisualization.displayName = 'TraceVisualization';
+
+export default TraceVisualization;

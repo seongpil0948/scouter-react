@@ -3,7 +3,7 @@ import { useRef, useCallback, useMemo, useState, useEffect } from 'react';
 import * as echarts from 'echarts';
 import { useTheme } from 'next-themes';
 import debounce from 'lodash.debounce';
-import { useChartStore, DEFAULT_CHART_CONFIG } from '@/lib/store/chartStore';
+import { useChartStore } from '@/lib/store/chartStore';
 import { DEFAULT_CONFIG } from '../constant';
 
 interface UseTraceChartOptions {
@@ -18,28 +18,35 @@ export function useTraceChart({ traceData, onDataPointClick, config = {} }: UseT
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   
+  // 마운트 상태 추적
+  const isMountedRef = useRef<boolean>(true);
+  
+  // 차트 생성 중복 방지용 락
+  const isInitializingRef = useRef<boolean>(false);
+  
+  // 데이터 참조 저장
+  const traceDataRef = useRef<TraceItem[]>(traceData);
+  
+  // 컴포넌트 마운트/언마운트 추적
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+  
   // Zustand 스토어에서 상태 가져오기
   const { 
-    config: storeConfig, 
-    updateConfig,
     legendState,
     isRefreshing,
     dataFilters
   } = useChartStore();
   
-  // 외부 config와 스토어 config 병합
-  const mergedConfig = useMemo(() => {
-    // 컴포넌트에 전달된 config가 있으면 스토어 업데이트
-    if (Object.keys(config).length > 0) {
-      updateConfig(config);
-    }
-    
-    return {
-      ...DEFAULT_CHART_CONFIG,
-      ...storeConfig,
-      ...config,
-    };
-  }, [config, storeConfig, updateConfig]);
+  // 메모이제이션된 설정
+  const mergedConfig = useMemo(() => ({
+    ...DEFAULT_CONFIG,
+    ...config,
+  }), [config]);
   
   const {
     title: chartTitle,
@@ -50,7 +57,7 @@ export function useTraceChart({ traceData, onDataPointClick, config = {} }: UseT
     symbolSizes,
   } = mergedConfig;
 
-  // 차트 데이터 상태
+  // 차트 데이터 상태 - useRef로 사용하여 리렌더링 방지
   const chartDataRef = useRef<{
     timeSeriesData: DataPoint[];
     highLatencyData: DataPoint[];
@@ -59,24 +66,6 @@ export function useTraceChart({ traceData, onDataPointClick, config = {} }: UseT
     highLatencyData: [],
   });
   
-  // 범례 상태에 따른 시리즈 표시 설정
-  useEffect(() => {
-    if (chartInstanceRef.current) {
-      chartInstanceRef.current.setOption({
-        series: [
-          { 
-            name: "일반 요청",
-            data: legendState.normal ? chartDataRef.current.timeSeriesData : [] 
-          },
-          { 
-            name: "고지연 요청",
-            data: legendState.highLatency ? chartDataRef.current.highLatencyData : [] 
-          }
-        ]
-      });
-    }
-  }, [legendState]);
-
   // 차트 테마 설정
   const getTheme = useCallback(() => {
     if (theme === "dark") {
@@ -90,8 +79,8 @@ export function useTraceChart({ traceData, onDataPointClick, config = {} }: UseT
     return {};
   }, [theme]);
 
-  // 툴팁 설정
-  const getTooltip = useCallback(() => ({
+  // 툴팁 설정 - 메모이제이션
+  const getTooltip = useMemo(() => ({
     show: true,
     trigger: "item",
     backgroundColor: theme === "dark" ? "rgba(50,50,50,0.9)" : "rgba(255,255,255,0.9)",
@@ -124,7 +113,7 @@ export function useTraceChart({ traceData, onDataPointClick, config = {} }: UseT
     },
   }), [theme, latencyThreshold, colors]);
 
-  // 차트 초기 옵션 설정
+  // 차트 초기 옵션 - 메모이제이션
   const getInitialOption = useCallback(() => {
     const themeOptions = getTheme();
     
@@ -141,11 +130,11 @@ export function useTraceChart({ traceData, onDataPointClick, config = {} }: UseT
         right: 10,
         top: 10,
         selected: {
-          "일반 요청": true,
-          "고지연 요청": true,
+          "일반 요청": legendState.normal,
+          "고지연 요청": legendState.highLatency,
         },
       },
-      tooltip: getTooltip(),
+      tooltip: getTooltip,
       toolbox: {
         show: true,
         feature: {
@@ -330,14 +319,31 @@ export function useTraceChart({ traceData, onDataPointClick, config = {} }: UseT
         },
       ],
     };
-  }, [chartTitle, theme, getTheme, getTooltip, symbolSizes, colors]);
+  }, [chartTitle, theme, getTheme, getTooltip, symbolSizes, colors, legendState]);
 
-  // 차트 초기화 함수
+  // 차트 초기화 함수 - 안정적인 의존성 유지
   const initChart = useCallback(() => {
-    if (chartRef.current) {
-      // 기존 차트 인스턴스가 있으면 제거
+    // 이미 초기화 중이거나 마운트 해제된 경우 중단
+    if (isInitializingRef.current || !isMountedRef.current || !chartRef.current) {
+      return null;
+    }
+    
+    try {
+      isInitializingRef.current = true;
+      
+      // 기존 차트 인스턴스가 있으면 안전하게 제거
       if (chartInstanceRef.current) {
-        chartInstanceRef.current.dispose();
+        try {
+          chartInstanceRef.current.dispose();
+          chartInstanceRef.current = null;
+        } catch (error) {
+          console.error("Failed to dispose chart:", error);
+        }
+      }
+
+      // 마운트 해제됐을 가능성 다시 확인
+      if (!isMountedRef.current || !chartRef.current) {
+        return null;
       }
 
       // 새 차트 인스턴스 생성
@@ -361,14 +367,15 @@ export function useTraceChart({ traceData, onDataPointClick, config = {} }: UseT
           params.value.length > 0
         ) {
           const timestamp = params.value[0] as number;
+          const traces = traceDataRef.current;
 
           // 클릭된 지점과 가장 가까운 트레이스 찾기
-          const closestTrace = traceData.reduce((closest, trace) => {
+          const closestTrace = traces.reduce((closest, trace) => {
             const currentDiff = Math.abs(trace.startTime - timestamp);
             const closestDiff = Math.abs((closest?.startTime || 0) - timestamp);
 
             return currentDiff < closestDiff ? trace : closest;
-          }, traceData[0]);
+          }, traces[0]);
 
           if (closestTrace) {
             onDataPointClick(closestTrace);
@@ -377,12 +384,15 @@ export function useTraceChart({ traceData, onDataPointClick, config = {} }: UseT
       });
 
       return chartInstance;
+    } catch (error) {
+      console.error("Error initializing chart:", error);
+      return null;
+    } finally {
+      isInitializingRef.current = false;
     }
+  }, [theme, getInitialOption, onDataPointClick, isMountedRef]);
 
-    return null;
-  }, [getInitialOption, traceData, onDataPointClick, theme]);
-
-  // 트레이스 데이터 처리 함수
+  // 트레이스 데이터 처리 함수 - useCallback으로 메모이제이션
   const processTraceData = useCallback((traces: TraceItem[]) => {
     if (!chartInstanceRef.current) {
       return false;
@@ -430,18 +440,34 @@ export function useTraceChart({ traceData, onDataPointClick, config = {} }: UseT
     });
 
     if (hasNewData) {
-      // 기존 데이터와 병합
-      const updatedTimeSeriesData = [
-        ...chartDataRef.current.timeSeriesData,
-        ...newData,
-      ]
+      // 기존 데이터와 병합 - 중복 데이터 방지를 위한 Map 사용
+      const timeSeriesMap = new Map<number, DataPoint>();
+      const highLatencyMap = new Map<number, DataPoint>();
+      
+      // 기존 데이터 Map에 추가
+      chartDataRef.current.timeSeriesData.forEach(point => {
+        timeSeriesMap.set(point[0], point);
+      });
+      
+      chartDataRef.current.highLatencyData.forEach(point => {
+        highLatencyMap.set(point[0], point);
+      });
+      
+      // 새 데이터 Map에 추가
+      newData.forEach(point => {
+        timeSeriesMap.set(point[0], point);
+      });
+      
+      newHighLatencyData.forEach(point => {
+        highLatencyMap.set(point[0], point);
+      });
+      
+      // Map을 배열로 변환하고 정렬 후 최대 개수 제한
+      const updatedTimeSeriesData = Array.from(timeSeriesMap.values())
         .sort((a, b) => a[0] - b[0])
         .slice(-maxDataPoints!);
 
-      const updatedHighLatencyData = [
-        ...chartDataRef.current.highLatencyData,
-        ...newHighLatencyData,
-      ]
+      const updatedHighLatencyData = Array.from(highLatencyMap.values())
         .sort((a, b) => a[0] - b[0])
         .slice(-maxDataPoints!);
 
@@ -455,8 +481,12 @@ export function useTraceChart({ traceData, onDataPointClick, config = {} }: UseT
         // 차트 옵션 업데이트
         chartInstanceRef.current?.setOption({
           series: [
-            { data: updatedTimeSeriesData },
-            { data: updatedHighLatencyData },
+            { 
+              data: legendState.normal ? updatedTimeSeriesData : [],
+            },
+            { 
+              data: legendState.highLatency ? updatedHighLatencyData : [],
+            },
           ],
         });
 
@@ -486,76 +516,149 @@ export function useTraceChart({ traceData, onDataPointClick, config = {} }: UseT
     }
 
     return hasNewData;
-  }, [latencyThreshold, maxDataPoints]);
+  }, [latencyThreshold, maxDataPoints, legendState]);
 
-  // 차트 리사이즈 처리
+  // 차트 리사이즈 처리 - 메모이제이션된 디바운스 함수
   const handleResize = useMemo(() => debounce(() => {
     if (chartInstanceRef.current) {
       chartInstanceRef.current.resize();
     }
   }, 300), []);
 
-  // 컴포넌트 마운트/언마운트 이펙트
+  // 범례 상태에 따른 시리즈 표시 설정
   useEffect(() => {
+    if (chartInstanceRef.current) {
+      chartInstanceRef.current.setOption({
+        legend: {
+          selected: {
+            "일반 요청": legendState.normal,
+            "고지연 요청": legendState.highLatency,
+          }
+        },
+        series: [
+          { 
+            name: "일반 요청",
+            data: legendState.normal ? chartDataRef.current.timeSeriesData : []
+          },
+          { 
+            name: "고지연 요청",
+            data: legendState.highLatency ? chartDataRef.current.highLatencyData : []
+          }
+        ]
+      });
+    }
+  }, [legendState]);
+
+  // traceData가 변경될 때만 참조 업데이트
+  useEffect(() => {
+    traceDataRef.current = traceData;
+  }, [traceData]);
+
+  // 차트 초기화 및 리사이즈 처리를 위한 통합 effect
+  useEffect(() => {
+    // 이미 언마운트됐을 가능성 확인
+    if (!isMountedRef.current) return;
+    
+    // 차트 초기화 전 잠시 대기
+    const initTimer = setTimeout(() => {
+      // 차트 초기화
+      const chartInstance = initChart();
+      
+      // 데이터가 있으면 처리
+      if (isMountedRef.current && traceData.length > 0 && chartInstanceRef.current) {
+        processTraceData(traceData);
+      }
+    }, 10);
+    
+    // 리사이즈 이벤트 리스너 등록
     window.addEventListener("resize", handleResize);
     
-    // 컴포넌트 마운트 후 차트 크기 조정
-    setTimeout(() => {
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.resize();
+    // 차트 초기 크기 조정 (약간의 지연으로 안정적인 렌더링 보장)
+    const resizeTimer = setTimeout(() => {
+      if (isMountedRef.current && chartInstanceRef.current && chartRef.current) {
+        try {
+          chartInstanceRef.current.resize();
+        } catch (error) {
+          console.error("Chart resize error:", error);
+        }
       }
-    }, 0);
-
+    }, 100);
+    
+    // 클린업 함수
     return () => {
+      // 타이머 제거
+      clearTimeout(initTimer);
+      clearTimeout(resizeTimer);
+      
+      // 이벤트 리스너 제거
       window.removeEventListener("resize", handleResize);
       handleResize.cancel();
       
-      // 컴포넌트 언마운트 시 차트 인스턴스 정리
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.dispose();
-      }
+      // 차트 인스턴스 안전하게 정리 - setTimeout으로 DOM 조작 순서 문제 해결
+      setTimeout(() => {
+        if (chartInstanceRef.current) {
+          try {
+            chartInstanceRef.current.dispose();
+          } catch (error) {
+            console.error("Chart disposal error:", error);
+          }
+          chartInstanceRef.current = null;
+        }
+      }, 0);
     };
-  }, [handleResize]);
-
-  // 데이터 변경 시 처리
-  useEffect(() => {
-    // 차트 초기화
-    const chartInstance = initChart();
-
-    // 차트가 초기화되었으면 데이터 처리
-    if (chartInstance && traceData && traceData.length > 0) {
-      processTraceData(traceData);
-    }
-  }, [initChart, traceData, processTraceData]);
+  }, [traceData, initChart, processTraceData, handleResize, isMountedRef]);
   
-  // 필터링 처리
+  // 다크 모드 변경 감지 - 별도 effect로 분리하고 실행 지연 추가
   useEffect(() => {
-    if (chartInstanceRef.current && dataFilters) {
-      // 데이터 필터에 따라 표시되는 데이터 조정
-      let filteredTimeSeriesData = [...chartDataRef.current.timeSeriesData];
-      let filteredHighLatencyData = [...chartDataRef.current.highLatencyData];
+    // 마운트 상태 및 차트 존재 여부 확인
+    if (!isMountedRef.current || !chartRef.current) return;
+    
+    // 테마 변경 시 약간의 지연 후 실행 (렌더링 사이클 안정화)
+    const themeChangeTimer = setTimeout(() => {
+      // 마운트 상태 재확인
+      if (!isMountedRef.current || !chartRef.current) return;
       
-      // 트레이스 데이터를 기반으로 필터링된 데이터 포인트 계산
-      // 실제 구현에서는 traceData와 dataPoint를 매핑할 수 있는 메타데이터가 필요함
-      // 여기서는 단순화된 예시만 제공
-      
-      // 차트 업데이트
       if (chartInstanceRef.current) {
-        chartInstanceRef.current.setOption({
-          series: [
-            { 
-              name: "일반 요청",
-              data: legendState.normal ? filteredTimeSeriesData : []
-            },
-            { 
-              name: "고지연 요청",
-              data: legendState.highLatency ? filteredHighLatencyData : []
-            }
-          ]
-        });
+        // 기존 데이터 백업
+        const oldTimeSeriesData = [...chartDataRef.current.timeSeriesData];
+        const oldHighLatencyData = [...chartDataRef.current.highLatencyData];
+        
+        // 차트 재초기화 (이전 차트는 자동으로 dispose됨)
+        const newChart = initChart();
+        
+        // 백업한 데이터로 새 차트 업데이트
+        if (newChart && (oldTimeSeriesData.length > 0 || oldHighLatencyData.length > 0)) {
+          // 차트 옵션 업데이트
+          try {
+            newChart.setOption({
+              series: [
+                { 
+                  data: legendState.normal ? oldTimeSeriesData : [],
+                },
+                { 
+                  data: legendState.highLatency ? oldHighLatencyData : [],
+                },
+              ],
+            });
+          } catch (error) {
+            console.error("Theme change chart update error:", error);
+          }
+        }
       }
+    }, 200);
+    
+    return () => {
+      clearTimeout(themeChangeTimer);
+    };
+  }, [theme, initChart, legendState, isMountedRef]);
+  
+  // 필터링 변경 감지
+  useEffect(() => {
+    if (chartInstanceRef.current && Object.keys(dataFilters).length > 0) {
+      // 필터가 변경되면 차트 업데이트
+      // 필요한 경우 여기에 필터링 로직 추가
     }
-  }, [dataFilters, legendState]);
+  }, [dataFilters]);
 
   return {
     chartRef,
