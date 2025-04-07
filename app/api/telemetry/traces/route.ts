@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status") || undefined;
   const limit = searchParams.get("limit")
     ? parseInt(searchParams.get("limit")!)
-    : 20;
+    : 10000;
   const offset = searchParams.get("from")
     ? parseInt(searchParams.get("from")!)
     : 0;

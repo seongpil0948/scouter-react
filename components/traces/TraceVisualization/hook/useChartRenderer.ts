@@ -282,8 +282,7 @@ export function useChartRenderer({
           largeThreshold: 100,
           progressive: 400,
           progressiveThreshold: 1000,
-          // Removed progressiveRepaint property as it doesn't exist in ECharts type definitions
-          // progressiveRepaint: true,
+          progressiveRepaint: true,
           symbol: "circle",
           symbolSize: (value: number[]) => {
             if (!value || value.length < 2) return symbolSizes?.min || 8;

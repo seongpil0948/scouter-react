@@ -1,7 +1,6 @@
 export const DEFAULT_CONFIG: ChartConfig = {
   title: "실시간 지연 시간 모니터링",
   height: 600,
-  maxDataPoints: 100,
   latencyThreshold: 300,
   autoUpdate: false,
   updateInterval: 30000,

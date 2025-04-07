@@ -19,7 +19,6 @@ export default function Home() {
     height: 400,
     title: "실시간 요청 지연 시간",
     latencyThreshold: 300,
-    maxDataPoints: 100,
     autoUpdate: false,
     colors: {
       low: "#52c41a", // 낮은 지연시간
@@ -31,7 +30,7 @@ export default function Home() {
   });
 
   // 메트릭 데이터 가져오기
-  const { data, isLoading, error, mutate } = useSWR<DtoTrace>(
+  const { data,  error, mutate } = useSWR<DtoTrace>(
     `/api/telemetry/traces?startTime=${timeRange.startTime}&endTime=${timeRange.endTime}`,
     fetcher,
     { refreshInterval: 30000 }, // 30초마다 자동 갱신

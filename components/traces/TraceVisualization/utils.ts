@@ -11,7 +11,6 @@ import { formatDuration } from '@/lib/utils/dateFormatter';
 export const DEFAULT_CHART_CONFIG: ChartConfig = {
   title: "실시간 지연 시간 모니터링",
   height: 600,
-  maxDataPoints: 100,
   latencyThreshold: 300,
   autoUpdate: false,
   updateInterval: 30000,
@@ -93,14 +92,12 @@ export function getServiceThreshold(
  * Process trace data for visualization
  * @param traces raw trace data
  * @param latencyThreshold default latency threshold
- * @param maxDataPoints maximum number of data points to keep
  * @param serviceThresholds service-specific thresholds
  * @returns processed data ready for chart visualization
  */
 export function processTraceData(
   traces: TraceItem[],
   latencyThreshold: number = 300,
-  maxDataPoints: number = 100,
   serviceThresholds?: Map<string, number>
 ): {
   timeSeriesData: DataPoint[];
@@ -152,11 +149,9 @@ export function processTraceData(
   // Convert maps to sorted arrays with limits
   const timeSeriesData = Array.from(timeSeriesMap.values())
     .sort((a, b) => a[0] - b[0])
-    .slice(-maxDataPoints);
   
   const highLatencyData = Array.from(highLatencyMap.values())
     .sort((a, b) => a[0] - b[0])
-    .slice(-maxDataPoints);
   
   return {
     timeSeriesData,

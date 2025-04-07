@@ -51,14 +51,14 @@ const TraceChart: React.FC<TraceChartProps> = React.memo(({
   return (
     <div className="relative w-full" style={{ height: typeof height === 'number' ? `${height}px` : height }}>
       {/* Loading Overlay */}
-      {(loading || isLoading) && (
+      {/* {(loading || isLoading) && (
         <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 dark:bg-gray-800 dark:bg-opacity-70 z-10">
           <div className="flex flex-col items-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
             <p className="mt-4">데이터를 불러오는 중...</p>
           </div>
         </div>
-      )}
+      )} */}
       
       {/* Chart Container */}
       <div ref={chartContainerRef} style={containerStyle} />

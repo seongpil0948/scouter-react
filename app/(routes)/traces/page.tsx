@@ -32,7 +32,6 @@ export default function Dashboard() {
         height: 400,
         title: "실시간 요청 지연 시간 모니터링",
         latencyThreshold: 300,
-        maxDataPoints: 100,
         colors: {
           low: "#52c41a", // 낮은 지연시간
           medium: "#1890ff", // 보통 지연시간

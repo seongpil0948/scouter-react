@@ -1,7 +1,6 @@
 interface ChartConfig {
   title?: string;
   height?: string | number;
-  maxDataPoints?: number;
   latencyThreshold?: number;
   autoUpdate?: boolean;
   updateInterval?: number;

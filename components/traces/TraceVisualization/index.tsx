@@ -61,12 +61,10 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     ...config,
   }), [config]);
 
-  // Service thresholds - either from props or auto-calculated
   const serviceThresholds = useMemo(() => 
     buildServiceThresholds(traceData, propServiceThresholds),
   [traceData, propServiceThresholds]);
 
-  // Apply filters to trace data
   const filteredData = useMemo(() => 
     filterTraceData(traceData, dataFilters),
   [traceData, dataFilters]);
@@ -99,7 +97,6 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     const result = processTraceData(
       filteredData, 
       mergedConfig.latencyThreshold,
-      mergedConfig.maxDataPoints,
       serviceThresholds
     );
     
@@ -108,7 +105,6 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   }, [
     filteredData, 
     mergedConfig.latencyThreshold, 
-    mergedConfig.maxDataPoints, 
     serviceThresholds
   ]);
 

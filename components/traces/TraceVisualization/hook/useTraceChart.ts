@@ -51,7 +51,6 @@ export function useTraceChart({ traceData, onDataPointClick, config = {} }: UseT
   const {
     title: chartTitle,
     height: chartHeight,
-    maxDataPoints,
     latencyThreshold,
     colors,
     symbolSizes,
@@ -465,11 +464,9 @@ export function useTraceChart({ traceData, onDataPointClick, config = {} }: UseT
       // Map을 배열로 변환하고 정렬 후 최대 개수 제한
       const updatedTimeSeriesData = Array.from(timeSeriesMap.values())
         .sort((a, b) => a[0] - b[0])
-        .slice(-maxDataPoints!);
 
       const updatedHighLatencyData = Array.from(highLatencyMap.values())
         .sort((a, b) => a[0] - b[0])
-        .slice(-maxDataPoints!);
 
       // chartDataRef 업데이트
       chartDataRef.current = {
@@ -516,7 +513,7 @@ export function useTraceChart({ traceData, onDataPointClick, config = {} }: UseT
     }
 
     return hasNewData;
-  }, [latencyThreshold, maxDataPoints, legendState]);
+  }, [latencyThreshold, legendState]);
 
   // 차트 리사이즈 처리 - 메모이제이션된 디바운스 함수
   const handleResize = useMemo(() => debounce(() => {
