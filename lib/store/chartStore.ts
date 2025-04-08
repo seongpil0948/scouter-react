@@ -9,7 +9,7 @@ import { Selection } from '@react-types/shared';
 // SelectFilter를 명확하게 정의
 export type SelectFilter = 'all' | Selection;
 
-// ChartState 인터페이스 수정
+// ChartState 인터페이스 수정 - 리프레시 관련 로직 제거
 interface ChartState {
   // Chart configuration
   config: ChartConfig;
@@ -18,10 +18,6 @@ interface ChartState {
   // Selected trace
   selectedTrace: TraceItem | null;
   setSelectedTrace: (trace: TraceItem | null) => void;
-  
-  // Chart refresh state
-  isRefreshing: boolean;
-  setRefreshing: (isRefreshing: boolean) => void;
   
   // Legend state for chart series
   legendState: {
@@ -39,22 +35,9 @@ interface ChartState {
   };
   updateDataFilters: (filters: Partial<ChartState['dataFilters']>) => void;
   resetFilters: () => void;
-
-  // Time range configuration
-  timeRange: TimeRangeOption;
-  setTimeRange: (range: TimeRangeOption) => void;
-
-  // Refresh interval configuration
-  refreshInterval: RefreshIntervalOption;
-  setRefreshInterval: (interval: RefreshIntervalOption) => void;
-  
-  // Auto-refresh enabled status
-  autoRefreshEnabled: boolean;
-  toggleAutoRefresh: () => void;
-  setAutoRefreshEnabled: (enabled: boolean) => void;
 }
 
-// Create Zustand store
+// Create Zustand store - 리프레시 로직 제거됨
 export const useChartStore = create<ChartState>()(
   devtools(
     persist(
@@ -79,10 +62,6 @@ export const useChartStore = create<ChartState>()(
         // Selected trace initialization
         selectedTrace: null,
         setSelectedTrace: (trace) => set({ selectedTrace: trace }),
-        
-        // Refresh state initialization
-        isRefreshing: false,
-        setRefreshing: (isRefreshing) => set({ isRefreshing }),
         
         // Legend state initialization
         legendState: {
@@ -113,21 +92,6 @@ export const useChartStore = create<ChartState>()(
           }
         },
         resetFilters: () => set({ dataFilters: DEFAULT_FILTER }),
-
-        // Time range selection
-        timeRange: '1h', // Default to 1 hour
-        setTimeRange: (range) => set({ timeRange: range }),
-
-        // Refresh interval
-        refreshInterval: 5000, // Default to 5 seconds
-        setRefreshInterval: (interval) => set({ refreshInterval: interval }),
-
-        // Auto-refresh status
-        autoRefreshEnabled: false,
-        toggleAutoRefresh: () => set((state) => ({ 
-          autoRefreshEnabled: !state.autoRefreshEnabled 
-        })),
-        setAutoRefreshEnabled: (enabled) => set({ autoRefreshEnabled: enabled }),
       }),
       {
         name: "chart-store",
@@ -135,10 +99,6 @@ export const useChartStore = create<ChartState>()(
           // Only persist these parts of the state
           config: state.config,
           legendState: state.legendState,
-          // dataFilters는 선택적으로 저장 (문제가 있는 경우 제외 가능)
-          timeRange: state.timeRange,
-          refreshInterval: state.refreshInterval,
-          autoRefreshEnabled: state.autoRefreshEnabled,
         }),
       }
     )
@@ -146,70 +106,17 @@ export const useChartStore = create<ChartState>()(
 );
 
 /**
- * Helper function to convert a time range option to milliseconds
- * @param range TimeRangeOption
- * @returns Time range in milliseconds
+ * Time range value to milliseconds mapping for SWR
  */
-export function timeRangeToMs(range: TimeRangeOption): number {
-  const now = Date.now();
-  
-  switch (range) {
-    case '1m': return 60 * 1000;
-    case '5m': return 5 * 60 * 1000;
-    case '10m': return 10 * 60 * 1000;
-    case '1h': return 60 * 60 * 1000;
-    case '3h': return 3 * 60 * 60 * 1000;
-    case '6h': return 6 * 60 * 60 * 1000;
-    case '12h': return 12 * 60 * 60 * 1000;
-    case '1d': return 24 * 60 * 60 * 1000;
-    default: return 60 * 60 * 1000; // Default to 1 hour
-  }
-}
-
-/**
- * Get time range for API queries based on selected time range option
- * @returns Object with startTime and endTime in milliseconds
- */
-export function getTimeRangeForQuery(): { startTime: number; endTime: number } {
-  const { timeRange } = useChartStore.getState();
-  const endTime = Date.now();
-  const startTime = endTime - timeRangeToMs(timeRange);
-  
-  return { startTime, endTime };
-}
-
-/**
- * Utility function for async refresh operation with UI feedback
- */
-export function refreshChart(callback?: () => Promise<any>): Promise<void> {
-  const { setRefreshing, isRefreshing } = useChartStore.getState();
-  
-  // Prevent concurrent refreshes
-  if (isRefreshing) {
-    return Promise.resolve();
-  }
-  
-  setRefreshing(true);
-  
-  if (callback) {
-    return callback()
-      .catch(error => {
-        console.error('Chart refresh error:', error);
-      })
-      .finally(() => {
-        // Add delay for UI feedback
-        setTimeout(() => {
-          setRefreshing(false);
-        }, 500);
-      });
-  }
-  
-  return new Promise(resolve => {
-    setTimeout(() => {
-      setRefreshing(false);
-      resolve();
-    }, 500);
-  });
-}
+export const TIME_RANGE_MS = {
+  '1m': 60 * 1000,
+  '5m': 5 * 60 * 1000,
+  '10m': 10 * 60 * 1000,
+  '1h': 60 * 60 * 1000,
+  '3h': 3 * 60 * 60 * 1000,
+  '6h': 6 * 60 * 60 * 1000,
+  '12h': 12 * 60 * 60 * 1000,
+  '1d': 24 * 60 * 60 * 1000,
+};
 
 export default useChartStore;

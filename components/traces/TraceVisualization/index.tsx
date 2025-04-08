@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { Card, CardBody } from '@heroui/card';
 import { Badge } from '@heroui/badge';
 import { Button } from '@heroui/button';
@@ -8,9 +8,7 @@ import { Select, SelectItem } from '@heroui/select';
 import { Filter, Clock, AlertTriangle, CheckCircle, BarChart2 } from 'lucide-react';
 
 import TraceChart from './TraceChart';
-import TimeRangeSelector from '@/components/shared/TimeRangeSelector';
-
-import { useChartStore, getTimeRangeForQuery, refreshChart } from '@/lib/store/chartStore';
+import { useChartStore } from '@/lib/store/chartStore';
 import { formatDuration } from '@/lib/utils/dateFormatter';
 import {
   buildServiceThresholds,
@@ -20,7 +18,6 @@ import {
   processTraceData,
   findTraceByTimestamp,
 } from './utils';
-import RefreshIntervalSelector from './RefreshIntervalSelector';
 import { DEFAULT_FILTER } from './constant';
 import { SharedSelection } from '@heroui/system';
 import { isEmpty } from 'lodash-es';
@@ -29,14 +26,12 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   traceData,
   onDataPointClick,
   config = {},
-  onRefresh,
+  title,
   showFilters = false,
   serviceThresholds: propServiceThresholds,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const { isRefreshing, legendState, dataFilters, updateDataFilters, refreshInterval, autoRefreshEnabled } = useChartStore();
-
-  const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const { legendState, dataFilters, updateDataFilters } = useChartStore();
 
   const serviceThresholds = useMemo(() => buildServiceThresholds(traceData, propServiceThresholds), [traceData, propServiceThresholds]);
 
@@ -59,9 +54,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
 
   const chartData = useMemo(() => {
     setIsProcessing(true);
-
     const result = processTraceData(filteredData, config.latencyThreshold, serviceThresholds);
-
     setIsProcessing(false);
     return result;
   }, [filteredData, config.latencyThreshold, serviceThresholds]);
@@ -76,45 +69,10 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     [traceData, onDataPointClick]
   );
 
-  const handleTimeRangeChange = useCallback(
-    (startTime: number, endTime: number) => {
-      if (onRefresh && !isRefreshing) {
-        // Refresh data with new time range
-        refreshChart(onRefresh);
-      }
-    },
-    [onRefresh, isRefreshing]
-  );
-
   // Reset all filters
   const handleResetFilters = useCallback(() => {
     updateDataFilters(DEFAULT_FILTER);
   }, [updateDataFilters]);
-
-  // Auto-refresh setup
-  useEffect(() => {
-    if (autoRefreshTimerRef.current) {
-      clearInterval(autoRefreshTimerRef.current);
-      autoRefreshTimerRef.current = null;
-    }
-
-    // Set up new timer if auto-refresh is enabled
-    if (autoRefreshEnabled && refreshInterval > 0 && onRefresh) {
-      autoRefreshTimerRef.current = setInterval(() => {
-        // Only refresh if not already refreshing
-        if (!isRefreshing) {
-          refreshChart(onRefresh);
-        }
-      }, refreshInterval);
-    }
-
-    // Clean up timer on unmount
-    return () => {
-      if (autoRefreshTimerRef.current) {
-        clearInterval(autoRefreshTimerRef.current);
-      }
-    };
-  }, [autoRefreshEnabled, refreshInterval, onRefresh, isRefreshing]);
 
   const getSelectedServiceKeys = useCallback(() => {
     return dataFilters.serviceFilter === 'all' ? new Set<Key>([]) : dataFilters.serviceFilter;
@@ -151,15 +109,10 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     dataFilters.minDuration !== undefined ||
     dataFilters.maxDuration !== undefined;
 
+  const isLoading = isProcessing;
+
   return (
     <Card className="w-full">
-      <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <TimeRangeSelector onRangeChange={handleTimeRangeChange} />
-
-          <RefreshIntervalSelector />
-        </div>
-      </div>
       {showFilters && (
         <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -216,7 +169,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
 
       <CardBody className="p-4">
         {/* Stats Summary - Shown when data is available */}
-        {filteredData.length > 0 && !isRefreshing && (
+        {filteredData.length > 0 && !isLoading && (
           <div className="mb-4 flex flex-wrap gap-4">
             <div className="flex items-center">
               <Clock size={16} className="mr-1 text-blue-500" />
@@ -262,28 +215,19 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
           </div>
         )}
 
-        {/* Auto-refresh Indicator - NEW */}
-        {autoRefreshEnabled && (
-          <div className="absolute top-4 right-4 z-10">
-            <Badge color="primary" variant="flat" className="animate-pulse">
-              {refreshInterval / 1000}초마다 자동 새로고침
-            </Badge>
-          </div>
-        )}
-
         {/* Chart Component */}
         <TraceChart
           data={chartData}
           height={config.height}
           config={config}
           onDataPointClick={handleDataPointClick}
-          loading={isRefreshing || isProcessing}
+          loading={isLoading}
           legendState={legendState}
           serviceThresholds={serviceThresholds}
         />
 
         {/* No Data Message */}
-        {filteredData.length === 0 && !isRefreshing && (
+        {filteredData.length === 0 && !isLoading && (
           <div className="absolute inset-0 flex items-center justify-center text-gray-500">
             <p>
               {traceData.length > 0
@@ -293,7 +237,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
           </div>
         )}
 
-        {filteredData.length > 0 && !isRefreshing && (
+        {filteredData.length > 0 && !isLoading && (
           <div className="mt-4 text-sm text-gray-600">
             <div className="flex flex-wrap justify-between gap-2">
               <span>표시된 트레이스: {filteredData.length}개</span>
