@@ -16,7 +16,8 @@ type RefreshIntervalOption =
   | 5000  // 5 seconds
   | 10000; // 10 seconds
 
-type SelectFilter = 'all' | Iterable<string>
+type Key = string | number;
+type SelectionFilter = 'all' | Set<Key>;
 
 interface ChartState {
   // Chart configuration
@@ -42,8 +43,8 @@ interface ChartState {
   dataFilters: {
     minDuration?: number;
     maxDuration?: number;
-    serviceFilter: SelectFilter;
-    statusFilter:  SelectFilter;
+    serviceFilter: SelectionFilter;
+    statusFilter:  SelectionFilter;
   };
   updateDataFilters: (filters: Partial<ChartState['dataFilters']>) => void;
   resetFilters: () => void;

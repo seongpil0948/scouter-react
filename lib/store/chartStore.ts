@@ -4,7 +4,55 @@ import { DEFAULT_CHART_CONFIG } from '@/components/traces/TraceVisualization/uti
 import { isEqual } from 'lodash-es';
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { Selection } from '@react-types/shared';
 
+// SelectFilter를 명확하게 정의
+export type SelectFilter = 'all' | Selection;
+
+// ChartState 인터페이스 수정
+interface ChartState {
+  // Chart configuration
+  config: ChartConfig;
+  updateConfig: (newConfig: Partial<ChartConfig>) => void;
+  
+  // Selected trace
+  selectedTrace: TraceItem | null;
+  setSelectedTrace: (trace: TraceItem | null) => void;
+  
+  // Chart refresh state
+  isRefreshing: boolean;
+  setRefreshing: (isRefreshing: boolean) => void;
+  
+  // Legend state for chart series
+  legendState: {
+    normal: boolean;
+    highLatency: boolean;
+  };
+  toggleLegend: (type: 'normal' | 'highLatency') => void;
+  
+  // Data filters
+  dataFilters: {
+    minDuration?: number;
+    maxDuration?: number;
+    serviceFilter: SelectFilter;
+    statusFilter: SelectFilter;
+  };
+  updateDataFilters: (filters: Partial<ChartState['dataFilters']>) => void;
+  resetFilters: () => void;
+
+  // Time range configuration
+  timeRange: TimeRangeOption;
+  setTimeRange: (range: TimeRangeOption) => void;
+
+  // Refresh interval configuration
+  refreshInterval: RefreshIntervalOption;
+  setRefreshInterval: (interval: RefreshIntervalOption) => void;
+  
+  // Auto-refresh enabled status
+  autoRefreshEnabled: boolean;
+  toggleAutoRefresh: () => void;
+  setAutoRefreshEnabled: (enabled: boolean) => void;
+}
 
 // Create Zustand store
 export const useChartStore = create<ChartState>()(
@@ -64,17 +112,17 @@ export const useChartStore = create<ChartState>()(
             }));
           }
         },
-        resetFilters: () => set({ dataFilters: DEFAULT_FILTER,  }),
+        resetFilters: () => set({ dataFilters: DEFAULT_FILTER }),
 
-        // Time range selection - NEW
+        // Time range selection
         timeRange: '1h', // Default to 1 hour
         setTimeRange: (range) => set({ timeRange: range }),
 
-        // Refresh interval - NEW
+        // Refresh interval
         refreshInterval: 5000, // Default to 5 seconds
         setRefreshInterval: (interval) => set({ refreshInterval: interval }),
 
-        // Auto-refresh status - NEW
+        // Auto-refresh status
         autoRefreshEnabled: false,
         toggleAutoRefresh: () => set((state) => ({ 
           autoRefreshEnabled: !state.autoRefreshEnabled 
@@ -87,7 +135,7 @@ export const useChartStore = create<ChartState>()(
           // Only persist these parts of the state
           config: state.config,
           legendState: state.legendState,
-          dataFilters: state.dataFilters,
+          // dataFilters는 선택적으로 저장 (문제가 있는 경우 제외 가능)
           timeRange: state.timeRange,
           refreshInterval: state.refreshInterval,
           autoRefreshEnabled: state.autoRefreshEnabled,

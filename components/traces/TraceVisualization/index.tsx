@@ -22,6 +22,8 @@ import {
 } from './utils';
 import RefreshIntervalSelector from './RefreshIntervalSelector';
 import { DEFAULT_FILTER } from './constant';
+import { SharedSelection } from '@heroui/system';
+import { isEmpty } from 'lodash-es';
 
 const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   traceData,
@@ -91,7 +93,6 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
 
   // Auto-refresh setup
   useEffect(() => {
-    console.info('dataFilters.serviceFilter', dataFilters);
     if (autoRefreshTimerRef.current) {
       clearInterval(autoRefreshTimerRef.current);
       autoRefreshTimerRef.current = null;
@@ -115,24 +116,40 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     };
   }, [autoRefreshEnabled, refreshInterval, onRefresh, isRefreshing]);
 
-  // useEffect(() => {
-  //   // 데이터 상태 디버깅
-  //   console.log('원본 트레이스 데이터:', traceData.length);
-  //   console.log('필터링된 데이터:', filteredData.length);
-  //   console.log('차트 데이터 - 일반:', chartData.timeSeriesData.length);
-  //   console.log('차트 데이터 - 고지연:', chartData.highLatencyData.length);
+  const getSelectedServiceKeys = useCallback(() => {
+    return dataFilters.serviceFilter === 'all' ? new Set<Key>([]) : dataFilters.serviceFilter;
+  }, [dataFilters.serviceFilter]);
 
-  //   // 타임스탬프 고유성 확인
-  //   const uniqueTimestamps = new Set(traceData.map(t => t.startTime));
-  //   console.log('고유 타임스탬프 개수:', uniqueTimestamps.size);
-  // }, [traceData, filteredData, chartData]);
+  const getSelectedStatusKeys = useCallback(() => {
+    return dataFilters.statusFilter === 'all' ? new Set<Key>([]) : dataFilters.statusFilter;
+  }, [dataFilters.statusFilter]);
+
+  const handleServiceSelectionChange = useCallback(
+    (keys: SharedSelection) => {
+      const serviceFilter = isEmpty(keys) ? 'all' : keys;
+      updateDataFilters({ serviceFilter });
+    },
+    [updateDataFilters]
+  );
+
+  const handleStatusSelectionChange = useCallback(
+    (keys: SharedSelection) => {
+      // keys가 비어있거나 undefined인 경우 'all'로 설정
+      const statusFilter = isEmpty(keys) ? 'all' : keys;
+      updateDataFilters({ statusFilter });
+    },
+    [updateDataFilters]
+  );
 
   // Calculate display values
   const errorCount = filteredData.filter((t) => t.status === 'ERROR').length;
   const successCount = filteredData.filter((t) => t.status === 'OK').length;
   const highLatencyCount = chartData.highLatencyData.length;
   const hasFilters =
-    dataFilters.serviceFilter || dataFilters.statusFilter || dataFilters.minDuration !== undefined || dataFilters.maxDuration !== undefined;
+    dataFilters.serviceFilter !== 'all' ||
+    dataFilters.statusFilter !== 'all' ||
+    dataFilters.minDuration !== undefined ||
+    dataFilters.maxDuration !== undefined;
 
   return (
     <Card className="w-full">
@@ -156,13 +173,9 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
               <Select
                 label="서비스"
                 placeholder="모든 서비스"
-                selectedKeys={dataFilters.serviceFilter}
+                selectedKeys={getSelectedServiceKeys()}
                 selectionMode="multiple"
-                onSelectionChange={(k) =>
-                  updateDataFilters({
-                    serviceFilter: k as SelectFilter,
-                  })
-                }
+                onSelectionChange={handleServiceSelectionChange}
                 size="sm"
                 className="w-48"
               >
@@ -177,18 +190,11 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                 label="상태"
                 placeholder="모든 상태"
                 selectionMode="multiple"
-                selectedKeys={dataFilters.statusFilter}
-                onSelectionChange={(k) =>
-                  updateDataFilters({
-                    statusFilter: k as SelectFilter,
-                  })
-                }
+                selectedKeys={getSelectedStatusKeys()}
+                onSelectionChange={handleStatusSelectionChange}
                 size="sm"
                 className="w-32"
               >
-                <SelectItem key="" textValue="모든 상태">
-                  모든 상태
-                </SelectItem>
                 <SelectItem key="OK" textValue="성공">
                   성공
                 </SelectItem>
@@ -292,19 +298,21 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
             <div className="flex flex-wrap justify-between gap-2">
               <span>표시된 트레이스: {filteredData.length}개</span>
 
-              {dataFilters.serviceFilter && (
-                <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">서비스: {dataFilters.serviceFilter}</Badge>
+              {dataFilters.serviceFilter !== 'all' && (
+                <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
+                  서비스: {Array.from(dataFilters.serviceFilter).join(', ')}
+                </Badge>
               )}
 
-              {dataFilters.statusFilter && (
+              {dataFilters.statusFilter !== 'all' && (
                 <Badge
                   className={
-                    dataFilters.statusFilter === 'ERROR'
+                    dataFilters.statusFilter.has('ERROR')
                       ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
                       : 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
                   }
                 >
-                  상태: {dataFilters.statusFilter}
+                  상태: {Array.from(dataFilters.statusFilter).join(', ')}
                 </Badge>
               )}
 

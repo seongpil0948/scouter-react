@@ -1,7 +1,7 @@
 // lib/utils/traceUtils.ts
-
 import { formatDuration } from '@/lib/utils/dateFormatter';
 import { Selection } from '@react-types/shared';
+import { SelectFilter } from '@/lib/store/chartStore';
 
 /**
  * Common utility functions for trace data processing and visualization
@@ -162,14 +162,13 @@ export function processTraceData(
   timeSeriesData.sort((a, b) => a[0] - b[0]);
   highLatencyData.sort((a, b) => a[0] - b[0]);
   
-  console.log(`처리된 전체 데이터: ${timeSeriesData.length}, 고지연 데이터: ${highLatencyData.length}`);
-  
   return {
     timeSeriesData,
     highLatencyData,
     metadataMap
   };
 }
+
 /**
  * Find trace closest to a timestamp
  * @param traces array of trace items to search
@@ -299,14 +298,15 @@ export function filterTraceData(
   filters: {
     minDuration?: number;
     maxDuration?: number;
-    serviceFilter?: Selection;
-    statusFilter?: Selection;
+    serviceFilter?: SelectFilter;
+    statusFilter?: SelectFilter;
     search?: string;
   }
 ): TraceItem[] {
-  // Short-circuit if no filters
+  // 필터 없는 경우 조기 반환
   if (!filters.minDuration && !filters.maxDuration && 
-      !filters.serviceFilter && !filters.statusFilter && 
+      (!filters.serviceFilter || filters.serviceFilter === 'all') && 
+      (!filters.statusFilter || filters.statusFilter === 'all') && 
       !filters.search) {
     return traces;
   }
@@ -319,13 +319,28 @@ export function filterTraceData(
     if (filters.maxDuration && trace.duration > filters.maxDuration) {
       return false;
     }
-    if (filters.serviceFilter !== 'all' && !filters.serviceFilter?.has(trace.serviceName)) {
-      return false;
-    }
-    if (filters.statusFilter !== 'all' && !filters.statusFilter?.has(trace.serviceName)) {
-      return false;
+
+    // Service filter - 'all'이면 모든 서비스 포함, 그렇지 않으면 선택된 서비스만
+    if (filters.serviceFilter && filters.serviceFilter !== 'all') {
+      // filters.serviceFilter가 Set인 경우
+      if (filters.serviceFilter instanceof Set) {
+        if (!filters.serviceFilter.has(trace.serviceName)) {
+          return false;
+        }
+      }
     }
 
+    // Status filter - 'all'이면 모든 상태 포함, 그렇지 않으면 선택된 상태만
+    if (trace.status && filters.statusFilter && filters.statusFilter !== 'all') {
+      // filters.statusFilter가 Set인 경우
+      if (filters.statusFilter instanceof Set) {
+        if (!filters.statusFilter.has(trace.status)) {
+          return false;
+        }
+      }
+    }
+
+    // Search filter
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       
