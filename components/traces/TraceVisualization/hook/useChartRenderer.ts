@@ -2,7 +2,7 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import * as echarts from 'echarts';
 import { useTheme } from 'next-themes';
-import debounce from 'lodash.debounce';
+import {debounce} from 'lodash-es';
 import type { EChartsOption } from 'echarts';
 import { DEFAULT_CHART_CONFIG, getServiceThreshold } from '../utils';
 
@@ -176,19 +176,19 @@ export function useChartRenderer({
         extraCssText: "box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);",
         formatter: getTooltipFormatter()
       },
-      toolbox: {
-        show: true,
-        feature: {
-          dataZoom: { yAxisIndex: "none" },
-          restore: {},
-          saveAsImage: {},
-        },
-        right: 10,
-        iconStyle: {
-          borderColor: theme === "dark" ? "#666" : "#666",
-          color: theme === "dark" ? "#ddd" : "#333",
-        },
-      },
+      // toolbox: {
+      //   show: true,
+      //   feature: {
+      //     dataZoom: { yAxisIndex: "none" },
+      //     restore: {},
+      //     saveAsImage: {},
+      //   },
+      //   right: 10,
+      //   iconStyle: {
+      //     borderColor: theme === "dark" ? "#666" : "#666",
+      //     color: theme === "dark" ? "#ddd" : "#333",
+      //   },
+      // },
       dataZoom: [
         {
           type: "inside",
@@ -278,10 +278,10 @@ export function useChartRenderer({
         {
           name: "일반 요청",
           type: "scatter",
-          large: true,
-          largeThreshold: 100,
-          progressive: 400,
-          progressiveThreshold: 1000,
+          // large: true,
+          // largeThreshold: 2000,       
+          progressive: 1000,          
+          progressiveThreshold: 5000, 
           progressiveRepaint: true,
           symbol: "circle",
           symbolSize: (value: number[]) => {

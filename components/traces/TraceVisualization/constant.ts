@@ -18,3 +18,10 @@ export const DEFAULT_CONFIG: ChartConfig = {
     effectMax: 30,
   },
 };
+
+export const DEFAULT_FILTER = Object.freeze<ChartState['dataFilters']>({
+      minDuration: undefined,
+      maxDuration: undefined,
+      serviceFilter: 'all',
+      statusFilter: 'all',
+    })

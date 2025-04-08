@@ -1,7 +1,7 @@
 // lib/utils/traceUtils.ts
 
 import { formatDuration } from '@/lib/utils/dateFormatter';
-
+import { Selection } from '@react-types/shared';
 
 /**
  * Common utility functions for trace data processing and visualization
@@ -104,54 +104,65 @@ export function processTraceData(
   highLatencyData: DataPoint[];
   metadataMap: Map<number, { serviceName: string; status?: string }>;
 } {
-  // Maps to prevent duplicates
-  const timeSeriesMap = new Map<number, DataPoint>();
-  const highLatencyMap = new Map<number, DataPoint>();
+  // 고유 ID 생성을 위한 카운터
+  let uniqueCounter = 0;
+  
+  // 결과 배열 직접 사용 (Map 대신)
+  const timeSeriesData: DataPoint[] = [];
+  const highLatencyData: DataPoint[] = [];
   const metadataMap = new Map<number, { serviceName: string; status?: string }>();
   
-  // Process each trace item
-  traces.forEach((trace) => {
+  // 처리할 최대 데이터 수 (성능 문제 방지)
+  const maxDataPoints = 10000;
+  const dataToProcess = traces.slice(0, maxDataPoints);
+  
+  dataToProcess.forEach((trace) => {
     if (!trace) return;
     
-    // Parse timestamp if needed
+    // 타임스탬프 파싱
     const timestamp = typeof trace.startTime === 'string' 
       ? parseInt(trace.startTime, 10) 
       : trace.startTime;
     
     if (!timestamp || isNaN(timestamp)) return;
     
-    // Get latency
+    // 지연 시간 추출
     const latency = trace.duration;
     if (latency === undefined || isNaN(latency)) return;
     
-    // Store metadata
-    metadataMap.set(timestamp, {
+    // 미세한 오프셋 추가 (동일 타임스탬프 구분용)
+    // 이 방법은 차트에 영향을 거의 주지 않으면서 고유성 보장
+    const adjustedTimestamp = timestamp + (uniqueCounter * 0.001);
+    uniqueCounter++;
+    
+    // 메타데이터 저장
+    metadataMap.set(adjustedTimestamp, {
       serviceName: trace.serviceName || "unknown",
       status: trace.status
     });
     
-    // Create data point and add to time series
-    const dataPoint: DataPoint = [timestamp, latency];
-    timeSeriesMap.set(timestamp, dataPoint);
+    // 데이터 포인트 생성 및 배열에 추가
+    const dataPoint: DataPoint = [adjustedTimestamp, latency];
+    timeSeriesData.push(dataPoint);
     
-    // Determine if this is a high-latency point
+    // 서비스별 임계값 적용
     const threshold = getServiceThreshold(
       trace.serviceName,
       serviceThresholds,
       latencyThreshold
     );
     
+    // 고지연 데이터 처리
     if (latency > threshold) {
-      highLatencyMap.set(timestamp, dataPoint);
+      highLatencyData.push(dataPoint);
     }
   });
   
-  // Convert maps to sorted arrays with limits
-  const timeSeriesData = Array.from(timeSeriesMap.values())
-    .sort((a, b) => a[0] - b[0])
+  // 배열 정렬
+  timeSeriesData.sort((a, b) => a[0] - b[0]);
+  highLatencyData.sort((a, b) => a[0] - b[0]);
   
-  const highLatencyData = Array.from(highLatencyMap.values())
-    .sort((a, b) => a[0] - b[0])
+  console.log(`처리된 전체 데이터: ${timeSeriesData.length}, 고지연 데이터: ${highLatencyData.length}`);
   
   return {
     timeSeriesData,
@@ -159,7 +170,6 @@ export function processTraceData(
     metadataMap
   };
 }
-
 /**
  * Find trace closest to a timestamp
  * @param traces array of trace items to search
@@ -289,8 +299,8 @@ export function filterTraceData(
   filters: {
     minDuration?: number;
     maxDuration?: number;
-    serviceFilter?: string;
-    statusFilter?: string;
+    serviceFilter?: Selection;
+    statusFilter?: Selection;
     search?: string;
   }
 ): TraceItem[] {
@@ -309,18 +319,13 @@ export function filterTraceData(
     if (filters.maxDuration && trace.duration > filters.maxDuration) {
       return false;
     }
-    
-    // Service filter
-    if (filters.serviceFilter && trace.serviceName !== filters.serviceFilter) {
+    if (filters.serviceFilter !== 'all' && !filters.serviceFilter?.has(trace.serviceName)) {
       return false;
     }
-    
-    // Status filter
-    if (filters.statusFilter && trace.status !== filters.statusFilter) {
+    if (filters.statusFilter !== 'all' && !filters.statusFilter?.has(trace.serviceName)) {
       return false;
     }
-    
-    // Search term
+
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       

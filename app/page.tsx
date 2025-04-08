@@ -33,7 +33,7 @@ export default function Home() {
   const { data,  error, mutate } = useSWR<DtoTrace>(
     `/api/telemetry/traces?startTime=${timeRange.startTime}&endTime=${timeRange.endTime}`,
     fetcher,
-    { refreshInterval: 30000 }, // 30초마다 자동 갱신
+    { refreshInterval: 5 }, // 30초마다 자동 갱신
   );
 
   const handleTraceClick = useCallback((trace: TraceItem) => {

@@ -1,94 +1,10 @@
 // lib/store/chartStore.ts
+import { DEFAULT_FILTER } from '@/components/traces/TraceVisualization/constant';
 import { DEFAULT_CHART_CONFIG } from '@/components/traces/TraceVisualization/utils';
+import { isEqual } from 'lodash-es';
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 
-// Time range options
-export type TimeRangeOption = 
-  | '1m' // 1 minute
-  | '5m' // 5 minutes
-  | '10m' // 10 minutes
-  | '1h' // 1 hour
-  | '3h' // 3 hours
-  | '6h' // 6 hours
-  | '12h' // 12 hours
-  | '1d'; // 1 day
-
-// Refresh interval options in milliseconds
-export type RefreshIntervalOption = 
-  | 0     // Manual refresh only
-  | 1000  // 1 second
-  | 5000  // 5 seconds
-  | 10000; // 10 seconds
-
-interface ChartState {
-  // Chart configuration
-  config: ChartConfig;
-  updateConfig: (newConfig: Partial<ChartConfig>) => void;
-  
-  // Selected trace
-  selectedTrace: TraceItem | null;
-  setSelectedTrace: (trace: TraceItem | null) => void;
-  
-  // Chart refresh state
-  isRefreshing: boolean;
-  setRefreshing: (isRefreshing: boolean) => void;
-  
-  // Legend state for chart series
-  legendState: {
-    normal: boolean;
-    highLatency: boolean;
-  };
-  toggleLegend: (type: 'normal' | 'highLatency') => void;
-  
-  // Data filters
-  dataFilters: {
-    minDuration?: number;
-    maxDuration?: number;
-    serviceFilter?: string;
-    statusFilter?: string;
-  };
-  updateDataFilters: (filters: Partial<ChartState['dataFilters']>) => void;
-  resetFilters: () => void;
-
-  // Time range configuration - NEW
-  timeRange: TimeRangeOption;
-  setTimeRange: (range: TimeRangeOption) => void;
-
-  // Refresh interval configuration - NEW
-  refreshInterval: RefreshIntervalOption;
-  setRefreshInterval: (interval: RefreshIntervalOption) => void;
-  
-  // Auto-refresh enabled status - NEW
-  autoRefreshEnabled: boolean;
-  toggleAutoRefresh: () => void;
-  setAutoRefreshEnabled: (enabled: boolean) => void;
-}
-
-
-/**
- * Helper function to check if objects are deeply different
- */
-function isDifferent(obj1: any, obj2: any): boolean {
-  if (obj1 === obj2) return false;
-  if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return true;
-  
-  const keys1 = Object.keys(obj1 || {});
-  const keys2 = Object.keys(obj2 || {});
-  
-  if (keys1.length !== keys2.length) return true;
-  
-  return keys1.some(key => {
-    const val1 = obj1[key];
-    const val2 = obj2[key];
-    
-    if (typeof val1 === 'object' && typeof val2 === 'object') {
-      return isDifferent(val1, val2);
-    }
-    
-    return val1 !== val2;
-  });
-}
 
 // Create Zustand store
 export const useChartStore = create<ChartState>()(
@@ -102,7 +18,7 @@ export const useChartStore = create<ChartState>()(
           const currentConfig = get().config;
           const hasChanges = Object.keys(newConfig).some(key => {
             // @ts-ignore - dynamic property access
-            return isDifferent(newConfig[key], currentConfig[key]);
+            return !isEqual(newConfig[key], currentConfig[key]);
           });
           
           if (hasChanges) {
@@ -133,7 +49,7 @@ export const useChartStore = create<ChartState>()(
         })),
         
         // Data filters initialization
-        dataFilters: {},
+        dataFilters: DEFAULT_FILTER,
         updateDataFilters: (filters) => {
           // Check if filters actually changed before updating state
           const currentFilters = get().dataFilters;
@@ -148,7 +64,7 @@ export const useChartStore = create<ChartState>()(
             }));
           }
         },
-        resetFilters: () => set({ dataFilters: {} }),
+        resetFilters: () => set({ dataFilters: DEFAULT_FILTER,  }),
 
         // Time range selection - NEW
         timeRange: '1h', // Default to 1 hour
