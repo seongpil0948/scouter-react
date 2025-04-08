@@ -1,7 +1,5 @@
 // lib/utils/traceUtils.ts
 import { formatDuration } from '@/lib/utils/dateFormatter';
-import { Selection } from '@react-types/shared';
-import { SelectFilter } from '@/lib/store/chartStore';
 
 /**
  * Common utility functions for trace data processing and visualization
@@ -288,74 +286,6 @@ export function getLatencyColor(
 }
 
 /**
- * Filter trace data based on criteria
- * @param traces array of trace items
- * @param filters filter criteria
- * @returns filtered array of trace items
- */
-export function filterTraceData(
-  traces: TraceItem[],
-  filters: {
-    minDuration?: number;
-    maxDuration?: number;
-    serviceFilter?: SelectFilter;
-    statusFilter?: SelectFilter;
-    search?: string;
-  }
-): TraceItem[] {
-  // 필터 없는 경우 조기 반환
-  if (!filters.minDuration && !filters.maxDuration && 
-      (!filters.serviceFilter || filters.serviceFilter === 'all') && 
-      (!filters.statusFilter || filters.statusFilter === 'all') && 
-      !filters.search) {
-    return traces;
-  }
-
-  return traces.filter(trace => {
-    // Duration filters
-    if (filters.minDuration && trace.duration < filters.minDuration) {
-      return false;
-    }
-    if (filters.maxDuration && trace.duration > filters.maxDuration) {
-      return false;
-    }
-
-    // Service filter - 'all'이면 모든 서비스 포함, 그렇지 않으면 선택된 서비스만
-    if (filters.serviceFilter && filters.serviceFilter !== 'all') {
-      // filters.serviceFilter가 Set인 경우
-      if (filters.serviceFilter instanceof Set) {
-        if (!filters.serviceFilter.has(trace.serviceName)) {
-          return false;
-        }
-      }
-    }
-
-    // Status filter - 'all'이면 모든 상태 포함, 그렇지 않으면 선택된 상태만
-    if (trace.status && filters.statusFilter && filters.statusFilter !== 'all') {
-      // filters.statusFilter가 Set인 경우
-      if (filters.statusFilter instanceof Set) {
-        if (!filters.statusFilter.has(trace.status)) {
-          return false;
-        }
-      }
-    }
-
-    // Search filter
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      
-      return (
-        (trace.name && trace.name.toLowerCase().includes(searchLower)) ||
-        (trace.serviceName && trace.serviceName.toLowerCase().includes(searchLower)) ||
-        (trace.traceId && trace.traceId.toLowerCase().includes(searchLower))
-      );
-    }
-    
-    return true;
-  });
-}
-
-/**
  * Format trace service and latency information for display
  * @param trace trace item
  * @param threshold service threshold
@@ -384,6 +314,5 @@ export default {
   calculateLatencyStats,
   calculateServiceStats,
   getLatencyColor,
-  filterTraceData,
   formatTraceInfo
 };

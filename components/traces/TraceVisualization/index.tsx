@@ -10,14 +10,7 @@ import { Filter, Clock, AlertTriangle, CheckCircle, BarChart2 } from 'lucide-rea
 import TraceChart from './TraceChart';
 import { useChartStore } from '@/lib/store/chartStore';
 import { formatDuration } from '@/lib/utils/dateFormatter';
-import {
-  buildServiceThresholds,
-  filterTraceData,
-  calculateServiceStats,
-  calculateLatencyStats,
-  processTraceData,
-  findTraceByTimestamp,
-} from './utils';
+import { buildServiceThresholds, calculateServiceStats, calculateLatencyStats, processTraceData, findTraceByTimestamp } from './utils';
 import { DEFAULT_FILTER } from './constant';
 import { SharedSelection } from '@heroui/system';
 import { isEmpty } from 'lodash-es';
@@ -29,13 +22,15 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   title,
   showFilters = false,
   serviceThresholds: propServiceThresholds,
+  onFilterChange,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { legendState, dataFilters, updateDataFilters } = useChartStore();
 
   const serviceThresholds = useMemo(() => buildServiceThresholds(traceData, propServiceThresholds), [traceData, propServiceThresholds]);
 
-  const filteredData = useMemo(() => filterTraceData(traceData, dataFilters), [traceData, dataFilters]);
+  // 필터링은 이제 백엔드에서 처리되므로 filteredData는 바로 traceData 사용
+  const filteredData = traceData;
 
   // Extract unique services for filtering
   const services = useMemo(() => {
@@ -71,8 +66,14 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
 
   // Reset all filters
   const handleResetFilters = useCallback(() => {
-    updateDataFilters(DEFAULT_FILTER);
-  }, [updateDataFilters]);
+    const resetFilters = DEFAULT_FILTER;
+    updateDataFilters(resetFilters);
+
+    // 상위 컴포넌트에 필터 변경 알림
+    if (onFilterChange) {
+      onFilterChange(resetFilters);
+    }
+  }, [updateDataFilters, onFilterChange]);
 
   const getSelectedServiceKeys = useCallback(() => {
     return dataFilters.serviceFilter === 'all' ? new Set<Key>([]) : dataFilters.serviceFilter;
@@ -85,18 +86,29 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   const handleServiceSelectionChange = useCallback(
     (keys: SharedSelection) => {
       const serviceFilter = isEmpty(keys) ? 'all' : keys;
+      const newFilters = { ...dataFilters, serviceFilter };
       updateDataFilters({ serviceFilter });
+
+      // 상위 컴포넌트에 필터 변경 알림
+      if (onFilterChange) {
+        onFilterChange(newFilters);
+      }
     },
-    [updateDataFilters]
+    [dataFilters, updateDataFilters, onFilterChange]
   );
 
   const handleStatusSelectionChange = useCallback(
     (keys: SharedSelection) => {
-      // keys가 비어있거나 undefined인 경우 'all'로 설정
       const statusFilter = isEmpty(keys) ? 'all' : keys;
+      const newFilters = { ...dataFilters, statusFilter };
       updateDataFilters({ statusFilter });
+
+      // 상위 컴포넌트에 필터 변경 알림
+      if (onFilterChange) {
+        onFilterChange(newFilters);
+      }
     },
-    [updateDataFilters]
+    [dataFilters, updateDataFilters, onFilterChange]
   );
 
   // Calculate display values
@@ -230,9 +242,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         {filteredData.length === 0 && !isLoading && (
           <div className="absolute inset-0 flex items-center justify-center text-gray-500">
             <p>
-              {traceData.length > 0
-                ? '필터 조건에 맞는 데이터가 없습니다.'
-                : '데이터가 로드되지 않았습니다. 데이터가 수신되면 여기에 표시됩니다.'}
+              {hasFilters ? '필터 조건에 맞는 데이터가 없습니다.' : '데이터가 로드되지 않았습니다. 데이터가 수신되면 여기에 표시됩니다.'}
             </p>
           </div>
         )}

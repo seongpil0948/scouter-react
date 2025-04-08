@@ -4,7 +4,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/lib/postgres/client";
 
 export async function GET(request: NextRequest) {
-  // URL에서 파라미터 추출
   const searchParams = request.nextUrl.searchParams;
   const query = searchParams.get("query") || "*";
   const startTime = searchParams.get("startTime")
@@ -13,14 +12,17 @@ export async function GET(request: NextRequest) {
   const endTime = searchParams.get("endTime")
     ? parseInt(searchParams.get("endTime")!)
     : Date.now();
-  const serviceName = searchParams.get("serviceName") || undefined;
+  
+  // 단일 값이 아닌 배열 형태로 서비스 및 상태 필터 처리
+  const serviceNames = searchParams.getAll("serviceName") || [];
+  const statuses = searchParams.getAll("status") || [];
+  
   const minDuration = searchParams.get("minDuration")
     ? parseInt(searchParams.get("minDuration")!)
     : undefined;
   const maxDuration = searchParams.get("maxDuration")
     ? parseInt(searchParams.get("maxDuration")!)
     : undefined;
-  const status = searchParams.get("status") || undefined;
   const limit = searchParams.get("limit")
     ? parseInt(searchParams.get("limit")!)
     : 100;
@@ -31,25 +33,24 @@ export async function GET(request: NextRequest) {
   try {
     const pool = getPool();
 
-    // 쿼리 파라미터 배열
     const queryParams: any[] = [startTime, endTime];
 
     // 기본 WHERE 조건
     let whereClause = "start_time >= $1 AND start_time <= $2";
     let paramIndex = 3;
 
-    // 서비스명 필터
-    if (serviceName) {
-      whereClause += ` AND service_name = $${paramIndex}`;
-      queryParams.push(serviceName);
-      paramIndex++;
+    if (serviceNames.length > 0) {
+      const placeholders = serviceNames.map((_, i) => `$${paramIndex + i}`).join(", ");
+      whereClause += ` AND service_name IN (${placeholders})`;
+      queryParams.push(...serviceNames);
+      paramIndex += serviceNames.length;
     }
 
-    // 상태 필터
-    if (status) {
-      whereClause += ` AND status = $${paramIndex}`;
-      queryParams.push(status);
-      paramIndex++;
+    if (statuses.length > 0) {
+      const placeholders = statuses.map((_, i) => `$${paramIndex + i}`).join(", ");
+      whereClause += ` AND status IN (${placeholders})`;
+      queryParams.push(...statuses);
+      paramIndex += statuses.length;
     }
 
     // 지속 시간 필터
@@ -100,45 +101,17 @@ export async function GET(request: NextRequest) {
 
     queryParams.push(limit, offset);
 
-    // // 트레이스 그룹 쿼리 (trace_id로 그룹화)
-    // const traceGroupsQuery = `
-    //   SELECT
-    //     trace_id AS "traceId",
-    //     MIN(start_time) AS "startTime",
-    //     MAX(end_time) - MIN(start_time) AS "duration",
-    //     COUNT(*) AS "spanCount",
-    //     json_agg(DISTINCT service_name) AS "services"
-    //   FROM
-    //     traces
-    //   WHERE
-    //     ${whereClause}
-    //   GROUP BY
-    //     trace_id
-    //   ORDER BY
-    //     MIN(start_time) DESC
-    //   LIMIT 100
-    // `;
+    console.debug("Trace query:", tracesQuery);
+    console.debug("Query params:", queryParams);
 
-    // 총 개수 카운트 쿼리
-    // const countQuery = `
-    //   SELECT COUNT(*) AS total
-    //   FROM traces
-    //   WHERE ${whereClause}
-    // `;
-    console.debug("query: ", tracesQuery, queryParams);
-    // 병렬로 모든 쿼리 실행
-    // const [tracesResult, traceGroupsResult, countResult] = await Promise.all([
+    // 쿼리 실행
     const [tracesResult] = await Promise.all([
       pool.query(tracesQuery, queryParams),
-      // pool.query(traceGroupsQuery, queryParams.slice(0, -2)), // limit, offset 제외
-      // pool.query(countQuery, queryParams.slice(0, -2)), // limit, offset 제외
     ]);
 
     const traces = tracesResult.rows.filter(isTraceItem);
     const response: DtoTrace = {
       traces,
-      // traceGroups: traceGroupsResult.rows,
-      // total: parseInt(countResult.rows[0].total),
     };
 
     return NextResponse.json(response);

@@ -8,17 +8,21 @@ import TraceVisualization from '@/components/traces/TraceVisualization';
 import { useChartStore } from '@/lib/store/chartStore';
 import { useFilterStore } from '@/lib/store/telemetryStore';
 import DateRangePicker from '@/components/shared/DateRangePicker';
+import { buildApiUrlWithFilters } from '@/lib/utils/filterUtils';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function Dashboard() {
   const router = useRouter();
   const [refreshInterval, setRefreshInterval] = useState<number>(0); // 기본 0 (자동 갱신 없음)
-  const { updateConfig } = useChartStore();
+  const { dataFilters, updateConfig } = useChartStore();
   const { timeRange } = useFilterStore();
 
+  // API URL 생성 - 필터 상태 반영
+  const apiUrl = buildApiUrlWithFilters('/api/telemetry/traces', dataFilters, timeRange);
+
   // SWR을 사용하여 데이터 가져오기 (refreshInterval을 SWR에 직접 전달)
-  const { data, error } = useSWR<DtoTrace>(`/api/telemetry/traces?startTime=${timeRange.startTime}&endTime=${timeRange.endTime}`, fetcher, {
+  const { data, error, mutate } = useSWR<DtoTrace>(apiUrl, fetcher, {
     refreshInterval: refreshInterval,
     revalidateOnFocus: false,
     dedupingInterval: 1000, // 1초 내 중복 요청 방지
@@ -43,8 +47,14 @@ export default function Dashboard() {
   // 시간 범위 변경 핸들러
   const handleTimeRangeChange = useCallback(() => {
     // 시간 범위는 useFilterStore에서 자동으로 업데이트됨
-    // SWR이 새로운 URL로 자동으로 리페치함
-  }, []);
+    mutate();
+  }, [mutate]);
+
+  // 필터 변경 핸들러
+  const handleFilterChange = useCallback(() => {
+    // 필터 변경 시 새 URL로 SWR이 자동으로 데이터를 다시 가져옵니다
+    mutate();
+  }, [mutate]);
 
   // 트레이스 클릭 핸들러
   const handleTraceClick = useCallback(
@@ -78,6 +88,7 @@ export default function Dashboard() {
           onDataPointClick={handleTraceClick}
           title={error ? '데이터 로드 중 오류 발생' : undefined}
           showFilters={true}
+          onFilterChange={handleFilterChange}
         />
       </div>
     </section>

@@ -28,6 +28,7 @@ interface TraceVisualizationProps {
   title?: string;
   showFilters?: boolean;
   serviceThresholds?: Map<string, number>; // 서비스별 임계값 추가
+  onFilterChange?: (filters: any) => void; // 필터 변경 콜백 추가
 }
 
 interface TraceChartProps {

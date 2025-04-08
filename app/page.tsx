@@ -8,12 +8,14 @@ import DateRangePicker from '@/components/shared/DateRangePicker';
 import { ThemeSwitch } from '@/components/shared/theme-switch';
 import TraceVisualization from '@/components/traces/TraceVisualization';
 import { useChartStore } from '@/lib/store/chartStore';
+import { buildApiUrlWithFilters } from '@/lib/utils/filterUtils';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function Home() {
   const router = useRouter();
   const { timeRange } = useFilterStore();
+  const { dataFilters, updateConfig } = useChartStore();
   const [chartConfig] = useState({
     height: 400,
     title: '실시간 요청 지연 시간',
@@ -27,16 +29,15 @@ export default function Home() {
     },
   });
 
-  // 메트릭 데이터 가져오기 (refreshInterval을 SWR에 직접 전달)
-  const { data, error, mutate } = useSWR<DtoTrace>(
-    `/api/telemetry/traces?startTime=${timeRange.startTime}&endTime=${timeRange.endTime}`,
-    fetcher,
-    {
-      refreshInterval: 5000,
-      revalidateOnFocus: true,
-      dedupingInterval: 1000,
-    }
-  );
+  // API URL 생성 - 필터 상태 반영
+  const apiUrl = buildApiUrlWithFilters('/api/telemetry/traces', dataFilters, timeRange);
+
+  // 메트릭 데이터 가져오기 (필터 반영된 URL 사용)
+  const { data, error, mutate } = useSWR<DtoTrace>(apiUrl, fetcher, {
+    refreshInterval: 5000,
+    revalidateOnFocus: true,
+    dedupingInterval: 1000,
+  });
 
   const handleTraceClick = useCallback(
     (trace: TraceItem) => {
@@ -47,9 +48,13 @@ export default function Home() {
 
   const handleTimeRangeChange = useCallback(() => {
     mutate();
-  }, []);
+  }, [mutate]);
 
-  const { updateConfig } = useChartStore();
+  // 필터 변경 핸들러
+  const handleFilterChange = useCallback(() => {
+    // 필터 변경 시 새 URL로 SWR이 자동으로 데이터를 다시 가져옵니다
+    mutate();
+  }, [mutate]);
 
   // 컴포넌트 마운트 시 차트 설정 초기화
   useEffect(() => {
@@ -75,6 +80,7 @@ export default function Home() {
         traceData={data?.traces ?? []}
         onDataPointClick={handleTraceClick}
         showFilters={true}
+        onFilterChange={handleFilterChange}
       />
     </section>
   );
