@@ -1,60 +1,59 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
 import { ThemeSwitch } from '@/components/shared/theme-switch';
-import TraceVisualization from '@/components/traces/TraceVisualization';
-import { useChartStore } from '@/lib/store/chartStore';
-import { useFilterStore } from '@/lib/store/telemetryStore';
+import TraceFilter from '@/components/traces/TraceFilter';
+import TraceTable from '@/components/traces/TraceTable';
 import DateRangePicker from '@/components/shared/DateRangePicker';
-import { buildApiUrlWithFilters } from '@/lib/utils/filterUtils';
+import { useFilterStore } from '@/lib/store/telemetryStore';
+import { useTraceFilterStore, LimitOption } from '@/lib/store/traceFilterStore';
+import { buildTraceApiUrl } from '@/lib/utils/filterUtils';
+import { Card, CardBody } from '@heroui/card';
 
+// API 호출을 위한 fetcher 함수
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export default function Dashboard() {
+export default function TracesPage() {
   const router = useRouter();
-  const [refreshInterval, setRefreshInterval] = useState<number>(0); // 기본 0 (자동 갱신 없음)
-  const { dataFilters, updateConfig } = useChartStore();
   const { timeRange } = useFilterStore();
+  const { searchQuery, limit, selectedServices, selectedStatuses, minDuration, maxDuration, sortField, sortDirection, lastRefreshed } =
+    useTraceFilterStore();
 
-  // API URL 생성 - 필터 상태 반영
-  const apiUrl = buildApiUrlWithFilters('/api/telemetry/traces', dataFilters, timeRange);
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // SWR을 사용하여 데이터 가져오기 (refreshInterval을 SWR에 직접 전달)
-  const { data, error, mutate } = useSWR<DtoTrace>(apiUrl, fetcher, {
-    refreshInterval: refreshInterval,
-    revalidateOnFocus: false,
-    dedupingInterval: 1000, // 1초 내 중복 요청 방지
-  });
+  // 페이지 변경 시 offset 계산
+  const offset = (currentPage - 1) * limit;
 
-  // 초기화
-  useState(() => {
-    updateConfig({
-      height: 400,
-      title: '실시간 요청 지연 시간 모니터링',
-      latencyThreshold: 300,
-      colors: {
-        low: '#52c41a', // 낮은 지연시간
-        medium: '#1890ff', // 보통 지연시간
-        high: '#faad14', // 높은 지연시간
-        critical: '#ff4d4f', // 임계치 초과 지연시간
-        error: '#ff4d4f', // 에러 상태 색상
-      },
-    });
-  });
+  // API URL 생성
+  const apiUrl = buildTraceApiUrl(
+    '/api/telemetry/traces',
+    {
+      searchQuery,
+      selectedServices,
+      selectedStatuses,
+      minDuration,
+      maxDuration,
+    },
+    timeRange,
+    limit,
+    sortField,
+    sortDirection,
+    offset
+  );
 
-  // 시간 범위 변경 핸들러
-  const handleTimeRangeChange = useCallback(() => {
-    // 시간 범위는 useFilterStore에서 자동으로 업데이트됨
-    mutate();
-  }, [mutate]);
-
-  // 필터 변경 핸들러
-  const handleFilterChange = useCallback(() => {
-    // 필터 변경 시 새 URL로 SWR이 자동으로 데이터를 다시 가져옵니다
-    mutate();
-  }, [mutate]);
+  // SWR로 데이터 가져오기
+  const { data, error, isLoading, mutate } = useSWR(
+    // 새로고침, 페이지 변경, 필터 변경 시 재요청을 위한 의존성 배열
+    [apiUrl, lastRefreshed, currentPage],
+    () => fetcher(apiUrl),
+    {
+      dedupingInterval: 2000,
+      revalidateOnFocus: false,
+    }
+  );
 
   // 트레이스 클릭 핸들러
   const handleTraceClick = useCallback(
@@ -64,16 +63,23 @@ export default function Dashboard() {
     [router]
   );
 
-  // 새로고침 간격 변경 핸들러
-  const handleRefreshIntervalChange = useCallback((interval: number) => {
-    setRefreshInterval(interval);
-  }, []);
+  // 필터 변경 핸들러
+  const handleFilterChange = useCallback(() => {
+    setCurrentPage(1); // 필터 변경 시 첫 페이지로 이동
+    mutate(); // 데이터 재요청
+  }, [mutate]);
+
+  // 시간 범위 변경 핸들러
+  const handleTimeRangeChange = useCallback(() => {
+    setCurrentPage(1); // 시간 범위 변경 시 첫 페이지로 이동
+    mutate(); // 데이터 재요청
+  }, [mutate]);
 
   return (
     <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
       <div className="inline-block max-w-xl text-center justify-center">
-        <h1 className="text-xl font-bold">트레이스 모니터링 대시보드</h1>
-        <p className="text-gray-500 text-sm mt-1">실시간 지연 시간 및 오류 모니터링</p>
+        <h1 className="text-2xl font-bold">트레이스 목록</h1>
+        <p className="text-gray-500 text-sm mt-1">분산 트레이스 데이터를 시간, 서비스, 상태 등으로 필터링하여 조회할 수 있습니다.</p>
       </div>
 
       <ThemeSwitch className="absolute top-4 right-4" />
@@ -82,13 +88,29 @@ export default function Dashboard() {
         <DateRangePicker onChange={handleTimeRangeChange} />
       </div>
 
-      <div className="w-full max-w-7xl">
-        <TraceVisualization
-          traceData={data?.traces ?? []}
-          onDataPointClick={handleTraceClick}
-          title={error ? '데이터 로드 중 오류 발생' : undefined}
-          showFilters={true}
-          onFilterChange={handleFilterChange}
+      <div className="w-full max-w-7xl space-y-4">
+        {/* 필터 컴포넌트 */}
+        <TraceFilter onFilterChange={handleFilterChange} />
+
+        {/* 오류 상태 */}
+        {error && (
+          <Card>
+            <CardBody className="p-8 text-center text-red-500">
+              <p>데이터를 불러오는 중 오류가 발생했습니다.</p>
+              <p className="text-sm text-gray-500 mt-2">{error.message}</p>
+            </CardBody>
+          </Card>
+        )}
+
+        {/* 테이블 컴포넌트 */}
+        <TraceTable
+          traces={data?.traces || []}
+          isLoading={isLoading}
+          totalCount={data?.total || 0}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          onSelectTrace={handleTraceClick}
+          pageSize={limit}
         />
       </div>
     </section>

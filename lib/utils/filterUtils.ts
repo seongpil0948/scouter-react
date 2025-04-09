@@ -1,5 +1,89 @@
 // lib/utils/filterUtils.ts
+import { LimitOption, SortDirection, SortField } from "@/lib/store/traceFilterStore";
 import { SelectFilter } from "@/lib/store/chartStore";
+
+/**
+ * 트레이스 필터 파라미터를 API URL로 변환
+ * @param baseUrl - 기본 API URL
+ * @param filters - 필터 객체
+ * @param timeRange - 시간 범위 객체
+ * @param limit - 결과 수 제한
+ * @param sortField - 정렬 필드
+ * @param sortDirection - 정렬 방향
+ * @param additionalParams - 추가 파라미터
+ * @returns 완성된 API URL 문자열
+ */
+export function buildTraceApiUrl(
+  baseUrl: string,
+  filters: {
+    selectedServices?: string[];
+    selectedStatuses?: string[];
+    searchQuery?: string;
+    minDuration?: number;
+    maxDuration?: number;
+  },
+  timeRange: { startTime: number; endTime: number },
+  limit: LimitOption = 100,
+  sortField: SortField = 'startTime',
+  sortDirection: SortDirection = 'desc',
+  offset: number = 0,
+  additionalParams: Record<string, string | number | boolean> = {}
+): string {
+  // 쿼리 파라미터 객체 생성
+  const params = new URLSearchParams();
+
+  // 시간 범위 추가
+  params.append("startTime", timeRange.startTime.toString());
+  params.append("endTime", timeRange.endTime.toString());
+
+  // 결과 수 제한 추가
+  params.append("limit", limit.toString());
+  
+  // 오프셋 추가
+  if (offset > 0) {
+    params.append("offset", offset.toString());
+  }
+  
+  // 정렬 설정 추가
+  params.append("sortField", sortField);
+  params.append("sortDirection", sortDirection);
+
+  // 서비스 필터 추가
+  if (filters.selectedServices && filters.selectedServices.length > 0) {
+    filters.selectedServices.forEach(service => {
+      params.append("serviceName", service);
+    });
+  }
+
+  // 상태 필터 추가
+  if (filters.selectedStatuses && filters.selectedStatuses.length > 0) {
+    filters.selectedStatuses.forEach(status => {
+      params.append("status", status);
+    });
+  }
+
+  // 검색어 필터 추가
+  if (filters.searchQuery && filters.searchQuery !== "") {
+    params.append("query", filters.searchQuery);
+  }
+
+  // 지연 시간 필터 추가
+  if (filters.minDuration !== undefined) {
+    params.append("minDuration", filters.minDuration.toString());
+  }
+
+  if (filters.maxDuration !== undefined) {
+    params.append("maxDuration", filters.maxDuration.toString());
+  }
+
+  // 추가 파라미터 처리
+  Object.entries(additionalParams).forEach(([key, value]) => {
+    params.append(key, value.toString());
+  });
+
+  // URL 구성
+  return `${baseUrl}?${params.toString()}`;
+}
 
 /**
  * 차트 필터 상태를 API 요청 URL에 사용할 수 있는 쿼리 파라미터로 변환
@@ -57,3 +141,26 @@ export function buildApiUrlWithFilters(
   // URL 구성
   return `${baseUrl}?${params.toString()}`;
 }
+
+/**
+ * 서비스 목록 조회 API URL 생성
+ * @param timeRange - 시간 범위 객체
+ * @returns 서비스 목록 API URL
+ */
+export function buildServiceListApiUrl(
+  timeRange: { startTime: number; endTime: number }
+): string {
+  const params = new URLSearchParams();
+  
+  // 시간 범위 추가
+  params.append("startTime", timeRange.startTime.toString());
+  params.append("endTime", timeRange.endTime.toString());
+  
+  return `/api/telemetry/traces/services?${params.toString()}`;
+}
+
+export default {
+  buildTraceApiUrl,
+  buildApiUrlWithFilters,
+  buildServiceListApiUrl
+};
