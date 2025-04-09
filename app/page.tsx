@@ -4,12 +4,13 @@ import { useRouter } from 'next/navigation';
 import { useState, useCallback, useEffect } from 'react';
 
 import { useFilterStore } from '@/lib/store/telemetryStore';
+import { useTraceFilterStore } from '@/lib/store/traceFilterStore';
 import DateRangePicker from '@/components/shared/DateRangePicker';
 import { ThemeSwitch } from '@/components/shared/theme-switch';
 import TraceVisualization from '@/components/traces/TraceVisualization';
-import { useChartStore } from '@/lib/store/chartStore';
-import { buildApiUrlWithFilters } from '@/lib/utils/filterUtils';
 import TraceFilter from '@/components/traces/TraceFilter';
+import { useChartStore } from '@/lib/store/chartStore';
+import { buildTraceApiUrl } from '@/lib/utils/filterUtils';
 import { Card, CardBody } from '@heroui/card';
 import { Button } from '@heroui/button';
 import { BarChart2, List, ArrowRight } from 'lucide-react';
@@ -20,6 +21,11 @@ export default function Home() {
   const router = useRouter();
   const { timeRange } = useFilterStore();
   const { dataFilters, updateConfig } = useChartStore();
+
+  // TraceFilterStore 상태 활용
+  const { searchQuery, limit, selectedServices, selectedStatuses, minDuration, maxDuration, sortField, sortDirection, lastRefreshed } =
+    useTraceFilterStore();
+
   const [chartConfig] = useState({
     height: 400,
     title: '실시간 요청 지연 시간',
@@ -33,15 +39,33 @@ export default function Home() {
     },
   });
 
-  // API URL 생성 - 필터 상태 반영
-  const apiUrl = buildApiUrlWithFilters('/api/telemetry/traces', dataFilters, timeRange);
+  // API URL 생성 - TraceFilterStore의 필터 상태 반영
+  const apiUrl = buildTraceApiUrl(
+    '/api/telemetry/traces',
+    {
+      searchQuery,
+      selectedServices,
+      selectedStatuses,
+      minDuration,
+      maxDuration,
+    },
+    timeRange,
+    limit,
+    sortField,
+    sortDirection,
+    0 // 대시보드에서는 페이지네이션이 필요 없어 offset을 0으로 설정
+  );
 
   // 트레이스 데이터 가져오기 (필터 반영된 URL 사용)
-  const { data, error, mutate } = useSWR<DtoTrace>(apiUrl, fetcher, {
-    refreshInterval: 5000,
-    revalidateOnFocus: true,
-    dedupingInterval: 1000,
-  });
+  const { data, error, mutate } = useSWR<{ traces: TraceItem[]; total: number }>(
+    [apiUrl, lastRefreshed], // lastRefreshed를 의존성에 추가하여 필터 변경 시 재요청
+    () => fetcher(apiUrl),
+    {
+      refreshInterval: 0, // 자동 갱신 비활성화 (필터 변경 시만 갱신)
+      revalidateOnFocus: false,
+      dedupingInterval: 1000,
+    }
+  );
 
   const handleTraceClick = useCallback(
     (trace: TraceItem) => {
@@ -56,7 +80,7 @@ export default function Home() {
 
   // 필터 변경 핸들러
   const handleFilterChange = useCallback(() => {
-    // 필터 변경 시 새 URL로 SWR이 자동으로 데이터를 다시 가져옵니다
+    // 필터 변경 시 데이터 재요청
     mutate();
   }, [mutate]);
 
@@ -82,7 +106,7 @@ export default function Home() {
       </div>
 
       <div className="w-full max-w-7xl space-y-4">
-        {/* 간단한 필터 컨트롤 (대시보드에서는 제한된 기능) */}
+        {/* 헤더 영역 */}
         <div className="flex justify-between items-center bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="flex items-center">
             <BarChart2 size={20} className="mr-2 text-blue-500" />
@@ -95,7 +119,10 @@ export default function Home() {
           </Button>
         </div>
 
-        {/* 차트 시각화 (기존 TraceVisualization 유지) */}
+        {/* TraceFilter 컴포넌트 추가 - /traces 페이지와 동일한 컴포넌트 사용 */}
+        <TraceFilter onFilterChange={handleFilterChange} />
+
+        {/* 차트 시각화 */}
         <TraceVisualization
           config={{
             ...chartConfig,
@@ -103,7 +130,7 @@ export default function Home() {
           }}
           traceData={data?.traces ?? []}
           onDataPointClick={handleTraceClick}
-          showFilters={true}
+          showFilters={false} /* 이미 TraceFilter 컴포넌트가 있으므로 내부 필터는 비활성화 */
           onFilterChange={handleFilterChange}
         />
       </div>
@@ -118,6 +145,19 @@ export default function Home() {
             </div>
           </CardBody>
         </Card>
+      )}
+
+      {/* 데이터 요약 표시 */}
+      {data && (
+        <div className="w-full max-w-7xl">
+          <Card>
+            <CardBody className="p-4">
+              <div className="text-sm text-gray-500 text-right">
+                총 {data.total}개의 트레이스 중 {data.traces.length}개 표시 중
+              </div>
+            </CardBody>
+          </Card>
+        </div>
       )}
     </section>
   );

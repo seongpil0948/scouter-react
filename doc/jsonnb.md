@@ -8,6 +8,8 @@ PostgreSQL의 `jsonb` 타입을 쿼리하고 인덱싱하는 방법을 설명하
 
 #### **(1) 기본 값 추출**
 
+`sql.query`
+
 - **`->`**: JSON 객체에서 특정 키의 값을 `jsonb` 형태로 반환합니다.
   - 예: `SELECT data->'name' FROM mytable;`  
     → `"John"` (jsonb 형식)
