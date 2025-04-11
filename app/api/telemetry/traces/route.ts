@@ -33,6 +33,9 @@ export async function GET(request: NextRequest) {
     ? parseInt(searchParams.get("offset")!)
     : 0;
   const attributeKey = searchParams.get("attributeKey") || null;
+  
+  // 새로 추가: 루트 스팬만 조회할지 여부 (기본값 true)
+  const rootSpansOnly = searchParams.get("rootSpansOnly") !== "false";
 
   try {
     const pool = getPool();
@@ -41,6 +44,12 @@ export async function GET(request: NextRequest) {
 
     // 기본 WHERE 조건
     let whereClause = "start_time >= $1 AND start_time <= $2";
+    
+    // 루트 스팬만 조회하는 조건 추가 (parent_span_id가 NULL 또는 빈 문자열)
+    if (rootSpansOnly) {
+      whereClause += " AND (parent_span_id IS NULL OR parent_span_id = '')";
+    }
+    
     let paramIndex = 3;
 
     // 서비스명 필터 (복수 선택 지원)
@@ -77,7 +86,6 @@ export async function GET(request: NextRequest) {
       queryParams.push(attributeKey);
       paramIndex++;
     }
-        
 
     // 검색어 필터 (name, serviceName 또는 traceId에 검색어 포함)
     if (query !== "*") {
@@ -89,7 +97,6 @@ export async function GET(request: NextRequest) {
       queryParams.push(`%${query}%`);
       paramIndex++;
     }
-    
 
     // 정렬 필드 및 방향 생성 (SQL Injection 방지)
     const validSortFields: {[key: string]: string} = {
@@ -114,7 +121,8 @@ export async function GET(request: NextRequest) {
         start_time AS "startTime",
         duration,
         status,
-        attributes
+        attributes,
+        parent_span_id IS NULL OR parent_span_id = '' AS "isRootSpan" -- 루트 스팬 여부 플래그 추가
       FROM 
         traces
       WHERE 
@@ -144,7 +152,7 @@ export async function GET(request: NextRequest) {
     // 쿼리 병렬 실행
     const [tracesResult, countResult] = await Promise.all([
       pool.query(tracesQuery, queryParams),
-      pool.query(countQuery, countParams), // 수정: paramIndex가 아닌 실제 WHERE 절에 사용된 파라미터만 전달
+      pool.query(countQuery, countParams),
     ]);
 
     const traces = tracesResult.rows.filter(isTraceItem);
@@ -158,7 +166,8 @@ export async function GET(request: NextRequest) {
       timeRange: {
         startTime,
         endTime
-      }
+      },
+      rootSpansOnly // 응답에 루트 스팬 필터링 정보 포함
     };
 
     return NextResponse.json(response);

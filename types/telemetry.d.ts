@@ -22,6 +22,7 @@ interface TraceItem {
   status?: 'UNSET' | 'ERROR' | 'OK';
   attributes?: Record<string, any>;
   services?: string[];
+  isRootSpan?: boolean; // 루트 스팬 여부 플래그 추가
 }
 
 // 서비스 메트릭 인터페이스
@@ -61,6 +62,7 @@ interface TraceFilters {
   startTime?: number;
   endTime?: number;
   attributeKey?: string | null;
+  rootSpansOnly?: boolean; // 루트 스팬만 조회 옵션 추가
 }
 
 // 필터 스토어 타입

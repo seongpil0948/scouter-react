@@ -26,6 +26,13 @@ export const DEFAULT_CHART_CONFIG: ChartConfig = {
     effectMin: 15,
     effectMax: 30,
   },
+  brush: {
+    enabled: true,
+    type: 'rect' as const,
+    mode: 'multiple' as const,
+    throttleType: 'debounce' as const,
+    throttleDelay: 300
+  }
 };
 
 /**
@@ -100,7 +107,7 @@ export function processTraceData(
 ): {
   timeSeriesData: DataPoint[];
   highLatencyData: DataPoint[];
-  metadataMap: Map<number, { serviceName: string; status?: string }>;
+  metadataMap: Map<number, { serviceName: string; status?: string; traceItem: TraceItem }>;
 } {
   // 고유 ID 생성을 위한 카운터
   let uniqueCounter = 0;
@@ -108,7 +115,7 @@ export function processTraceData(
   // 결과 배열 직접 사용 (Map 대신)
   const timeSeriesData: DataPoint[] = [];
   const highLatencyData: DataPoint[] = [];
-  const metadataMap = new Map<number, { serviceName: string; status?: string }>();
+  const metadataMap = new Map<number, { serviceName: string; status?: string; traceItem: TraceItem }>();
   
   // 처리할 최대 데이터 수 (성능 문제 방지)
   const maxDataPoints = 10000;
@@ -133,10 +140,11 @@ export function processTraceData(
     const adjustedTimestamp = timestamp + (uniqueCounter * 0.001);
     uniqueCounter++;
     
-    // 메타데이터 저장
+    // 메타데이터 저장 (traceItem 전체 포함)
     metadataMap.set(adjustedTimestamp, {
       serviceName: trace.serviceName || "unknown",
-      status: trace.status
+      status: trace.status,
+      traceItem: trace
     });
     
     // 데이터 포인트 생성 및 배열에 추가

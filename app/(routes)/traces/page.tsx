@@ -1,16 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
+import { useState, useCallback, useEffect } from 'react';
+
+import { useFilterStore } from '@/lib/store/telemetryStore';
+import { useTraceFilterStore } from '@/lib/store/traceFilterStore';
+import DateRangePicker from '@/components/shared/DateRangePicker';
 import { ThemeSwitch } from '@/components/shared/theme-switch';
 import TraceFilter from '@/components/traces/TraceFilter';
-import TraceTable from '@/components/traces/TraceTable';
-import DateRangePicker from '@/components/shared/DateRangePicker';
-import { useFilterStore } from '@/lib/store/telemetryStore';
-import { useTraceFilterStore, LimitOption } from '@/lib/store/traceFilterStore';
 import { buildTraceApiUrl } from '@/lib/utils/filterUtils';
 import { Card, CardBody } from '@heroui/card';
+import TraceTable from '@/components/traces/TraceTable';
 
 // API 호출을 위한 fetcher 함수
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -18,8 +19,18 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export default function TracesPage() {
   const router = useRouter();
   const { timeRange } = useFilterStore();
-  const { searchQuery, limit, selectedServices, selectedStatuses, minDuration, maxDuration, sortField, sortDirection, lastRefreshed } =
-    useTraceFilterStore();
+  const {
+    searchQuery,
+    limit,
+    selectedServices,
+    selectedStatuses,
+    minDuration,
+    maxDuration,
+    sortField,
+    sortDirection,
+    lastRefreshed,
+    rootSpansOnly, // 루트 스팬만 조회 옵션 사용
+  } = useTraceFilterStore();
 
   // 페이지네이션 상태
   const [currentPage, setCurrentPage] = useState(1);
@@ -27,7 +38,7 @@ export default function TracesPage() {
   // 페이지 변경 시 offset 계산
   const offset = (currentPage - 1) * limit;
 
-  // API URL 생성
+  // API URL 생성 (rootSpansOnly 추가)
   const apiUrl = buildTraceApiUrl(
     '/api/telemetry/traces',
     {
@@ -41,17 +52,16 @@ export default function TracesPage() {
     limit,
     sortField,
     sortDirection,
-    offset
+    offset,
+    { rootSpansOnly } // 루트 스팬만 조회 여부 전달
   );
-
-  // SWR로 데이터 가져오기
-  const { data, error, isLoading, mutate } = useSWR(
-    // 새로고침, 페이지 변경, 필터 변경 시 재요청을 위한 의존성 배열
-    [apiUrl, lastRefreshed, currentPage],
+  const { data, error, mutate } = useSWR<TracesResponse>(
+    [apiUrl, lastRefreshed], // lastRefreshed를 의존성에 추가하여 필터 변경 시 재요청
     () => fetcher(apiUrl),
     {
-      dedupingInterval: 2000,
+      refreshInterval: 0, // 자동 갱신 비활성화 (필터 변경 시만 갱신)
       revalidateOnFocus: false,
+      dedupingInterval: 1000,
     }
   );
 
@@ -105,13 +115,20 @@ export default function TracesPage() {
         {/* 테이블 컴포넌트 */}
         <TraceTable
           traces={data?.traces || []}
-          isLoading={isLoading}
           totalCount={data?.total || 0}
           currentPage={currentPage}
           onPageChange={setCurrentPage}
           onSelectTrace={handleTraceClick}
           pageSize={limit}
         />
+
+        {/* 표시 정보 */}
+        {data && (
+          <div className="text-sm text-gray-500 text-right">
+            총 {data.total}개의 트레이스 중 {data.traces.length}개 표시 중
+            {data.rootSpansOnly && <span className="ml-2">(루트 스팬만 표시)</span>}
+          </div>
+        )}
       </div>
     </section>
   );

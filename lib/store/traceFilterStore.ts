@@ -47,9 +47,13 @@ interface TraceFilterStore {
   setMinDuration: (duration?: number) => void;
   setMaxDuration: (duration?: number) => void;
   
-  // 속성 키 필터 (추가)
+  // 속성 키 필터
   attributeKey: string;
   setAttributeKey: (key: string) => void;
+  
+  // 루트 스팬만 조회 필터 추가
+  rootSpansOnly: boolean;
+  setRootSpansOnly: (rootOnly: boolean) => void;
   
   // 시간 범위 (빠른 선택 옵션)
   timeRangeOption: keyof typeof TIME_RANGE_MS;
@@ -79,7 +83,8 @@ const DEFAULT_FILTERS = {
   selectedStatuses: [],
   minDuration: undefined,
   maxDuration: undefined,
-  attributeKey: '',  // 추가: 속성 키 필터 기본값
+  attributeKey: '',
+  rootSpansOnly: true, // 기본값은 루트 스팬만 조회
   timeRangeOption: '1h' as keyof typeof TIME_RANGE_MS,
   sortField: 'startTime' as SortField,
   sortDirection: 'desc' as SortDirection,
@@ -124,9 +129,11 @@ export const useTraceFilterStore = create<TraceFilterStore>()(
         setMinDuration: (duration) => set({ minDuration: duration }),
         setMaxDuration: (duration) => set({ maxDuration: duration }),
         
-        // 속성 키 필터 (추가)
-        attributeKey: '',
+        // 속성 키 필터
         setAttributeKey: (key) => set({ attributeKey: key }),
+        
+        // 루트 스팬만 조회 필터
+        setRootSpansOnly: (rootOnly) => set({ rootSpansOnly: rootOnly }),
         
         // 시간 범위 옵션
         setTimeRangeOption: (option) => set({ timeRangeOption: option }),
@@ -152,9 +159,10 @@ export const useTraceFilterStore = create<TraceFilterStore>()(
           return state.selectedServices.length > 0 ||
                  state.selectedStatuses.length > 0 ||
                  state.searchQuery !== '' ||
-                 state.attributeKey !== '' ||  // 추가: 속성 키 필터 확인
+                 state.attributeKey !== '' ||
                  state.minDuration !== undefined ||
                  state.maxDuration !== undefined ||
+                 state.rootSpansOnly !== DEFAULT_FILTERS.rootSpansOnly ||
                  state.limit !== DEFAULT_FILTERS.limit;
         }
       }),
@@ -167,7 +175,8 @@ export const useTraceFilterStore = create<TraceFilterStore>()(
           selectedStatuses: state.selectedStatuses,
           minDuration: state.minDuration,
           maxDuration: state.maxDuration,
-          attributeKey: state.attributeKey,  // 추가: 속성 키 저장
+          attributeKey: state.attributeKey,
+          rootSpansOnly: state.rootSpansOnly,
           timeRangeOption: state.timeRangeOption,
           sortField: state.sortField,
           sortDirection: state.sortDirection,

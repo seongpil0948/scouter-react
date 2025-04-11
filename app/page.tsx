@@ -26,7 +26,7 @@ export default function Home() {
   const { searchQuery, limit, selectedServices, selectedStatuses, minDuration, maxDuration, sortField, sortDirection, lastRefreshed } =
     useTraceFilterStore();
 
-  const [chartConfig] = useState({
+  const [chartConfig] = useState<ChartConfig>({
     height: 400,
     title: '실시간 요청 지연 시간',
     latencyThreshold: 300,
@@ -37,9 +37,14 @@ export default function Home() {
       critical: '#ff4d4f', // 임계치 초과 지연시간
       error: '#ff4d4f', // 에러 상태 색상
     },
+    brush: {
+      enabled: true,
+      type: 'rect',
+      mode: 'multiple',
+    },
   });
 
-  // API URL 생성 - TraceFilterStore의 필터 상태 반영
+  // API URL 생성 - TraceFilterStore의 필터 상태 및 rootSpansOnly=true 추가
   const apiUrl = buildTraceApiUrl(
     '/api/telemetry/traces',
     {
@@ -53,11 +58,12 @@ export default function Home() {
     limit,
     sortField,
     sortDirection,
-    0 // 대시보드에서는 페이지네이션이 필요 없어 offset을 0으로 설정
+    0, // 대시보드에서는 페이지네이션이 필요 없어 offset을 0으로 설정
+    { rootSpansOnly: true } // 루트 스팬만 조회
   );
 
   // 트레이스 데이터 가져오기 (필터 반영된 URL 사용)
-  const { data, error, mutate } = useSWR<{ traces: TraceItem[]; total: number }>(
+  const { data, error, mutate } = useSWR<TracesResponse>(
     [apiUrl, lastRefreshed], // lastRefreshed를 의존성에 추가하여 필터 변경 시 재요청
     () => fetcher(apiUrl),
     {
@@ -67,9 +73,10 @@ export default function Home() {
     }
   );
 
-  const handleTraceClick = useCallback(
-    (trace: TraceItem) => {
-      router.push(`/traces/${trace.traceId}`);
+  // 트레이스 상세 보기 핸들러
+  const handleTraceSelect = useCallback(
+    (traceId: string) => {
+      router.push(`/traces/${traceId}`);
     },
     [router]
   );
@@ -129,7 +136,7 @@ export default function Home() {
             title: error ? '데이터 로드 중 오류 발생' : chartConfig.title,
           }}
           traceData={data?.traces ?? []}
-          onDataPointClick={handleTraceClick}
+          onTraceSelect={handleTraceSelect}
           showFilters={false} /* 이미 TraceFilter 컴포넌트가 있으므로 내부 필터는 비활성화 */
           onFilterChange={handleFilterChange}
         />
@@ -154,6 +161,7 @@ export default function Home() {
             <CardBody className="p-4">
               <div className="text-sm text-gray-500 text-right">
                 총 {data.total}개의 트레이스 중 {data.traces.length}개 표시 중
+                {data.rootSpansOnly && <span className="ml-2">(루트 스팬만 표시)</span>}
               </div>
             </CardBody>
           </Card>

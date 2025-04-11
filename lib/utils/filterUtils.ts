@@ -10,7 +10,8 @@ import { SelectFilter } from "@/lib/store/chartStore";
  * @param limit - 결과 수 제한
  * @param sortField - 정렬 필드
  * @param sortDirection - 정렬 방향
- * @param additionalParams - 추가 파라미터
+ * @param offset - 페이지네이션 오프셋
+ * @param additionalParams - 추가 파라미터 (rootSpansOnly 등)
  * @returns 완성된 API URL 문자열
  */
 export function buildTraceApiUrl(
@@ -21,7 +22,7 @@ export function buildTraceApiUrl(
     searchQuery?: string;
     minDuration?: number;
     maxDuration?: number;
-    attributeKey?: string; // 추가: 속성 키 필터링용
+    attributeKey?: string;
   },
   timeRange: { startTime: number; endTime: number },
   limit: LimitOption = 100,
@@ -67,8 +68,7 @@ export function buildTraceApiUrl(
     params.append("attributeKey", filters.attributeKey);
   }
     
-
-  // 추가 파라미터 처리
+  // 추가 파라미터 처리 (루트 스팬만 조회 여부 등)
   Object.entries(additionalParams).forEach(([key, value]) => {
     params.append(key, value.toString());
   });
@@ -82,6 +82,7 @@ export function buildTraceApiUrl(
  * @param baseUrl - 기본 API URL
  * @param filters - 필터 객체 (dataFilters)
  * @param timeRange - 시간 범위 객체
+ * @param additionalParams - 추가 파라미터 (rootSpansOnly 등)
  * @returns 완성된 API URL 문자열
  */
 export function buildApiUrlWithFilters(
@@ -125,7 +126,7 @@ export function buildApiUrlWithFilters(
     params.append("maxDuration", filters.maxDuration.toString());
   }
 
-  // 추가 파라미터 처리
+  // 추가 파라미터 처리 (루트 스팬만 조회 여부 등)
   Object.entries(additionalParams).forEach(([key, value]) => {
     params.append(key, value.toString());
   });

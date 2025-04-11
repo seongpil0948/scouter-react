@@ -1,26 +1,10 @@
-// hooks/useChartRenderer.ts
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import * as echarts from 'echarts';
 import { useTheme } from 'next-themes';
-import {debounce} from 'lodash-es';
+import { debounce } from 'lodash-es';
 import type { EChartsOption } from 'echarts';
 import { DEFAULT_CHART_CONFIG, getServiceThreshold } from '../utils';
-
-interface ChartRendererOptions {
-  data: {
-    timeSeriesData: DataPoint[];
-    highLatencyData: DataPoint[];
-    metadataMap: Map<number, { serviceName: string; status?: string }>;
-  };
-  config?: Partial<ChartConfig>;
-  legendState: {
-    normal: boolean;
-    highLatency: boolean;
-  };
-  onDataPointClick?: (timestamp: number) => void;
-  serviceThresholds?: Map<string, number>;
-}
-
+import { BrushSelectedEvent, SelectedTraceData, ExtendedChartRendererOptions, BrushToolboxIconType } from '../types';
 /**
  * Hook for rendering and managing trace chart
  */
@@ -29,8 +13,9 @@ export function useChartRenderer({
   config = {},
   legendState,
   onDataPointClick,
+  onBrushSelected,
   serviceThresholds
-}: ChartRendererOptions) {
+}: ExtendedChartRendererOptions) {
   // Refs
   const chartContainerRef = useRef<HTMLDivElement | null>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
@@ -143,13 +128,81 @@ export function useChartRenderer({
     return {};
   }, [theme]);
   
+  // 선택된 데이터 핸들러
+  const handleBrushSelected = useCallback((params: BrushSelectedEvent) => {
+    if (!onBrushSelected || !data.metadataMap) return;
+    
+    const selectedData: SelectedTraceData[] = [];
+    
+    // 서비스를 처리합니다 - 일반 요청 시리즈(0)와 고지연 요청 시리즈(1)
+    params.batch.forEach((batchItem) => {
+      batchItem.selected.forEach((selection) => {
+        const seriesIndex = selection.seriesIndex[0];
+        const dataPoints = seriesIndex === 0 ? data.timeSeriesData : data.highLatencyData;
+        
+        selection.dataIndex.forEach((dataIndex) => {
+          const point = dataPoints[dataIndex];
+          if (!point) return;
+          
+          const timestamp = point[0];
+          const latency = point[1];
+          const metadata = data.metadataMap.get(timestamp);
+          
+          if (metadata && metadata.traceItem) {
+            selectedData.push({
+              timestamp,
+              latency,
+              serviceName: metadata.serviceName || '',
+              status: metadata.status,
+              traceId: metadata.traceItem.traceId,
+              name: metadata.traceItem.name,
+              traceItem: metadata.traceItem
+            });
+          }
+        });
+      });
+    });
+    
+    // 중복 제거 (timestamp 기준)
+    const uniqueSelectedData = Array.from(
+      new Map(selectedData.map(item => [item.timestamp, item])).values()
+    );
+    
+    // 정렬 (시간순)
+    uniqueSelectedData.sort((a, b) => a.timestamp - b.timestamp);
+    
+    onBrushSelected(uniqueSelectedData);
+  }, [data.highLatencyData, data.metadataMap, data.timeSeriesData, onBrushSelected]);
+  
   // Get chart options
   const getChartOptions = useCallback((): EChartsOption => {
     const {
       title: chartTitle,
       colors,
       symbolSizes,
+      brush: brushConfig
     } = mergedConfig;
+    
+    // 브러시 기본 설정
+    const defaultBrushConfig = {
+      toolbox: ['rect', 'polygon', 'lineX', 'lineY', 'keep', 'clear'] as BrushToolboxIconType[],
+      brushType: 'rect' as const,
+      brushMode: 'multiple' as const,
+      transformable: true,
+      throttleType: 'debounce' as const,
+      throttleDelay: 300,
+    };
+    
+    // 브러시 설정
+    const brushOption = brushConfig?.enabled ? {
+      brush: {
+        ...defaultBrushConfig,
+        brushType: brushConfig.type || 'rect',
+        brushMode: brushConfig.mode || 'multiple',
+        throttleType: brushConfig.throttleType === 'throttle' ? 'fixRate' : brushConfig.throttleType || 'debounce' as echarts.BrushComponentOption['throttleType'],
+        throttleDelay: brushConfig.throttleDelay || 300,
+      }
+    } : {};
     
     return {
       animation: true,
@@ -176,19 +229,23 @@ export function useChartRenderer({
         extraCssText: "box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);",
         formatter: getTooltipFormatter()
       },
-      // toolbox: {
-      //   show: true,
-      //   feature: {
-      //     dataZoom: { yAxisIndex: "none" },
-      //     restore: {},
-      //     saveAsImage: {},
-      //   },
-      //   right: 10,
-      //   iconStyle: {
-      //     borderColor: theme === "dark" ? "#666" : "#666",
-      //     color: theme === "dark" ? "#ddd" : "#333",
-      //   },
-      // },
+      toolbox: {
+        show: true,
+        feature: {
+          ...(brushConfig?.enabled ? {
+            brush: { type: ['rect', 'polygon', 'lineX', 'lineY', 'keep', 'clear'] }
+          } : {}),
+          dataZoom: { yAxisIndex: "none" },
+          restore: {},
+          saveAsImage: {},
+        },
+        right: 10,
+        iconStyle: {
+          borderColor: theme === "dark" ? "#666" : "#666",
+          color: theme === "dark" ? "#ddd" : "#333",
+        },
+      },
+      ...brushOption,
       dataZoom: [
         {
           type: "inside",
@@ -212,8 +269,6 @@ export function useChartRenderer({
       ],
       xAxis: {
         type: "time",
-        // Fix for Type Error: boundaryGap should be a tuple for time axis
-        // boundaryGap: false, 
         name: "시간",
         nameLocation: "middle",
         nameGap: 30,
@@ -277,9 +332,7 @@ export function useChartRenderer({
       series: [
         {
           name: "일반 요청",
-          type: "scatter",
-          // large: true,
-          // largeThreshold: 2000,       
+          type: "scatter",        
           progressive: 1000,          
           progressiveThreshold: 5000, 
           progressiveRepaint: true,
@@ -473,7 +526,12 @@ export function useChartRenderer({
       // Set initial options
       chartInstance.setOption(getChartOptions());
       
-      // Add click handler
+      // 브러시 선택 이벤트 핸들러 등록
+      if (onBrushSelected && mergedConfig.brush?.enabled) {
+        chartInstance.on('brushselected', (params: any) => handleBrushSelected(params as BrushSelectedEvent));
+      }
+      
+      // 클릭 이벤트 핸들러 등록
       if (onDataPointClick) {
         chartInstance.on("click", function (params) {
           if (params && params.value && Array.isArray(params.value) && params.value.length > 0) {
@@ -490,7 +548,7 @@ export function useChartRenderer({
     } finally {
       isInitializingRef.current = false;
     }
-  }, [theme, getChartOptions, onDataPointClick]);
+  }, [theme, getChartOptions, onBrushSelected, handleBrushSelected, onDataPointClick, mergedConfig.brush?.enabled]);
   
   // Handle resize
   const handleResize = useMemo(() => 

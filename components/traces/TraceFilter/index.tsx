@@ -5,7 +5,8 @@ import { Badge } from '@heroui/badge';
 import { Button } from '@heroui/button';
 import { Select, SelectItem } from '@heroui/select';
 import { Input } from '@heroui/input';
-import { Filter, Search, X, Clock, RefreshCw, SortAsc, SortDesc, List } from 'lucide-react';
+import { Switch } from '@heroui/switch';
+import { Filter, Search, X, Clock, RefreshCw, SortAsc, SortDesc, List, GitCommit } from 'lucide-react';
 import useSWR from 'swr';
 
 import { formatDuration } from '@/lib/utils/dateFormatter';
@@ -54,6 +55,8 @@ const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '
     hasActiveFilters,
     attributeKey,
     setAttributeKey,
+    rootSpansOnly, // 루트 스팬만 조회 상태
+    setRootSpansOnly, // 루트 스팬만 조회 설정 함수
   } = useTraceFilterStore();
 
   // 전역 시간 범위 스토어 사용
@@ -144,6 +147,15 @@ const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '
       onFilterChange?.();
     }
   }, [maxDurationInput, maxDuration, setMaxDuration, onFilterChange]);
+
+  // 루트 스팬만 조회 변경 핸들러
+  const handleRootSpansOnlyChange = useCallback(
+    (isChecked: boolean) => {
+      setRootSpansOnly(isChecked);
+      onFilterChange?.();
+    },
+    [setRootSpansOnly, onFilterChange]
+  );
 
   // 필터 초기화 핸들러
   const handleClearFilters = useCallback(() => {
@@ -346,6 +358,17 @@ const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '
             />
           </div>
 
+          {/* 루트 스팬만 보기 필터 */}
+          <div className="min-w-[140px] flex flex-col justify-end">
+            <div className="flex items-center gap-2 py-2">
+              <Switch isSelected={rootSpansOnly} onValueChange={handleRootSpansOnlyChange} size="sm" />
+              <div className="flex items-center text-sm">
+                <GitCommit size={16} className="mr-1 text-gray-500" />
+                <span>루트 스팬만 보기</span>
+              </div>
+            </div>
+          </div>
+
           {/* 결과 수 제한 필터 */}
           <div className="min-w-[140px]">
             <Select
@@ -529,6 +552,20 @@ const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '
                   onClick={() => {
                     setMaxDuration(undefined);
                     setMaxDurationInput('');
+                    onFilterChange?.();
+                  }}
+                />
+              </Badge>
+            )}
+
+            {!rootSpansOnly && (
+              <Badge color="secondary" variant="flat" className="flex items-center gap-1">
+                모든 스팬 보기
+                <X
+                  size={14}
+                  className="ml-1 cursor-pointer"
+                  onClick={() => {
+                    setRootSpansOnly(true);
                     onFilterChange?.();
                   }}
                 />
