@@ -60,6 +60,7 @@ interface TraceFilters {
   maxDuration?: number;
   startTime?: number;
   endTime?: number;
+  attributeKey?: string | null;
 }
 
 // 필터 스토어 타입

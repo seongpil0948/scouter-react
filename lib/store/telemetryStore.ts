@@ -2,18 +2,21 @@
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 
+// 기본 필터 값 생성 함수 - 서버 렌더링과 클라이언트 렌더링의 차이를 해결하기 위해 사용
 const genDefaultFilter = () => ({
   service: null,
   severity: null,
   search: "",
+  status: null,
   hasTrace: false,
-  startTime: Date.now() - 60 * 60 * 1000 * 24, // 1일 전
-  endTime: Date.now(),
+  startTime: 0, // 초기값은 0으로 설정 (클라이언트 사이드에서 실제 시간으로 초기화)
+  endTime: 0,   // 초기값은 0으로 설정 (클라이언트 사이드에서 실제 시간으로 초기화)
+  attributeKey: null,
 });
+
 // 기본 필터 값
 const DEFAULT_LOG_FILTERS: LogFilters = genDefaultFilter();
-
-const DEFAULT_TRACE_FILTERS: TraceFilters = genDefaultFilter();
+const DEFAULT_TRACE_FILTERS  = genDefaultFilter() as TraceFilters;
 
 // 필터 스토어 생성
 export const useFilterStore = create<FilterStore>()(
@@ -38,8 +41,8 @@ export const useFilterStore = create<FilterStore>()(
 
         // 시간 범위
         timeRange: {
-          startTime: Date.now() - 3600000, // 1시간 전
-          endTime: Date.now(),
+          startTime: 0, // 초기값은 0으로 설정 (하이드레이션 문제 방지)
+          endTime: 0,   // 초기값은 0으로 설정 (하이드레이션 문제 방지)
         },
         setTimeRange: (startTime, endTime) =>
           set({ timeRange: { startTime, endTime } }),

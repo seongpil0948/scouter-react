@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
     ? parseInt(searchParams.get("endTime")!)
     : Date.now();
   
-  // 단일 값이 아닌 배열 형태로 서비스 및 상태 필터 처리
   const serviceNames = searchParams.getAll("serviceName") || [];
   const statuses = searchParams.getAll("status") || [];
   
@@ -23,18 +22,17 @@ export async function GET(request: NextRequest) {
     ? parseInt(searchParams.get("maxDuration")!)
     : undefined;
     
-  // Limit 처리 
   const limit = searchParams.get("limit")
     ? parseInt(searchParams.get("limit")!)
     : 100; // 기본값 100개
     
-  // 정렬 처리
   const sortField = searchParams.get("sortField") || "start_time";
   const sortDirection = searchParams.get("sortDirection") || "DESC";
   
   const offset = searchParams.get("offset")
     ? parseInt(searchParams.get("offset")!)
     : 0;
+  const attributeKey = searchParams.get("attributeKey") || null;
 
   try {
     const pool = getPool();
@@ -74,6 +72,13 @@ export async function GET(request: NextRequest) {
       paramIndex++;
     }
 
+    if (attributeKey) {
+      whereClause += ` AND attributes ? $${paramIndex}`;
+      queryParams.push(attributeKey);
+      paramIndex++;
+    }
+        
+
     // 검색어 필터 (name, serviceName 또는 traceId에 검색어 포함)
     if (query !== "*") {
       whereClause += ` AND (
@@ -84,6 +89,7 @@ export async function GET(request: NextRequest) {
       queryParams.push(`%${query}%`);
       paramIndex++;
     }
+    
 
     // 정렬 필드 및 방향 생성 (SQL Injection 방지)
     const validSortFields: {[key: string]: string} = {

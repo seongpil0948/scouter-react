@@ -21,6 +21,7 @@ export function buildTraceApiUrl(
     searchQuery?: string;
     minDuration?: number;
     maxDuration?: number;
+    attributeKey?: string; // 추가: 속성 키 필터링용
   },
   timeRange: { startTime: number; endTime: number },
   limit: LimitOption = 100,
@@ -29,45 +30,32 @@ export function buildTraceApiUrl(
   offset: number = 0,
   additionalParams: Record<string, string | number | boolean> = {}
 ): string {
-  // 쿼리 파라미터 객체 생성
   const params = new URLSearchParams();
 
-  // 시간 범위 추가
   params.append("startTime", timeRange.startTime.toString());
   params.append("endTime", timeRange.endTime.toString());
-
-  // 결과 수 제한 추가
   params.append("limit", limit.toString());
   
-  // 오프셋 추가
   if (offset > 0) {
     params.append("offset", offset.toString());
   }
   
-  // 정렬 설정 추가
   params.append("sortField", sortField);
   params.append("sortDirection", sortDirection);
 
-  // 서비스 필터 추가
   if (filters.selectedServices && filters.selectedServices.length > 0) {
     filters.selectedServices.forEach(service => {
       params.append("serviceName", service);
     });
   }
-
-  // 상태 필터 추가
   if (filters.selectedStatuses && filters.selectedStatuses.length > 0) {
     filters.selectedStatuses.forEach(status => {
       params.append("status", status);
     });
   }
-
-  // 검색어 필터 추가
   if (filters.searchQuery && filters.searchQuery !== "") {
     params.append("query", filters.searchQuery);
   }
-
-  // 지연 시간 필터 추가
   if (filters.minDuration !== undefined) {
     params.append("minDuration", filters.minDuration.toString());
   }
@@ -75,6 +63,10 @@ export function buildTraceApiUrl(
   if (filters.maxDuration !== undefined) {
     params.append("maxDuration", filters.maxDuration.toString());
   }
+  if (filters.attributeKey && filters.attributeKey !== "") {
+    params.append("attributeKey", filters.attributeKey);
+  }
+    
 
   // 추가 파라미터 처리
   Object.entries(additionalParams).forEach(([key, value]) => {

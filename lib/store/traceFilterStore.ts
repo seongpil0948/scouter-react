@@ -47,6 +47,10 @@ interface TraceFilterStore {
   setMinDuration: (duration?: number) => void;
   setMaxDuration: (duration?: number) => void;
   
+  // 속성 키 필터 (추가)
+  attributeKey: string;
+  setAttributeKey: (key: string) => void;
+  
   // 시간 범위 (빠른 선택 옵션)
   timeRangeOption: keyof typeof TIME_RANGE_MS;
   setTimeRangeOption: (option: keyof typeof TIME_RANGE_MS) => void;
@@ -75,6 +79,7 @@ const DEFAULT_FILTERS = {
   selectedStatuses: [],
   minDuration: undefined,
   maxDuration: undefined,
+  attributeKey: '',  // 추가: 속성 키 필터 기본값
   timeRangeOption: '1h' as keyof typeof TIME_RANGE_MS,
   sortField: 'startTime' as SortField,
   sortDirection: 'desc' as SortDirection,
@@ -119,6 +124,10 @@ export const useTraceFilterStore = create<TraceFilterStore>()(
         setMinDuration: (duration) => set({ minDuration: duration }),
         setMaxDuration: (duration) => set({ maxDuration: duration }),
         
+        // 속성 키 필터 (추가)
+        attributeKey: '',
+        setAttributeKey: (key) => set({ attributeKey: key }),
+        
         // 시간 범위 옵션
         setTimeRangeOption: (option) => set({ timeRangeOption: option }),
         
@@ -143,6 +152,7 @@ export const useTraceFilterStore = create<TraceFilterStore>()(
           return state.selectedServices.length > 0 ||
                  state.selectedStatuses.length > 0 ||
                  state.searchQuery !== '' ||
+                 state.attributeKey !== '' ||  // 추가: 속성 키 필터 확인
                  state.minDuration !== undefined ||
                  state.maxDuration !== undefined ||
                  state.limit !== DEFAULT_FILTERS.limit;
@@ -157,6 +167,7 @@ export const useTraceFilterStore = create<TraceFilterStore>()(
           selectedStatuses: state.selectedStatuses,
           minDuration: state.minDuration,
           maxDuration: state.maxDuration,
+          attributeKey: state.attributeKey,  // 추가: 속성 키 저장
           timeRangeOption: state.timeRangeOption,
           sortField: state.sortField,
           sortDirection: state.sortDirection,

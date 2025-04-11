@@ -12,6 +12,8 @@ import { formatDuration } from '@/lib/utils/dateFormatter';
 import { useTraceFilterStore, LimitOption, SortField, SortDirection } from '@/lib/store/traceFilterStore';
 import { useFilterStore } from '@/lib/store/telemetryStore';
 import { buildServiceListApiUrl } from '@/lib/utils/filterUtils';
+import { useIsSSR } from '@react-aria/ssr';
+import { isEmpty } from 'lodash-es';
 
 // API 호출을 위한 fetcher 함수
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -50,13 +52,28 @@ const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '
     sortDirection,
     setSorting,
     hasActiveFilters,
+    attributeKey,
+    setAttributeKey,
   } = useTraceFilterStore();
 
   // 전역 시간 범위 스토어 사용
   const { timeRange } = useFilterStore();
+  const isSSR = useIsSSR();
 
   // 검색어 입력 상태 (디바운싱용)
   const [searchInput, setSearchInput] = useState(searchQuery);
+  const [attributeKeyInput, setAttributeKeyInput] = useState(attributeKey);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (attributeKeyInput !== attributeKey) {
+        setAttributeKey(attributeKeyInput);
+        onFilterChange?.();
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [attributeKeyInput, attributeKey, setAttributeKey, onFilterChange]);
 
   // 최소/최대 지연 시간 입력 상태 (유효성 검사용)
   const [minDurationInput, setMinDurationInput] = useState(minDuration !== undefined ? minDuration.toString() : '');
@@ -173,6 +190,7 @@ const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '
     },
     [sortField, sortDirection]
   );
+  if (isSSR || isEmpty(serviceOptions)) return null;
 
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 ${className}`}>
@@ -201,6 +219,28 @@ const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '
                 <X size={16} />
               </button>
             )}
+          </div>
+          <div className="min-w-[200px]">
+            <Input
+              label="속성 키 필터"
+              placeholder="예: sql.query, http.method"
+              value={attributeKeyInput}
+              onChange={(e) => setAttributeKeyInput(e.target.value)}
+              onBlur={() => {
+                if (attributeKeyInput !== attributeKey) {
+                  setAttributeKey(attributeKeyInput);
+                  onFilterChange?.();
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && attributeKeyInput !== attributeKey) {
+                  setAttributeKey(attributeKeyInput);
+                  onFilterChange?.();
+                }
+              }}
+              size="sm"
+              className="w-full"
+            />
           </div>
 
           {/* 새로고침 버튼 */}
@@ -410,6 +450,20 @@ const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '
                   onClick={() => {
                     setSearchInput('');
                     setSearchQuery('');
+                    onFilterChange?.();
+                  }}
+                />
+              </Badge>
+            )}
+            {attributeKey && (
+              <Badge color="primary" variant="flat" className="flex items-center gap-1">
+                속성 키: {attributeKey}
+                <X
+                  size={14}
+                  className="ml-1 cursor-pointer"
+                  onClick={() => {
+                    setAttributeKeyInput('');
+                    setAttributeKey('');
                     onFilterChange?.();
                   }}
                 />
