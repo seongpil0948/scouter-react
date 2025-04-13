@@ -4,8 +4,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge } from '@heroui/badge';
 import { Button } from '@heroui/button';
 import { Select, SelectItem } from '@heroui/select';
-import { Filter, X, RefreshCw, SortAsc, SortDesc, List, GitCommit, Clock } from 'lucide-react';
+import { Filter, X, RefreshCw, SortAsc, SortDesc, GitCommit, Clock } from 'lucide-react';
 import { Switch } from '@heroui/switch';
+import { Tooltip } from '@heroui/tooltip';
 
 import { useTraceFilterStore, LimitOption, SortField, SortDirection } from '@/lib/store/traceFilterStore';
 import { useFilterStore } from '@/lib/store/telemetryStore';
@@ -16,11 +17,34 @@ import { SearchField, AttributeKeyField, DurationInput, SortButtons, ActiveFilte
 import { useDisclosure } from '@heroui/modal';
 import ModalBlushHelp from '../BrushHelp';
 import useSWR from 'swr';
+import { RefreshIntervalOption, RealtimeRangeOption } from '@/lib/hooks/useTraceData';
 
 // API 응답 fetcher 함수 (여기서만 사용됨)
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '', isRealtime, onToggleRealtime }) => {
+interface TraceFilterProps {
+  onFilterChange?: () => void;
+  className?: string;
+  isRealtime?: boolean;
+  onToggleRealtime?: (enabled: boolean) => void;
+  refreshInterval?: RefreshIntervalOption;
+  onRefreshIntervalChange?: (interval: RefreshIntervalOption) => void;
+  realtimeRange?: RealtimeRangeOption;
+  onRealtimeRangeChange?: (range: RealtimeRangeOption) => void;
+  onRefresh?: () => void;
+}
+
+const TraceFilter: React.FC<TraceFilterProps> = ({
+  onFilterChange,
+  className = '',
+  isRealtime = false,
+  onToggleRealtime,
+  refreshInterval = 5,
+  onRefreshIntervalChange,
+  realtimeRange = 5,
+  onRealtimeRangeChange,
+  onRefresh,
+}) => {
   // Get filter state from store
   const {
     searchQuery,
@@ -154,11 +178,19 @@ const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '
     onFilterChange?.();
   }, [resetAllFilters, onFilterChange]);
 
-  // Refresh data
+  // Refresh data - 디바운스 추가
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const handleRefresh = useCallback(() => {
+    if (isRefreshing) return; // 연속 클릭 방지
+
+    setIsRefreshing(true);
     refreshData();
-    onFilterChange?.();
-  }, [refreshData, onFilterChange]);
+    onRefresh?.();
+
+    // 리프레시 후 약간의 시간을 둬서 연속 호출 방지
+    setTimeout(() => setIsRefreshing(false), 1000);
+  }, [refreshData, onRefresh, isRefreshing]);
 
   // Handle sort change
   const handleSortChange = useCallback(
@@ -243,10 +275,36 @@ const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '
     ]
   );
 
-  // 실시간 모드 토글 처리
+  // 실시간 모드 토글 처리 - 디바운스 추가
+  const [isTogglingRealtime, setIsTogglingRealtime] = useState(false);
+
   const handleToggleRealtime = useCallback(() => {
+    if (isTogglingRealtime) return; // 연속 실행 방지
+
+    setIsTogglingRealtime(true);
     onToggleRealtime?.(!isRealtime);
-  }, [isRealtime, onToggleRealtime]);
+
+    // 토글 후 약간의 시간을 둬서 연속 호출 방지
+    setTimeout(() => setIsTogglingRealtime(false), 500);
+  }, [isRealtime, onToggleRealtime, isTogglingRealtime]);
+
+  // 실시간 갱신 간격 변경 핸들러 - 변경 시에만 호출
+  const handleRefreshIntervalChange = useCallback(
+    (interval: RefreshIntervalOption) => {
+      if (interval === refreshInterval) return;
+      onRefreshIntervalChange?.(interval);
+    },
+    [onRefreshIntervalChange, refreshInterval]
+  );
+
+  // 실시간 조회 범위 변경 핸들러 - 변경 시에만 호출
+  const handleRealtimeRangeChange = useCallback(
+    (range: RealtimeRangeOption) => {
+      if (range === realtimeRange) return;
+      onRealtimeRangeChange?.(range);
+    },
+    [onRealtimeRangeChange, realtimeRange]
+  );
 
   const disclosureHelper = useDisclosure();
 
@@ -387,16 +445,77 @@ const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '
               </Select>
             </div>
 
-            {/* 실시간 모드 토글 (onToggleRealtime이 제공된 경우만 표시) */}
+            {/* 실시간 모드 설정 영역 */}
             {onToggleRealtime && (
-              <div className="min-w-[180px] flex flex-col justify-end">
-                <div className="flex items-center gap-2 py-2">
+              <div className="flex flex-col gap-2 min-w-[200px]">
+                <div className="flex items-center gap-2 py-1">
                   <Switch isSelected={isRealtime} onValueChange={handleToggleRealtime} size="sm" />
                   <div className="flex items-center text-sm">
                     <Clock size={16} className={`mr-1 ${isRealtime ? 'text-blue-500' : 'text-gray-500'}`} />
                     <span className={isRealtime ? 'text-blue-500' : 'text-gray-500'}>실시간 갱신</span>
                   </div>
                 </div>
+
+                {isRealtime && onRefreshIntervalChange && (
+                  <div className="ml-6">
+                    <Select
+                      label="갱신 간격"
+                      size="sm"
+                      selectedKeys={[refreshInterval.toString()]}
+                      onSelectionChange={(keys) => {
+                        if (typeof keys === 'string') return;
+                        const key = Array.from(keys)[0];
+                        handleRefreshIntervalChange(parseInt(String(key)) as RefreshIntervalOption);
+                      }}
+                      className="w-full"
+                    >
+                      <SelectItem key="5" textValue="5초">
+                        5초
+                      </SelectItem>
+                      <SelectItem key="10" textValue="10초">
+                        10초
+                      </SelectItem>
+                      <SelectItem key="30" textValue="30초">
+                        30초
+                      </SelectItem>
+                      <SelectItem key="60" textValue="60초">
+                        60초
+                      </SelectItem>
+                    </Select>
+                  </div>
+                )}
+
+                {isRealtime && onRealtimeRangeChange && (
+                  <div className="ml-6">
+                    <Select
+                      label="조회 범위"
+                      size="sm"
+                      selectedKeys={[realtimeRange.toString()]}
+                      onSelectionChange={(keys) => {
+                        if (typeof keys === 'string') return;
+                        const key = Array.from(keys)[0];
+                        handleRealtimeRangeChange(parseInt(String(key)) as RealtimeRangeOption);
+                      }}
+                      className="w-full"
+                    >
+                      <SelectItem key="1" textValue="1분">
+                        1분
+                      </SelectItem>
+                      <SelectItem key="5" textValue="5분">
+                        5분
+                      </SelectItem>
+                      <SelectItem key="10" textValue="10분">
+                        10분
+                      </SelectItem>
+                      <SelectItem key="15" textValue="15분">
+                        15분
+                      </SelectItem>
+                      <SelectItem key="30" textValue="30분">
+                        30분
+                      </SelectItem>
+                    </Select>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -404,15 +523,20 @@ const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '
           {/* Sort controls */}
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
-              <List size={16} className="text-gray-500" />
+              <SortAsc size={16} className="text-gray-500" />
               <span className="text-sm font-medium">정렬:</span>
             </div>
 
             <SortButtons sortField={sortField} handleSortChange={handleSortChange} renderSortIcon={renderSortIcon} />
-            <Button size="sm" variant="ghost" title="새로고침" onPress={handleRefresh}>
-              <RefreshCw size={16} className="mr-1" />
-              새로고침
-            </Button>
+
+            {/* 통합된 새로고침 버튼 */}
+            <Tooltip content="데이터 새로고침">
+              <Button size="sm" variant="ghost" isDisabled={isRealtime} title="새로고침" onPress={handleRefresh} className="ml-auto">
+                <RefreshCw size={16} className="mr-1" />
+                새로고침
+              </Button>
+            </Tooltip>
+
             <Button onPress={disclosureHelper.onOpen} size="sm" variant="ghost">
               <GitCommit size={16} className="mr-1" />
               <span className="hidden md:inline">트레이스 선택 방법</span>

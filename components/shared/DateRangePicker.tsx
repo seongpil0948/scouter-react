@@ -1,9 +1,8 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
 import { DateRangePicker as HeroDateRangePicker } from '@heroui/date-picker';
-import { Button } from '@heroui/button';
-import { Clock, RefreshCw } from 'lucide-react';
-import { parseDateTime, getLocalTimeZone, CalendarDateTime, today, now } from '@internationalized/date';
+import { Clock } from 'lucide-react';
+import { parseDateTime, getLocalTimeZone, CalendarDateTime } from '@internationalized/date';
 import { RangeValue } from '@react-types/shared';
 
 import { useFilterStore } from '@/lib/store/telemetryStore';
@@ -19,7 +18,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange, isRealtime 
   // Initialize with timeRange values converted to CalendarDateTime to include time
   const [value, setValue] = useState<RangeValue<CalendarDateTime> | null>(null);
 
-  // 컴포넌트 마운트 시 초기화
+  // 컴포넌트 마운트 시 초기화 - 의존성 배열 수정
   useEffect(() => {
     // 시간 범위가 있으면 해당 값으로, 없으면 기본값으로 설정
     if (timeRange.startTime && timeRange.endTime) {
@@ -31,6 +30,9 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange, isRealtime 
       setTimeRange(startTime, endTime);
       updateValueFromTimeRange(startTime, endTime);
     }
+    // 컴포넌트가 처음 마운트될 때만 실행되도록 빈 배열로 설정
+    // 참고: 기존 코드에서 updateValueFromTimeRange와 setTimeRange가 의존성 배열에 없지만
+    // 의도적으로 최초 한 번만 실행하기 위해 설계된 것으로 보임
   }, []);
 
   // timeRange가 변경되었을 때 value 업데이트
@@ -59,35 +61,31 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange, isRealtime 
     }
   }, []);
 
-  // 날짜 범위 변경 핸들러
+  // 날짜 범위 변경 핸들러 - 디바운스 추가
+  const [isChangingRange, setIsChangingRange] = useState(false);
+
   const handleValueChange = useCallback(
     (newValue: RangeValue<CalendarDateTime> | null) => {
       if (!newValue?.start || !newValue?.end) return;
+      if (isChangingRange) return; // 연속 변경 방지
 
+      setIsChangingRange(true);
       setValue(newValue);
 
       const startTime = newValue.start.toDate(getLocalTimeZone()).getTime();
       const endTime = newValue.end.toDate(getLocalTimeZone()).getTime();
 
-      setTimeRange(startTime, endTime);
-      onChange?.(startTime, endTime);
+      // 현재 timeRange와 다를 때만 업데이트
+      if (timeRange.startTime !== startTime || timeRange.endTime !== endTime) {
+        setTimeRange(startTime, endTime);
+        onChange?.(startTime, endTime);
+      }
+
+      // 변경 후 약간의 시간을 둬서 연속 호출 방지
+      setTimeout(() => setIsChangingRange(false), 500);
     },
-    [onChange, setTimeRange]
+    [onChange, setTimeRange, timeRange, isChangingRange]
   );
-
-  // 새로고침 핸들러 - 현재 시간 기준으로 같은 기간 다시 설정
-  const handleRefresh = useCallback(() => {
-    if (!value?.start || !value?.end) return;
-
-    const duration = timeRange.endTime - timeRange.startTime;
-    const now = Date.now();
-    const newStartTime = now - duration;
-    const newEndTime = now;
-
-    setTimeRange(newStartTime, newEndTime);
-    updateValueFromTimeRange(newStartTime, newEndTime);
-    onChange?.(newStartTime, newEndTime);
-  }, [timeRange, value, onChange, setTimeRange, updateValueFromTimeRange]);
 
   return (
     <div className="flex items-center gap-2 w-full max-w-xl">
@@ -98,16 +96,6 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange, isRealtime 
         granularity="minute" // 시간과 분까지 선택 가능하도록 설정
         isDisabled={isRealtime} // 실시간 모드일 때는 비활성화
       />
-      <Button
-        size="sm"
-        variant="ghost"
-        color="default"
-        title="새로고침"
-        isDisabled={isRealtime} // 실시간 모드일 때는 비활성화
-        onPress={handleRefresh}
-      >
-        <RefreshCw size={16} />
-      </Button>
 
       {isRealtime && (
         <div className="flex items-center px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded text-blue-600 dark:text-blue-300 text-sm">

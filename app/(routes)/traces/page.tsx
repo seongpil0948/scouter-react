@@ -16,7 +16,6 @@ export default function TracesPage() {
   // useTraceData 커스텀 훅 사용
   const { traces, error, isLoading, isValidating, refresh, isRealtime, toggleRealtime, currentPage, setCurrentPage, totalCount } =
     useTraceData({
-      refreshInterval: 5000,
       rootSpansOnly: true,
     });
 

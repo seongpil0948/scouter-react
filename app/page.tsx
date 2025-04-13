@@ -4,13 +4,13 @@ import { useState, useCallback, useEffect } from 'react';
 
 import { useFilterStore } from '@/lib/store/telemetryStore';
 import { useChartStore } from '@/lib/store/chartStore';
-import { useTraceData } from '@/lib/hooks/useTraceData'; // 새로운 커스텀 훅 사용
+import { useTraceData, RefreshIntervalOption, RealtimeRangeOption } from '@/lib/hooks/useTraceData'; // 개선된 훅 사용
 
 import TraceVisualization from '@/components/traces/TraceVisualization';
 import TraceFilter from '@/components/traces/TraceFilter';
 import { Card, CardBody } from '@heroui/card';
 import { Button } from '@heroui/button';
-import { List, ArrowRight, RefreshCw, Clock } from 'lucide-react';
+import { List, ArrowRight, Clock } from 'lucide-react';
 import DateRangePicker from '@/components/shared/DateRangePicker';
 import { ThemeSwitch } from '@/components/shared/theme-switch';
 
@@ -19,9 +19,21 @@ export default function Home() {
   const { timeRange } = useFilterStore();
   const { updateConfig } = useChartStore();
 
-  // useTraceData 커스텀 훅 사용
-  const { traces, error, refresh, isLoading, isRealtime, toggleRealtime } = useTraceData({
-    refreshInterval: 5000,
+  // 개선된 useTraceData 훅 사용
+  const {
+    traces,
+    error,
+    refresh,
+    isLoading,
+    isRealtime,
+    toggleRealtime,
+    refreshInterval,
+    setRefreshInterval,
+    realtimeRange,
+    setRealtimeRange,
+  } = useTraceData({
+    refreshInterval: 5, // 기본 5초 갱신
+    realtimeRange: 5, // 기본 5분 범위
     rootSpansOnly: true,
   });
 
@@ -51,6 +63,7 @@ export default function Home() {
     [router]
   );
 
+  // 시간 범위 변경 처리
   const handleTimeRangeChange = useCallback(() => {
     // 시간 범위가 변경되면 실시간 데이터 조회 비활성화
     if (isRealtime) {
@@ -59,10 +72,37 @@ export default function Home() {
     refresh();
   }, [refresh, isRealtime, toggleRealtime]);
 
-  // 필터 변경 핸들러
+  // 디바운스를 위한 상태
+  const [isChangingFilter, setIsChangingFilter] = useState(false);
+
+  // 필터 변경 핸들러 - 디바운스 추가
   const handleFilterChange = useCallback(() => {
-    refresh();
-  }, [refresh]);
+    if (isChangingFilter) return;
+
+    setIsChangingFilter(true);
+    setTimeout(() => {
+      refresh();
+      setIsChangingFilter(false);
+    }, 300);
+  }, [refresh, isChangingFilter]);
+
+  // 실시간 갱신 간격 변경 - 디바운스 추가
+  const handleRefreshIntervalChange = useCallback(
+    (interval: RefreshIntervalOption) => {
+      if (interval === refreshInterval) return; // 같은 값이면 변경하지 않음
+      setRefreshInterval(interval);
+    },
+    [setRefreshInterval, refreshInterval]
+  );
+
+  // 실시간 조회 범위 변경 - 디바운스 추가
+  const handleRealtimeRangeChange = useCallback(
+    (range: RealtimeRangeOption) => {
+      if (range === realtimeRange) return; // 같은 값이면 변경하지 않음
+      setRealtimeRange(range);
+    },
+    [setRealtimeRange, realtimeRange]
+  );
 
   // 트레이스 목록 페이지로 이동
   const navigateToTraces = useCallback(() => {
@@ -80,15 +120,6 @@ export default function Home() {
         <h2 className="text-xl font-semibold">IDS APM</h2>
         <div className="flex items-center gap-4">
           <DateRangePicker onChange={handleTimeRangeChange} isRealtime={isRealtime} />
-          <Button
-            color="default"
-            size="sm"
-            onPress={refresh}
-            title="새로고침"
-            isDisabled={isRealtime} // 실시간 모드일 때는 비활성화
-          >
-            <RefreshCw size={16} />
-          </Button>
         </div>
         <Button color="primary" endContent={<ArrowRight size={16} />} onPress={navigateToTraces}>
           <List size={16} className="mr-1" />
@@ -97,11 +128,20 @@ export default function Home() {
         <ThemeSwitch className="absolute top-4 right-4" />
       </div>
       <div className="w-full max-w-7xl space-y-4">
-        <TraceFilter onFilterChange={handleFilterChange} isRealtime={isRealtime} onToggleRealtime={toggleRealtime} />
+        <TraceFilter
+          onFilterChange={handleFilterChange}
+          isRealtime={isRealtime}
+          onToggleRealtime={toggleRealtime}
+          refreshInterval={refreshInterval}
+          onRefreshIntervalChange={handleRefreshIntervalChange}
+          realtimeRange={realtimeRange}
+          onRealtimeRangeChange={handleRealtimeRangeChange}
+          onRefresh={refresh} // 통합된 새로고침 함수 전달
+        />
         <TraceVisualization
           config={{
             ...chartConfig,
-            title: error ? '데이터 로드 중 오류 발생' : isRealtime ? '실시간 요청 지연 시간 (5분)' : chartConfig.title,
+            title: error ? '데이터 로드 중 오류 발생' : isRealtime ? `실시간 요청 지연 시간 (${realtimeRange}분)` : chartConfig.title,
             // 실시간 모드일 때 자동 업데이트를 활성화
             autoUpdate: isRealtime,
           }}
@@ -146,7 +186,9 @@ export default function Home() {
                   {isRealtime ? (
                     <span className="flex items-center">
                       <Clock size={14} className="mr-1 text-blue-500" />
-                      <span>실시간 데이터 5초마다 자동 갱신 중</span>
+                      <span>
+                        실시간 데이터 {refreshInterval}초마다 자동 갱신 중 (최근 {realtimeRange}분 데이터)
+                      </span>
                     </span>
                   ) : (
                     <span>선택된 기간에 대한 데이터</span>
