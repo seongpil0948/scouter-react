@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { Card, CardBody } from '@heroui/card';
 import { Badge } from '@heroui/badge';
 import { Button } from '@heroui/button';
 import { Select, SelectItem } from '@heroui/select';
-import { Filter, Clock, AlertTriangle, CheckCircle, BarChart2 } from 'lucide-react';
+import { Filter, Clock, AlertTriangle, CheckCircle, BarChart2, Trash2 } from 'lucide-react';
 
 import TraceChart from './TraceChart';
 import SelectedTracesTable from './SelectedTracesTable';
@@ -57,14 +57,36 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     return result;
   }, [filteredData, config.latencyThreshold, serviceThresholds]);
 
-  // 브러시 선택 핸들러
+  // 브러시 선택 핸들러 - 완전히 개선된 버전
   const handleBrushSelected = useCallback((selectedData: SelectedTraceData[]) => {
-    setSelectedTraces(selectedData);
+    console.log('Selected traces from brush:', selectedData.length);
+
+    // 선택된 항목이 있을 때만 상태 업데이트
+    if (selectedData.length > 0) {
+      // 디버깅용 로그
+      console.log('First selected trace:', {
+        traceId: selectedData[0].traceId,
+        name: selectedData[0].name,
+        timestamp: new Date(selectedData[0].timestamp).toISOString(),
+      });
+
+      // 상태 업데이트
+      setSelectedTraces(selectedData);
+    } else {
+      console.log('No traces selected from brush');
+    }
   }, []);
 
   // 선택 초기화 핸들러
   const handleClearSelection = useCallback(() => {
     setSelectedTraces([]);
+  }, []);
+
+  // 컴포넌트 언마운트 시 선택 초기화
+  useEffect(() => {
+    return () => {
+      setSelectedTraces([]);
+    };
   }, []);
 
   // 트레이스 상세 보기 핸들러
@@ -217,6 +239,19 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                 <AlertTriangle size={16} className="mr-1 text-red-500" />
                 <span className="text-sm">오류: {errorCount}개</span>
               </div>
+
+              {/* 선택된 트레이스 수 표시 */}
+              {selectedTraces.length > 0 && (
+                <div className="flex items-center ml-auto">
+                  <Badge color="primary" variant="flat">
+                    선택됨: {selectedTraces.length}개
+                  </Badge>
+                  <Button size="sm" variant="ghost" color="danger" className="ml-2" onPress={handleClearSelection}>
+                    <Trash2 size={14} />
+                    <span className="ml-1">선택 해제</span>
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -241,11 +276,21 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
             </div>
           )}
 
-          {/* Chart Component */}
+          {/* Chart Component - brush 옵션 명시적으로 설정 */}
           <TraceChart
             data={chartData}
             height={config.height}
-            config={config}
+            config={{
+              ...config,
+              brush: {
+                enabled: true,
+                type: 'rect',
+                mode: 'multiple',
+                throttleType: 'debounce',
+                throttleDelay: 300,
+                ...config.brush,
+              },
+            }}
             onBrushSelected={handleBrushSelected}
             loading={isLoading}
             legendState={legendState}

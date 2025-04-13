@@ -4,9 +4,10 @@ import { useTheme } from 'next-themes';
 import { debounce } from 'lodash-es';
 import type { EChartsOption } from 'echarts';
 import { DEFAULT_CHART_CONFIG, getServiceThreshold } from '../utils';
-import { BrushSelectedEvent, SelectedTraceData, ExtendedChartRendererOptions, BrushToolboxIconType } from '../types';
+import { SelectedTraceData, BrushToolboxIconType } from '../types';
+
 /**
- * Hook for rendering and managing trace chart
+ * ECharts 렌더링과 브러시 이벤트를 처리하는 커스텀 훅
  */
 export function useChartRenderer({
   data,
@@ -15,7 +16,7 @@ export function useChartRenderer({
   onDataPointClick,
   onBrushSelected,
   serviceThresholds
-}: ExtendedChartRendererOptions) {
+}: any) {
   // Refs
   const chartContainerRef = useRef<HTMLDivElement | null>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
@@ -115,67 +116,101 @@ export function useChartRenderer({
     };
   }, [data.metadataMap, serviceThresholds, mergedConfig]);
   
-  // Get theme options
-  const getThemeOptions = useCallback(() => {
-    if (theme === "dark") {
-      return {
-        backgroundColor: "#141414",
-        textStyle: { color: "#ffffff" },
-        axisLine: { lineStyle: { color: "#333" } },
-        splitLine: { lineStyle: { color: "#333" } },
-      };
-    }
-    return {};
-  }, [theme]);
-  
-  // 선택된 데이터 핸들러
-  const handleBrushSelected = useCallback((params: BrushSelectedEvent) => {
+  // 브러시 이벤트 핸들러 - 완전히 다시 작성된 버전
+  const handleBrushSelected = useCallback((params: any) => {
+    console.log('Brush event triggered!', JSON.stringify(params, null, 2));
+    
     if (!onBrushSelected || !data.metadataMap) return;
     
+    // 선택된 데이터를 저장할 배열
     const selectedData: SelectedTraceData[] = [];
     
-    // 서비스를 처리합니다 - 일반 요청 시리즈(0)와 고지연 요청 시리즈(1)
-    params.batch.forEach((batchItem) => {
-      batchItem.selected.forEach((selection) => {
-        const seriesIndex = selection.seriesIndex[0];
-        const dataPoints = seriesIndex === 0 ? data.timeSeriesData : data.highLatencyData;
+    // batch가 존재하고 배열인지 확인
+    if (!params.batch || !Array.isArray(params.batch) || params.batch.length === 0) {
+      console.log('Invalid batch data in brush event');
+      return;
+    }
+    
+    // 각 배치 처리
+    params.batch.forEach((batchItem: any) => {
+      // selected 배열이 존재하는지 확인
+      if (!batchItem.selected || !Array.isArray(batchItem.selected)) {
+        console.log('No selected data in batch item');
+        return;
+      }
+      
+      // 각 시리즈 데이터 처리
+      batchItem.selected.forEach((selection: any) => {
+        // 시리즈 인덱스와 데이터 인덱스 가져오기
+        const seriesIndex = selection.seriesIndex;
+        const dataIndices = selection.dataIndex;
         
-        selection.dataIndex.forEach((dataIndex) => {
-          const point = dataPoints[dataIndex];
-          if (!point) return;
-          
-          const timestamp = point[0];
-          const latency = point[1];
-          const metadata = data.metadataMap.get(timestamp);
-          
-          if (metadata && metadata.traceItem) {
-            selectedData.push({
-              timestamp,
-              latency,
-              serviceName: metadata.serviceName || '',
-              status: metadata.status,
-              traceId: metadata.traceItem.traceId,
-              name: metadata.traceItem.name,
-              traceItem: metadata.traceItem
-            });
+        console.log(`Processing series ${seriesIndex} with indices:`, dataIndices);
+        
+        // 데이터 인덱스가 비어있지 않은지 확인
+        if (!dataIndices || !Array.isArray(dataIndices) || dataIndices.length === 0) {
+          console.log(`No data indices for series ${seriesIndex}`);
+          return;
+        }
+        
+        // 해당 시리즈의 데이터 배열 가져오기
+        const seriesData = seriesIndex === 0 ? data.timeSeriesData : data.highLatencyData;
+        
+        // 각 인덱스에 해당하는 데이터 처리
+        dataIndices.forEach((index: number) => {
+          if (index >= 0 && index < seriesData.length) {
+            const point = seriesData[index];
+            if (!point) return;
+            
+            const timestamp = point[0];
+            const latency = point[1];
+            
+            // 메타데이터 가져오기
+            const metadata = data.metadataMap.get(timestamp);
+            
+            if (metadata && metadata.traceItem) {
+              console.log(`Found data point at index ${index}:`, timestamp, latency, metadata.traceItem.traceId);
+              
+              selectedData.push({
+                timestamp,
+                latency,
+                serviceName: metadata.serviceName || '',
+                status: metadata.status,
+                traceId: metadata.traceItem.traceId,
+                name: metadata.traceItem.name,
+                traceItem: metadata.traceItem
+              });
+            } else {
+              console.log(`No metadata found for timestamp ${timestamp}`);
+            }
+          } else {
+            console.log(`Index ${index} out of range for series ${seriesIndex}`);
           }
         });
       });
     });
     
-    // 중복 제거 (timestamp 기준)
+    // 중복 제거 (traceId 기준)
     const uniqueSelectedData = Array.from(
-      new Map(selectedData.map(item => [item.timestamp, item])).values()
+      new Map(selectedData.map(item => [item.traceId, item])).values()
     );
     
     // 정렬 (시간순)
     uniqueSelectedData.sort((a, b) => a.timestamp - b.timestamp);
     
-    onBrushSelected(uniqueSelectedData);
+    console.log('Selected data processed:', uniqueSelectedData.length, 'items');
+    
+    // 선택된 데이터가 있으면 콜백 호출
+    if (uniqueSelectedData.length > 0) {
+      console.log('Calling onBrushSelected with data');
+      onBrushSelected(uniqueSelectedData);
+    } else {
+      console.log('No data selected after processing');
+    }
   }, [data.highLatencyData, data.metadataMap, data.timeSeriesData, onBrushSelected]);
   
   // Get chart options
-  const getChartOptions = useCallback((): EChartsOption => {
+  const getChartOptions = useCallback((): echarts.EChartsOption => {
     const {
       title: chartTitle,
       colors,
@@ -183,27 +218,25 @@ export function useChartRenderer({
       brush: brushConfig
     } = mergedConfig;
     
-    // 브러시 기본 설정
-    const defaultBrushConfig = {
-      toolbox: ['rect', 'polygon', 'lineX', 'lineY', 'keep', 'clear'] as BrushToolboxIconType[],
-      brushType: 'rect' as const,
-      brushMode: 'multiple' as const,
-      transformable: true,
-      throttleType: 'debounce' as const,
-      throttleDelay: 300,
-    };
-    
     // 브러시 설정
     const brushOption = brushConfig?.enabled ? {
       brush: {
-        ...defaultBrushConfig,
-        brushType: brushConfig.type || 'rect',
-        brushMode: brushConfig.mode || 'multiple',
-        throttleType: brushConfig.throttleType === 'throttle' ? 'fixRate' : brushConfig.throttleType || 'debounce' as echarts.BrushComponentOption['throttleType'],
-        throttleDelay: brushConfig.throttleDelay || 300,
+        toolbox: ['rect', 'polygon', 'lineX', 'lineY', 'keep', 'clear'],
+        brushType: 'rect',
+        brushMode: 'multiple',
+        throttleType: 'debounce',
+        throttleDelay: 300,
+        transformable: true,
+        brushStyle: {
+          borderWidth: 1,
+          color: theme === "dark" ? 'rgba(100,100,100,0.15)' : 'rgba(0,0,0,0.1)',
+          borderColor: theme === "dark" ? 'rgba(150,150,150,0.35)' : 'rgba(0,0,0,0.3)',
+        },
+        removeOnClick: false
       }
     } : {};
     
+    // 기본 옵션
     return {
       animation: true,
       title: {
@@ -232,12 +265,23 @@ export function useChartRenderer({
       toolbox: {
         show: true,
         feature: {
-          ...(brushConfig?.enabled ? {
-            brush: { type: ['rect', 'polygon', 'lineX', 'lineY', 'keep', 'clear'] }
-          } : {}),
-          dataZoom: { yAxisIndex: "none" },
-          restore: {},
-          saveAsImage: {},
+          brush: { 
+            type: ['rect', 'polygon', 'lineX', 'lineY', 'keep', 'clear'],
+            title: {
+              rect: '사각형 선택',
+              polygon: '다각형 선택',
+              lineX: 'X축 선택',
+              lineY: 'Y축 선택',
+              keep: '선택 유지',
+              clear: '선택 초기화'
+            }
+          },
+          dataZoom: { 
+            yAxisIndex: "none",
+            title: { zoom: '확대', back: '되돌리기' }
+          },
+          restore: { title: '초기화' },
+          saveAsImage: { title: '이미지로 저장' },
         },
         right: 10,
         iconStyle: {
@@ -245,6 +289,7 @@ export function useChartRenderer({
           color: theme === "dark" ? "#ddd" : "#333",
         },
       },
+      // 브러시 옵션은 여기서 확장
       ...brushOption,
       dataZoom: [
         {
@@ -336,7 +381,6 @@ export function useChartRenderer({
           progressive: 1000,          
           progressiveThreshold: 5000, 
           progressiveRepaint: true,
-          symbol: "circle",
           symbolSize: (value: number[]) => {
             if (!value || value.length < 2) return symbolSizes?.min || 8;
             
@@ -480,8 +524,8 @@ export function useChartRenderer({
           },
           data: legendState.highLatency ? data.highLatencyData : [],
         },
-      ] as EChartsOption['series'],
-    };
+      ] as any, // series 타입 에러 방지를 위해 any로 처리
+    } as any;
   }, [
     mergedConfig, 
     theme, 
@@ -526,14 +570,14 @@ export function useChartRenderer({
       // Set initial options
       chartInstance.setOption(getChartOptions());
       
-      // 브러시 선택 이벤트 핸들러 등록
-      if (onBrushSelected && mergedConfig.brush?.enabled) {
-        chartInstance.on('brushselected', (params: any) => handleBrushSelected(params as BrushSelectedEvent));
-      }
+      // 브러시 선택 이벤트 리스너 등록 - 여기서 명시적 추가
+      chartInstance.off('brushselected');
+      chartInstance.on('brushselected', handleBrushSelected);
       
       // 클릭 이벤트 핸들러 등록
       if (onDataPointClick) {
-        chartInstance.on("click", function (params) {
+        chartInstance.off('click');
+        chartInstance.on('click', function (params) {
           if (params && params.value && Array.isArray(params.value) && params.value.length > 0) {
             const timestamp = params.value[0] as number;
             onDataPointClick(timestamp);
@@ -548,7 +592,7 @@ export function useChartRenderer({
     } finally {
       isInitializingRef.current = false;
     }
-  }, [theme, getChartOptions, onBrushSelected, handleBrushSelected, onDataPointClick, mergedConfig.brush?.enabled]);
+  }, [theme, getChartOptions, handleBrushSelected, onDataPointClick]);
   
   // Handle resize
   const handleResize = useMemo(() => 
@@ -585,6 +629,12 @@ export function useChartRenderer({
     
     try {
       setIsLoading(true);
+      
+      // 차트 업데이트 전에 이벤트 리스너 명시적 등록 확인
+      if (onBrushSelected) {
+        chartInstanceRef.current.off('brushselected');
+        chartInstanceRef.current.on('brushselected', handleBrushSelected);
+      }
       
       // Update chart options
       chartInstanceRef.current.setOption({
@@ -627,7 +677,7 @@ export function useChartRenderer({
     } finally {
       setIsLoading(false);
     }
-  }, [data, isReady, legendState]);
+  }, [data, isReady, legendState, handleBrushSelected, onBrushSelected]);
   
   // Update for theme changes
   useEffect(() => {

@@ -4,7 +4,8 @@ import React from 'react';
 import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from '@heroui/table';
 import { Badge } from '@heroui/badge';
 import { Button } from '@heroui/button';
-import { Share2, X, ArrowRight } from 'lucide-react';
+import { Share2, X, ArrowRight, Eye } from 'lucide-react';
+import { addToast } from '@heroui/toast';
 import { formatDateTime, formatDuration } from '@/lib/utils/dateFormatter';
 import { SelectedTraceData } from './types';
 
@@ -32,11 +33,26 @@ const SelectedTracesTable: React.FC<SelectedTracesTableProps> = ({ selectedTrace
 
   // 트레이스 ID 복사
   const copyTraceId = (traceId: string) => {
-    navigator.clipboard.writeText(traceId);
+    navigator.clipboard
+      .writeText(traceId)
+      .then(() => {
+        addToast({
+          title: '복사 완료',
+          description: '트레이스 ID가 클립보드에 복사되었습니다',
+          color: 'success',
+        });
+      })
+      .catch(() => {
+        addToast({
+          title: '복사 실패',
+          description: '클립보드 접근에 실패했습니다',
+          color: 'danger',
+        });
+      });
   };
 
   return (
-    <div className={`mt-4 bg-white dark:bg-gray-800 rounded-lg shadow ${className}`}>
+    <div className={`mt-4 bg-white dark:bg-gray-800 rounded-lg shadow ${className}`} data-testid="selected-traces-table">
       <div className="p-3 bg-gray-50 dark:bg-gray-750 border-b flex justify-between items-center">
         <div className="flex items-center">
           <h3 className="text-base font-medium">선택된 트레이스 ({selectedTraces.length}개)</h3>
@@ -48,7 +64,7 @@ const SelectedTracesTable: React.FC<SelectedTracesTableProps> = ({ selectedTrace
       </div>
 
       <div className="overflow-x-auto">
-        <Table aria-label="선택된 트레이스 목록" isHeaderSticky removeWrapper isStriped>
+        <Table aria-label="선택된 트레이스 목록" isHeaderSticky removeWrapper isStriped selectionMode="none">
           <TableHeader>
             <TableColumn key="time">시간</TableColumn>
             <TableColumn key="service">서비스</TableColumn>
@@ -59,9 +75,9 @@ const SelectedTracesTable: React.FC<SelectedTracesTableProps> = ({ selectedTrace
               작업
             </TableColumn>
           </TableHeader>
-          <TableBody>
-            {selectedTraces.map((trace) => (
-              <TableRow key={trace.timestamp}>
+          <TableBody items={selectedTraces}>
+            {(trace) => (
+              <TableRow key={`${trace.traceId}-${trace.timestamp}`}>
                 <TableCell>{formatDateTime(trace.timestamp)}</TableCell>
                 <TableCell>
                   <Badge color="primary">{trace.serviceName}</Badge>
@@ -82,13 +98,13 @@ const SelectedTracesTable: React.FC<SelectedTracesTableProps> = ({ selectedTrace
                     </Button>
                     {onViewDetails && (
                       <Button isIconOnly size="sm" variant="light" title="상세 보기" onPress={() => onViewDetails(trace.traceId)}>
-                        <ArrowRight size={16} />
+                        <Eye size={16} />
                       </Button>
                     )}
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </div>
