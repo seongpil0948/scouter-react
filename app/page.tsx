@@ -5,13 +5,13 @@ import { useState, useCallback, useEffect } from 'react';
 
 import { useFilterStore } from '@/lib/store/telemetryStore';
 import { useTraceFilterStore } from '@/lib/store/traceFilterStore';
-import DateRangePicker from '@/components/shared/DateRangePicker';
-import { ThemeSwitch } from '@/components/shared/theme-switch';
+
 import TraceVisualization from '@/components/traces/TraceVisualization';
 import TraceFilter from '@/components/traces/TraceFilter';
 import { useChartStore } from '@/lib/store/chartStore';
 import { buildTraceApiUrl } from '@/lib/utils/filterUtils';
 import { Card, CardBody } from '@heroui/card';
+import NavTrace from '@/components/traces/TraceNav';
 import { Button } from '@heroui/button';
 import { BarChart2, List, ArrowRight } from 'lucide-react';
 
@@ -27,7 +27,7 @@ export default function Home() {
     useTraceFilterStore();
 
   const [chartConfig] = useState<ChartConfig>({
-    height: 400,
+    height: 800,
     title: '실시간 요청 지연 시간',
     latencyThreshold: 300,
     colors: {
@@ -102,31 +102,20 @@ export default function Home() {
   }, [chartConfig, updateConfig]);
 
   return (
-    <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
-      <div className="inline-block max-w-xl text-center justify-center">
-        <h1 className="text-xl font-bold">트레이스 모니터링 대시보드</h1>
-      </div>
-      <ThemeSwitch className="absolute top-4 right-4" />
-
-      <div className="flex flex-col md:flex-row items-center justify-between w-full max-w-7xl">
-        <DateRangePicker onChange={handleTimeRangeChange} />
-      </div>
-
-      <div className="w-full max-w-7xl space-y-4">
-        {/* 헤더 영역 */}
-        <div className="flex justify-between items-center bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="flex items-center">
-            <BarChart2 size={20} className="mr-2 text-blue-500" />
-            <h2 className="text-lg font-medium">트레이스 시각화</h2>
-          </div>
-
-          <Button color="primary" endContent={<ArrowRight size={16} />} onPress={navigateToTraces}>
-            <List size={16} className="mr-1" />
-            트레이스 목록 보기
-          </Button>
+    <section className="flex flex-col items-center justify-center gap-4">
+      <NavTrace handleTimeRangeChange={handleTimeRangeChange} />
+      <div className="w-full flex justify-between items-center bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <div className="flex items-center">
+          <BarChart2 size={20} className="mr-2 text-blue-500" />
+          <h2 className="text-lg font-medium">트레이스 시각화</h2>
         </div>
 
-        {/* TraceFilter 컴포넌트 추가 - /traces 페이지와 동일한 컴포넌트 사용 */}
+        <Button color="primary" endContent={<ArrowRight size={16} />} onPress={navigateToTraces}>
+          <List size={16} className="mr-1" />
+          트레이스 목록 보기
+        </Button>
+      </div>
+      <div className="w-full max-w-7xl space-y-4">
         <TraceFilter onFilterChange={handleFilterChange} />
 
         {/* 차트 시각화 */}

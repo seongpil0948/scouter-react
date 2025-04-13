@@ -5,7 +5,7 @@ import { useChartRenderer } from './hook/useChartRenderer';
 import { ExtendedTraceChartProps } from './types';
 
 const TraceChart: React.FC<ExtendedTraceChartProps> = React.memo(
-  ({ data, height = 400, config, onDataPointClick, onBrushSelected, loading = false, legendState, serviceThresholds }) => {
+  ({ data, height = 700, config, onDataPointClick, onBrushSelected, loading = false, legendState, serviceThresholds }) => {
     const [ready, setReady] = useState(false);
 
     // Use our custom chart renderer hook

@@ -214,7 +214,7 @@ export function useChartRenderer({
       legend: {
         data: ["일반 요청", "고지연 요청"],
         right: 10,
-        top: 10,
+        top: 30,
         selected: {
           "일반 요청": legendState.normal,
           "고지연 요청": legendState.highLatency,
