@@ -1,69 +1,24 @@
 'use client';
 
-import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
-import { useFilterStore } from '@/lib/store/telemetryStore';
-import { useTraceFilterStore } from '@/lib/store/traceFilterStore';
 import DateRangePicker from '@/components/shared/DateRangePicker';
 import { ThemeSwitch } from '@/components/shared/theme-switch';
 import TraceFilter from '@/components/traces/TraceFilter';
-import { buildTraceApiUrl } from '@/lib/utils/filterUtils';
 import { Card, CardBody } from '@heroui/card';
 import TraceTable from '@/components/traces/TraceTable';
-
-// API 호출을 위한 fetcher 함수
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import { useTraceData } from '@/lib/hooks/useTraceData'; // 새로운 커스텀 훅 사용
 
 export default function TracesPage() {
   const router = useRouter();
-  const { timeRange } = useFilterStore();
-  const {
-    searchQuery,
-    limit,
-    selectedServices,
-    selectedStatuses,
-    minDuration,
-    maxDuration,
-    sortField,
-    sortDirection,
-    lastRefreshed,
-    rootSpansOnly, // 루트 스팬만 조회 옵션 사용
-  } = useTraceFilterStore();
 
-  // 페이지네이션 상태
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // 페이지 변경 시 offset 계산
-  const offset = (currentPage - 1) * limit;
-
-  // API URL 생성 (rootSpansOnly 추가)
-  const apiUrl = buildTraceApiUrl(
-    '/api/telemetry/traces',
-    {
-      searchQuery,
-      selectedServices,
-      selectedStatuses,
-      minDuration,
-      maxDuration,
-    },
-    timeRange,
-    limit,
-    sortField,
-    sortDirection,
-    offset,
-    { rootSpansOnly } // 루트 스팬만 조회 여부 전달
-  );
-  const { data, error, mutate } = useSWR<TracesResponse>(
-    [apiUrl, lastRefreshed], // lastRefreshed를 의존성에 추가하여 필터 변경 시 재요청
-    () => fetcher(apiUrl),
-    {
-      refreshInterval: 0, // 자동 갱신 비활성화 (필터 변경 시만 갱신)
-      revalidateOnFocus: false,
-      dedupingInterval: 1000,
-    }
-  );
+  // useTraceData 커스텀 훅 사용
+  const { traces, error, isLoading, isValidating, refresh, isRealtime, toggleRealtime, currentPage, setCurrentPage, totalCount } =
+    useTraceData({
+      refreshInterval: 5000,
+      rootSpansOnly: true,
+    });
 
   // 트레이스 클릭 핸들러
   const handleTraceClick = useCallback(
@@ -73,17 +28,19 @@ export default function TracesPage() {
     [router]
   );
 
-  // 필터 변경 핸들러
-  const handleFilterChange = useCallback(() => {
-    setCurrentPage(1); // 필터 변경 시 첫 페이지로 이동
-    mutate(); // 데이터 재요청
-  }, [mutate]);
-
   // 시간 범위 변경 핸들러
   const handleTimeRangeChange = useCallback(() => {
-    setCurrentPage(1); // 시간 범위 변경 시 첫 페이지로 이동
-    mutate(); // 데이터 재요청
-  }, [mutate]);
+    // 시간 범위가 변경되면 실시간 모드 비활성화
+    if (isRealtime) {
+      toggleRealtime(false);
+    }
+    refresh();
+  }, [refresh, isRealtime, toggleRealtime]);
+
+  // 필터 변경 핸들러
+  const handleFilterChange = useCallback(() => {
+    refresh();
+  }, [refresh]);
 
   return (
     <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
@@ -95,12 +52,12 @@ export default function TracesPage() {
       <ThemeSwitch className="absolute top-4 right-4" />
 
       <div className="flex flex-col md:flex-row items-center justify-between w-full max-w-7xl">
-        <DateRangePicker onChange={handleTimeRangeChange} />
+        <DateRangePicker onChange={handleTimeRangeChange} isRealtime={isRealtime} />
       </div>
 
       <div className="w-full max-w-7xl space-y-4">
         {/* 필터 컴포넌트 */}
-        <TraceFilter onFilterChange={handleFilterChange} />
+        <TraceFilter onFilterChange={handleFilterChange} isRealtime={isRealtime} onToggleRealtime={toggleRealtime} />
 
         {/* 오류 상태 */}
         {error && (
@@ -114,21 +71,20 @@ export default function TracesPage() {
 
         {/* 테이블 컴포넌트 */}
         <TraceTable
-          traces={data?.traces || []}
-          totalCount={data?.total || 0}
+          traces={traces}
+          isLoading={isLoading}
+          totalCount={totalCount}
           currentPage={currentPage}
           onPageChange={setCurrentPage}
           onSelectTrace={handleTraceClick}
-          pageSize={limit}
+          pageSize={100}
         />
 
         {/* 표시 정보 */}
-        {data && (
-          <div className="text-sm text-gray-500 text-right">
-            총 {data.total}개의 트레이스 중 {data.traces.length}개 표시 중
-            {data.rootSpansOnly && <span className="ml-2">(루트 스팬만 표시)</span>}
-          </div>
-        )}
+        <div className="text-sm text-gray-500 text-right">
+          총 {totalCount}개의 트레이스 중 {traces.length}개 표시 중
+          {isRealtime && <span className="ml-2 text-blue-500">(실시간 갱신 중)</span>}
+        </div>
       </div>
     </section>
   );

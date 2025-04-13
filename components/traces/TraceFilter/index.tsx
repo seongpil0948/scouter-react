@@ -4,19 +4,23 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge } from '@heroui/badge';
 import { Button } from '@heroui/button';
 import { Select, SelectItem } from '@heroui/select';
-import { Filter, X, RefreshCw, SortAsc, SortDesc, List, GitCommit } from 'lucide-react';
-import useSWR from 'swr';
+import { Filter, X, RefreshCw, SortAsc, SortDesc, List, GitCommit, Clock } from 'lucide-react';
+import { Switch } from '@heroui/switch';
 
 import { useTraceFilterStore, LimitOption, SortField, SortDirection } from '@/lib/store/traceFilterStore';
 import { useFilterStore } from '@/lib/store/telemetryStore';
 import { buildServiceListApiUrl } from '@/lib/utils/filterUtils';
 import { useIsSSR } from '@react-aria/ssr';
 import { isEmpty } from 'lodash-es';
-import { fetcher, SearchField, AttributeKeyField, DurationInput, SortButtons, ActiveFilters, RootSpansToggle } from './components';
+import { SearchField, AttributeKeyField, DurationInput, SortButtons, ActiveFilters, RootSpansToggle } from './components';
 import { useDisclosure } from '@heroui/modal';
 import ModalBlushHelp from '../BrushHelp';
+import useSWR from 'swr';
 
-const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '' }) => {
+// API 응답 fetcher 함수 (여기서만 사용됨)
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '', isRealtime, onToggleRealtime }) => {
   // Get filter state from store
   const {
     searchQuery,
@@ -238,6 +242,12 @@ const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '
       onFilterChange,
     ]
   );
+
+  // 실시간 모드 토글 처리
+  const handleToggleRealtime = useCallback(() => {
+    onToggleRealtime?.(!isRealtime);
+  }, [isRealtime, onToggleRealtime]);
+
   const disclosureHelper = useDisclosure();
 
   // Skip rendering during SSR or when service options are not loaded
@@ -376,6 +386,19 @@ const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '
                 </SelectItem>
               </Select>
             </div>
+
+            {/* 실시간 모드 토글 (onToggleRealtime이 제공된 경우만 표시) */}
+            {onToggleRealtime && (
+              <div className="min-w-[180px] flex flex-col justify-end">
+                <div className="flex items-center gap-2 py-2">
+                  <Switch isSelected={isRealtime} onValueChange={handleToggleRealtime} size="sm" />
+                  <div className="flex items-center text-sm">
+                    <Clock size={16} className={`mr-1 ${isRealtime ? 'text-blue-500' : 'text-gray-500'}`} />
+                    <span className={isRealtime ? 'text-blue-500' : 'text-gray-500'}>실시간 갱신</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sort controls */}
