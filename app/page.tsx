@@ -21,7 +21,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export default function Home() {
   const router = useRouter();
   const { timeRange } = useFilterStore();
-  const { dataFilters, updateConfig } = useChartStore();
+  const { updateConfig } = useChartStore();
 
   // TraceFilterStore 상태 활용
   const { searchQuery, limit, selectedServices, selectedStatuses, minDuration, maxDuration, sortField, sortDirection, lastRefreshed } =

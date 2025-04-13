@@ -1,20 +1,13 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge } from '@heroui/badge';
 import { Button } from '@heroui/button';
-import { Select, SelectItem } from '@heroui/select';
 import { Input } from '@heroui/input';
 import { Switch } from '@heroui/switch';
-import { Filter, Search, X, RefreshCw, SortAsc, SortDesc, List, GitCommit } from 'lucide-react';
-import useSWR from 'swr';
+import { Search, X, GitCommit } from 'lucide-react';
 
 import { formatDuration } from '@/lib/utils/dateFormatter';
-import { useTraceFilterStore, LimitOption, SortField, SortDirection } from '@/lib/store/traceFilterStore';
-import { useFilterStore } from '@/lib/store/telemetryStore';
-import { buildServiceListApiUrl } from '@/lib/utils/filterUtils';
-import { useIsSSR } from '@react-aria/ssr';
-import { isEmpty } from 'lodash-es';
+import { SortField } from '@/lib/store/traceFilterStore';
 
 export const fetcher = (url: string) => fetch(url).then((res) => res.json());
 

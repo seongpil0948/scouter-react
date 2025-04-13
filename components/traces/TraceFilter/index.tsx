@@ -56,7 +56,7 @@ const TraceFilter: React.FC<TraceFilterProps> = ({ onFilterChange, className = '
   // Fetch service list
   const { data: serviceData } = useSWR<{ services: ServiceInfo[] }>(buildServiceListApiUrl(timeRange), fetcher, {
     revalidateOnFocus: false,
-    dedupingInterval: 30000, // 30초 캐시
+    dedupingInterval: 5, // 30초 캐시
   });
 
   // Generate service options
