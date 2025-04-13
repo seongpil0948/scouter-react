@@ -11,9 +11,10 @@ import TraceFilter from '@/components/traces/TraceFilter';
 import { useChartStore } from '@/lib/store/chartStore';
 import { buildTraceApiUrl } from '@/lib/utils/filterUtils';
 import { Card, CardBody } from '@heroui/card';
-import NavTrace from '@/components/traces/TraceNav';
 import { Button } from '@heroui/button';
 import { BarChart2, List, ArrowRight } from 'lucide-react';
+import DateRangePicker from '@/components/shared/DateRangePicker';
+import { ThemeSwitch } from '@/components/shared/theme-switch';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -103,17 +104,14 @@ export default function Home() {
 
   return (
     <section className="flex flex-col items-center justify-center gap-4">
-      <NavTrace handleTimeRangeChange={handleTimeRangeChange} />
       <div className="w-full flex justify-between items-center bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-        <div className="flex items-center">
-          <BarChart2 size={20} className="mr-2 text-blue-500" />
-          <h2 className="text-lg font-medium">트레이스 시각화</h2>
-        </div>
-
+        <h2 className="text-xl font-semibold">IDS APM</h2>
+        <DateRangePicker onChange={handleTimeRangeChange} />
         <Button color="primary" endContent={<ArrowRight size={16} />} onPress={navigateToTraces}>
           <List size={16} className="mr-1" />
           트레이스 목록 보기
         </Button>
+        <ThemeSwitch className="absolute top-4 right-4" />
       </div>
       <div className="w-full max-w-7xl space-y-4">
         <TraceFilter onFilterChange={handleFilterChange} />

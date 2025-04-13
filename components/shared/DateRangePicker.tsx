@@ -67,26 +67,6 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange }) => {
 
   useEffect(handleRefresh, []);
 
-  // Define quick selection options
-  const handleQuickSelect = (daysBack: number) => {
-    const nowTime = now(getLocalTimeZone());
-    const endDate = nowTime;
-    const startDate =
-      daysBack === 0
-        ? nowTime.set({ hour: 0, minute: 0, second: 0 }) // Today starting at midnight
-        : nowTime.subtract({ days: daysBack });
-
-    const newValue = { start: startDate, end: endDate };
-
-    setValue(newValue as any);
-
-    const startTime = startDate.toDate().getTime();
-    const endTime = endDate.toDate().getTime();
-
-    setTimeRange(startTime, endTime);
-    onChange?.(startTime, endTime);
-  };
-
   return (
     <div className="flex items-center gap-2 w-full max-w-xl">
       <HeroDateRangePicker
@@ -95,24 +75,6 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange }) => {
         onChange={handleValueChange}
         granularity="minute" // 시간과 분까지 선택 가능하도록 설정
       />
-
-      <Button size="sm" variant="ghost" onPress={() => handleQuickSelect(0)}>
-        오늘
-      </Button>
-      <Button size="sm" variant="ghost" onPress={() => handleQuickSelect(1)}>
-        어제
-      </Button>
-      <Button size="sm" variant="ghost" onPress={() => handleQuickSelect(7)}>
-        7일
-      </Button>
-      <Button size="sm" variant="ghost" onPress={() => handleQuickSelect(30)}>
-        30일
-      </Button>
-
-      <Button className="flex items-center gap-1" color="primary" title="새로고침" variant="ghost" onPress={handleRefresh}>
-        <Clock size={16} />
-        <span className="hidden md:inline">새로고침</span>
-      </Button>
     </div>
   );
 };

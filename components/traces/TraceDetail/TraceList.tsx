@@ -1,20 +1,13 @@
 // frontend/components/traces/TraceList.tsx
-"use client";
-import React, { useCallback, useMemo, useState } from "react";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableColumn,
-  TableRow,
-  TableCell,
-} from "@heroui/table";
-import { Button } from "@heroui/button";
-import { Badge } from "@heroui/badge";
-import { EyeIcon, SearchIcon, Clock, XIcon } from "lucide-react";
-import { Card, CardBody } from "@heroui/card";
+'use client';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from '@heroui/table';
+import { Button } from '@heroui/button';
+import { Badge } from '@heroui/badge';
+import { EyeIcon, SearchIcon, Clock, XIcon } from 'lucide-react';
+import { Card, CardBody } from '@heroui/card';
 
-import { useFilterStore, TraceItem } from "@/lib/store/telemetryStore";
+import { useFilterStore } from '@/lib/store/telemetryStore';
 
 interface TraceListProps {
   traces: TraceItem[];
@@ -22,23 +15,19 @@ interface TraceListProps {
   isLoading?: boolean;
 }
 
-const TraceList: React.FC<TraceListProps> = ({
-  traces,
-  onSelectTrace,
-  isLoading = false,
-}) => {
+const TraceList: React.FC<TraceListProps> = ({ traces, onSelectTrace, isLoading = false }) => {
   const { traceFilters, setTraceFilters } = useFilterStore();
-  const [searchInput, setSearchInput] = useState(traceFilters.search || "");
+  const [searchInput, setSearchInput] = useState(traceFilters.search || '');
 
   // 상태에 따른 배지 색상
   const getStatusBadgeColor = useCallback((status: string | undefined) => {
     const statusMap: Record<string, string> = {
-      ERROR: "bg-red-500",
-      OK: "bg-green-500",
-      UNSET: "bg-gray-500",
+      ERROR: 'bg-red-500',
+      OK: 'bg-green-500',
+      UNSET: 'bg-gray-500',
     };
 
-    return statusMap[status || "UNSET"] || "bg-gray-500";
+    return statusMap[status || 'UNSET'] || 'bg-gray-500';
   }, []);
 
   // 필터링된 트레이스
@@ -57,17 +46,11 @@ const TraceList: React.FC<TraceListProps> = ({
       }
 
       // 지연 시간 필터
-      if (
-        traceFilters.minDuration !== undefined &&
-        trace.duration < traceFilters.minDuration
-      ) {
+      if (traceFilters.minDuration !== undefined && trace.duration < traceFilters.minDuration) {
         return false;
       }
 
-      if (
-        traceFilters.maxDuration !== undefined &&
-        trace.duration > traceFilters.maxDuration
-      ) {
+      if (traceFilters.maxDuration !== undefined && trace.duration > traceFilters.maxDuration) {
         return false;
       }
 
@@ -77,8 +60,7 @@ const TraceList: React.FC<TraceListProps> = ({
 
         return (
           (trace.name && trace.name.toLowerCase().includes(searchLower)) ||
-          (trace.serviceName &&
-            trace.serviceName.toLowerCase().includes(searchLower)) ||
+          (trace.serviceName && trace.serviceName.toLowerCase().includes(searchLower)) ||
           (trace.traceId && trace.traceId.toLowerCase().includes(searchLower))
         );
       }
@@ -93,7 +75,7 @@ const TraceList: React.FC<TraceListProps> = ({
       e.preventDefault();
       setTraceFilters({ search: searchInput });
     },
-    [searchInput, setTraceFilters],
+    [searchInput, setTraceFilters]
   );
 
   // 상태 필터 토글
@@ -103,7 +85,7 @@ const TraceList: React.FC<TraceListProps> = ({
         status: traceFilters.status === status ? null : status,
       });
     },
-    [traceFilters.status, setTraceFilters],
+    [traceFilters.status, setTraceFilters]
   );
 
   // 필터 초기화
@@ -111,11 +93,11 @@ const TraceList: React.FC<TraceListProps> = ({
     setTraceFilters({
       service: null,
       status: null,
-      search: "",
+      search: '',
       minDuration: undefined,
       maxDuration: undefined,
     });
-    setSearchInput("");
+    setSearchInput('');
   }, [setTraceFilters]);
 
   // 시간 포맷팅
@@ -126,7 +108,7 @@ const TraceList: React.FC<TraceListProps> = ({
   // 지연 시간 포맷팅
   const formatDuration = useCallback((duration: number) => {
     if (duration < 1) {
-      return "<1ms";
+      return '<1ms';
     }
     if (duration < 1000) {
       return `${duration.toFixed(2)}ms`;
@@ -151,15 +133,9 @@ const TraceList: React.FC<TraceListProps> = ({
       {/* 필터 섹션 */}
       <div className="p-4 border-b">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <form
-            className="flex-1 w-full md:w-auto"
-            onSubmit={handleSearchSubmit}
-          >
+          <form className="flex-1 w-full md:w-auto" onSubmit={handleSearchSubmit}>
             <div className="relative">
-              <SearchIcon
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={18}
-              />
+              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
               <input
                 aria-label="검색"
                 className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
@@ -176,9 +152,9 @@ const TraceList: React.FC<TraceListProps> = ({
                   type="button"
                   variant="ghost"
                   onPress={() => {
-                    setSearchInput("");
+                    setSearchInput('');
                     if (traceFilters.search) {
-                      setTraceFilters({ search: "" });
+                      setTraceFilters({ search: '' });
                     }
                   }}
                 >
@@ -192,13 +168,11 @@ const TraceList: React.FC<TraceListProps> = ({
             {/* 상태 필터 */}
             <div className="flex gap-1 items-center">
               <span className="text-sm text-gray-500 mr-1">상태:</span>
-              {["ERROR", "OK"].map((status) => (
+              {['ERROR', 'OK'].map((status) => (
                 <Badge
                   key={status}
                   className={`cursor-pointer ${
-                    traceFilters.status === status
-                      ? getStatusBadgeColor(status)
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    traceFilters.status === status ? getStatusBadgeColor(status) : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
                   onClick={() => toggleStatusFilter(status)}
                 >
@@ -213,11 +187,7 @@ const TraceList: React.FC<TraceListProps> = ({
               traceFilters.search ||
               traceFilters.minDuration !== undefined ||
               traceFilters.maxDuration !== undefined) && (
-              <Button
-                className="whitespace-nowrap"
-                size="sm"
-                onPress={resetFilters}
-              >
+              <Button className="whitespace-nowrap" size="sm" onPress={resetFilters}>
                 필터 초기화
               </Button>
             )}
@@ -231,11 +201,7 @@ const TraceList: React.FC<TraceListProps> = ({
           <Table
             isHeaderSticky
             aria-label="트레이스 목록"
-            bottomContent={
-              <div className="text-right px-2 py-2">
-                총 {filteredTraces.length}개 트레이스 표시 중
-              </div>
-            }
+            bottomContent={<div className="text-right px-2 py-2">총 {filteredTraces.length}개 트레이스 표시 중</div>}
             isStriped={false}
           >
             <TableHeader>
@@ -247,31 +213,17 @@ const TraceList: React.FC<TraceListProps> = ({
               <TableColumn key="actions">동작</TableColumn>
             </TableHeader>
             <TableBody
-              emptyContent={
-                <div className="py-8 text-center text-gray-500">
-                  표시할 트레이스가 없습니다.
-                </div>
-              }
+              emptyContent={<div className="py-8 text-center text-gray-500">표시할 트레이스가 없습니다.</div>}
               items={filteredTraces}
             >
               {(trace) => (
-                <TableRow
-                  key={trace.id}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => onSelectTrace(trace)}
-                >
+                <TableRow key={trace.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => onSelectTrace(trace)}>
                   <TableCell>{formatTime(trace.startTime)}</TableCell>
                   <TableCell>
-                    <Badge className={getStatusBadgeColor(trace.status)}>
-                      {trace.status || "UNSET"}
-                    </Badge>
+                    <Badge className={getStatusBadgeColor(trace.status)}>{trace.status || 'UNSET'}</Badge>
                   </TableCell>
-                  <TableCell className="truncate max-w-[8rem]">
-                    {trace.serviceName}
-                  </TableCell>
-                  <TableCell className="truncate max-w-[32rem]">
-                    {trace.name}
-                  </TableCell>
+                  <TableCell className="truncate max-w-[8rem]">{trace.serviceName}</TableCell>
+                  <TableCell className="truncate max-w-[32rem]">{trace.name}</TableCell>
                   <TableCell>
                     <div className="flex items-center">
                       <Clock className="mr-1 text-gray-500" size={14} />
@@ -279,10 +231,7 @@ const TraceList: React.FC<TraceListProps> = ({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      onPress={() => onSelectTrace(trace)}
-                    >
+                    <Button variant="ghost" onPress={() => onSelectTrace(trace)}>
                       <EyeIcon className="text-gray-600" size={18} />
                     </Button>
                   </TableCell>

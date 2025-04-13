@@ -150,7 +150,6 @@ export const useTraceFilterStore = create<TraceFilterStore>()(
           lastRefreshed: Date.now()
         }),
         
-        // 데이터 새로고침
         refreshData: () => set({ lastRefreshed: Date.now() }),
         
         // 활성 필터 여부 확인 (UI 표시용)
