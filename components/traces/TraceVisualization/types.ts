@@ -73,6 +73,7 @@ export interface ExtendedTraceChartProps {
   height?: number | string;
   config: Partial<ChartConfig> & {
     brush?: BrushConfig;
+    realtimeRange?: number;
   };
   onDataPointClick?: (timestamp: number) => void;
   onBrushSelected?: (selectedData: SelectedTraceData[]) => void;

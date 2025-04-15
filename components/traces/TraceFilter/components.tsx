@@ -27,9 +27,14 @@ export const SearchField = ({
       value={searchInput}
       onChange={(e) => setSearchInput(e.target.value)}
       className="pl-10 w-full"
+      aria-label="이름, 서비스, 트레이스 ID 검색"
+      role="search"
     />
     {searchInput && (
       <button
+        type="button"
+        aria-label="검색어 지우기"
+        role="button"
         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-700"
         onClick={() => setSearchInput('')}
       >
@@ -55,19 +60,28 @@ export const AttributeKeyField = ({
   <div className="min-w-[200px]">
     <Input
       label="속성 키 필터"
+      aria-label="속성 키 필터"
+      role="textbox"
+      type="text"
       placeholder="예: sql.query, http.method"
       value={attributeKeyInput}
       onChange={(e) => setAttributeKeyInput(e.target.value)}
       onBlur={() => {
-        if (attributeKeyInput !== attributeKey) {
-          setAttributeKey(attributeKeyInput);
+        // 공백 제거 및 트림 처리
+        const trimmedValue = attributeKeyInput.trim();
+        if (trimmedValue !== attributeKey) {
+          setAttributeKey(trimmedValue);
           onFilterChange?.();
         }
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' && attributeKeyInput !== attributeKey) {
-          setAttributeKey(attributeKeyInput);
-          onFilterChange?.();
+        if (e.key === 'Enter') {
+          // 엔터키 누를 때도 공백 제거 및 트림 처리
+          const trimmedValue = attributeKeyInput.trim();
+          if (trimmedValue !== attributeKey) {
+            setAttributeKey(trimmedValue);
+            onFilterChange?.();
+          }
         }
       }}
       size="sm"
@@ -96,6 +110,8 @@ export const DurationInput = ({
       label={label}
       placeholder={placeholder}
       value={value}
+      aria-label={label}
+      role="textbox"
       onChange={(e) => setValue(e.target.value)}
       onBlur={onChange}
       onKeyDown={(e) => e.key === 'Enter' && onChange()}
@@ -110,7 +126,7 @@ export const DurationInput = ({
 export const RootSpansToggle = ({ rootSpansOnly, onChange }: { rootSpansOnly: boolean; onChange: (value: boolean) => void }) => (
   <div className="min-w-[140px] flex flex-col justify-end">
     <div className="flex items-center gap-2 py-2">
-      <Switch isSelected={rootSpansOnly} onValueChange={onChange} size="sm" />
+      <Switch aria-label="루트 스팬만 보기" role="switch" isSelected={rootSpansOnly} onValueChange={onChange} size="sm" />
       <div className="flex items-center text-sm">
         <GitCommit size={16} className="mr-1 text-gray-500" />
         <span>루트 스팬만 보기</span>
@@ -134,6 +150,8 @@ export const SortButtons = ({
       variant={sortField === 'startTime' ? 'solid' : 'ghost'}
       color={sortField === 'startTime' ? 'primary' : 'default'}
       onPress={() => handleSortChange('startTime')}
+      aria-label="정렬 기준: 시작 시간"
+      role="button"
     >
       시간
       {renderSortIcon('startTime')}
@@ -144,6 +162,8 @@ export const SortButtons = ({
       variant={sortField === 'duration' ? 'solid' : 'ghost'}
       color={sortField === 'duration' ? 'primary' : 'default'}
       onPress={() => handleSortChange('duration')}
+      aria-label="정렬 기준: 지연 시간"
+      role="button"
     >
       지연 시간
       {renderSortIcon('duration')}
@@ -154,6 +174,8 @@ export const SortButtons = ({
       variant={sortField === 'serviceName' ? 'solid' : 'ghost'}
       color={sortField === 'serviceName' ? 'primary' : 'default'}
       onPress={() => handleSortChange('serviceName')}
+      aria-label="정렬 기준: 서비스 이름"
+      role="button"
     >
       서비스
       {renderSortIcon('serviceName')}
@@ -164,6 +186,8 @@ export const SortButtons = ({
       variant={sortField === 'status' ? 'solid' : 'ghost'}
       color={sortField === 'status' ? 'primary' : 'default'}
       onPress={() => handleSortChange('status')}
+      aria-label="정렬 기준: 상태"
+      role="button"
     >
       상태
       {renderSortIcon('status')}
@@ -174,6 +198,8 @@ export const SortButtons = ({
       variant={sortField === 'name' ? 'solid' : 'ghost'}
       color={sortField === 'name' ? 'primary' : 'default'}
       onPress={() => handleSortChange('name')}
+      aria-label="정렬 기준: 이름"
+      role="button"
     >
       이름
       {renderSortIcon('name')}

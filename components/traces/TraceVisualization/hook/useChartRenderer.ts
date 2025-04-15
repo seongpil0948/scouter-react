@@ -1,7 +1,8 @@
+// components/traces/TraceVisualization/hook/useChartRenderer.ts
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import * as echarts from 'echarts';
 import { useTheme } from 'next-themes';
-import { debounce } from 'lodash-es';
+import { useIsSSR } from '@react-aria/ssr';
 import type { EChartsOption } from 'echarts';
 import { DEFAULT_CHART_CONFIG, getServiceThreshold } from '../utils';
 import { SelectedTraceData, BrushToolboxIconType } from '../types';
@@ -17,24 +18,33 @@ export function useChartRenderer({
   onBrushSelected,
   serviceThresholds
 }: any) {
+  // SSR 체크
+  const isSSR = useIsSSR();
+  
   // Refs
   const chartContainerRef = useRef<HTMLDivElement | null>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
   const isInitializingRef = useRef<boolean>(false);
   const isMountedRef = useRef<boolean>(true);
+  const prevSeriesDataRef = useRef<{ timeSeriesData: any[], highLatencyData: any[] } | null>(null);
+  const prevRangeRef = useRef<{ min: number, max: number } | null>(null);
   
   // State
   const [isReady, setIsReady] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   
   // Theme
-  const { theme } = useTheme();
+  const { theme, resolvedTheme } = useTheme();
+  const currentTheme = resolvedTheme || theme;
   
   // Merged configuration
-  const mergedConfig = {
+  const mergedConfig = useMemo(() => ({
     ...DEFAULT_CHART_CONFIG,
     ...config,
-  };
+  }), [config]);
+  
+  // 실시간 모드 상태
+  const isRealtime = useMemo(() => mergedConfig.autoUpdate === true, [mergedConfig.autoUpdate]);
   
   // Clean up on unmount
   useEffect(() => {
@@ -116,10 +126,8 @@ export function useChartRenderer({
     };
   }, [data.metadataMap, serviceThresholds, mergedConfig]);
   
-  // 브러시 이벤트 핸들러 - 완전히 다시 작성된 버전
+  // 브러시 이벤트 핸들러
   const handleBrushSelected = useCallback((params: any) => {
-    console.log('Brush event triggered!', JSON.stringify(params, null, 2));
-    
     if (!onBrushSelected || !data.metadataMap) return;
     
     // 선택된 데이터를 저장할 배열
@@ -127,7 +135,6 @@ export function useChartRenderer({
     
     // batch가 존재하고 배열인지 확인
     if (!params.batch || !Array.isArray(params.batch) || params.batch.length === 0) {
-      console.log('Invalid batch data in brush event');
       return;
     }
     
@@ -135,7 +142,6 @@ export function useChartRenderer({
     params.batch.forEach((batchItem: any) => {
       // selected 배열이 존재하는지 확인
       if (!batchItem.selected || !Array.isArray(batchItem.selected)) {
-        console.log('No selected data in batch item');
         return;
       }
       
@@ -145,11 +151,8 @@ export function useChartRenderer({
         const seriesIndex = selection.seriesIndex;
         const dataIndices = selection.dataIndex;
         
-        console.log(`Processing series ${seriesIndex} with indices:`, dataIndices);
-        
         // 데이터 인덱스가 비어있지 않은지 확인
         if (!dataIndices || !Array.isArray(dataIndices) || dataIndices.length === 0) {
-          console.log(`No data indices for series ${seriesIndex}`);
           return;
         }
         
@@ -169,8 +172,6 @@ export function useChartRenderer({
             const metadata = data.metadataMap.get(timestamp);
             
             if (metadata && metadata.traceItem) {
-              console.log(`Found data point at index ${index}:`, timestamp, latency, metadata.traceItem.traceId);
-              
               selectedData.push({
                 timestamp,
                 latency,
@@ -180,11 +181,7 @@ export function useChartRenderer({
                 name: metadata.traceItem.name,
                 traceItem: metadata.traceItem
               });
-            } else {
-              console.log(`No metadata found for timestamp ${timestamp}`);
             }
-          } else {
-            console.log(`Index ${index} out of range for series ${seriesIndex}`);
           }
         });
       });
@@ -198,14 +195,9 @@ export function useChartRenderer({
     // 정렬 (시간순)
     uniqueSelectedData.sort((a, b) => a.timestamp - b.timestamp);
     
-    console.log('Selected data processed:', uniqueSelectedData.length, 'items');
-    
     // 선택된 데이터가 있으면 콜백 호출
     if (uniqueSelectedData.length > 0) {
-      console.log('Calling onBrushSelected with data');
       onBrushSelected(uniqueSelectedData);
-    } else {
-      console.log('No data selected after processing');
     }
   }, [data.highLatencyData, data.metadataMap, data.timeSeriesData, onBrushSelected]);
   
@@ -229,8 +221,8 @@ export function useChartRenderer({
         transformable: true,
         brushStyle: {
           borderWidth: 1,
-          color: theme === "dark" ? 'rgba(100,100,100,0.15)' : 'rgba(0,0,0,0.1)',
-          borderColor: theme === "dark" ? 'rgba(150,150,150,0.35)' : 'rgba(0,0,0,0.3)',
+          color: currentTheme === "dark" ? 'rgba(100,100,100,0.15)' : 'rgba(0,0,0,0.1)',
+          borderColor: currentTheme === "dark" ? 'rgba(150,150,150,0.35)' : 'rgba(0,0,0,0.3)',
         },
         removeOnClick: false
       }
@@ -238,11 +230,13 @@ export function useChartRenderer({
     
     // 기본 옵션
     return {
-      animation: true,
+      animation: !isRealtime,
+      animationDuration: isRealtime ? 0 : 300,
+      animationDurationUpdate: isRealtime ? 0 : 300,
       title: {
         text: chartTitle,
         left: "center",
-        textStyle: theme === "dark" ? { color: "#fff" } : undefined,
+        textStyle: currentTheme === "dark" ? { color: "#fff" } : undefined,
       },
       legend: {
         data: ["일반 요청", "고지연 요청"],
@@ -256,9 +250,9 @@ export function useChartRenderer({
       tooltip: {
         show: true,
         trigger: "item",
-        backgroundColor: theme === "dark" ? "rgba(50,50,50,0.9)" : "rgba(255,255,255,0.9)",
-        borderColor: theme === "dark" ? "#333" : "#ccc",
-        textStyle: { color: theme === "dark" ? "#fff" : "#333" },
+        backgroundColor: currentTheme === "dark" ? "rgba(50,50,50,0.9)" : "rgba(255,255,255,0.9)",
+        borderColor: currentTheme === "dark" ? "#333" : "#ccc",
+        textStyle: { color: currentTheme === "dark" ? "#fff" : "#333" },
         extraCssText: "box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);",
         formatter: getTooltipFormatter()
       },
@@ -285,8 +279,8 @@ export function useChartRenderer({
         },
         right: 10,
         iconStyle: {
-          borderColor: theme === "dark" ? "#666" : "#666",
-          color: theme === "dark" ? "#ddd" : "#333",
+          borderColor: currentTheme === "dark" ? "#666" : "#666",
+          color: currentTheme === "dark" ? "#ddd" : "#333",
         },
       },
       // 브러시 옵션은 여기서 확장
@@ -294,22 +288,32 @@ export function useChartRenderer({
       dataZoom: [
         {
           type: "inside",
-          start: 0,
+          start: isRealtime ? 100 - Math.min(100, 100 * (5 / (mergedConfig.realtimeRange || 5))) : 0,
           end: 100,
-          zoomLock: false,
+          zoomLock: isRealtime,
           filterMode: "filter",
+          realtime: true,
+          throttle: 100,
+          rangeMode: ['value', 'value']
         },
         {
-          start: 0,
+          start: isRealtime ? 100 - Math.min(100, 100 * (5 / (mergedConfig.realtimeRange || 5))) : 0,
           end: 100,
           bottom: 10,
           height: 20,
-          borderColor: theme === "dark" ? "#444" : "#ddd",
+          borderColor: currentTheme === "dark" ? "#444" : "#ddd",
           textStyle: {
-            color: theme === "dark" ? "#fff" : undefined,
+            color: currentTheme === "dark" ? "#fff" : undefined,
           },
-          fillerColor: theme === "dark" ? "rgba(80,80,80,0.3)" : "rgba(200,200,200,0.3)",
+          fillerColor: currentTheme === "dark" ? "rgba(80,80,80,0.3)" : "rgba(200,200,200,0.3)",
           filterMode: "filter",
+          realtime: true,
+          throttle: 100,
+          rangeMode: ['value', 'value'],
+          labelFormatter: (value: number) => {
+            const date = new Date(value);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          }
         },
       ],
       xAxis: {
@@ -318,26 +322,44 @@ export function useChartRenderer({
         nameLocation: "middle",
         nameGap: 30,
         nameTextStyle: {
-          color: theme === "dark" ? "#fff" : undefined,
+          color: currentTheme === "dark" ? "#fff" : undefined,
         },
         axisLabel: {
-          formatter: (value: number) => new Date(value).toLocaleTimeString(),
+          formatter: (value: number) => new Date(value).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          }),
           show: true,
-          color: theme === "dark" ? "#ccc" : undefined,
+          color: currentTheme === "dark" ? "#ccc" : undefined,
         },
         axisLine: {
           lineStyle: {
-            color: theme === "dark" ? "#444" : "#ccc",
+            color: currentTheme === "dark" ? "#444" : "#ccc",
           },
         },
         splitLine: {
           show: true,
           lineStyle: {
             type: "dashed",
-            opacity: theme === "dark" ? 0.2 : 0.3,
-            color: theme === "dark" ? "#444" : "#ddd",
+            opacity: currentTheme === "dark" ? 0.2 : 0.3,
+            color: currentTheme === "dark" ? "#444" : "#ddd",
           },
         },
+        min: (value: { min: number; max: number }) => {
+          if (!isRealtime || !value.min) return value.min;
+          
+          const now = Date.now();
+          const windowSize = (mergedConfig.realtimeRange || 5) * 60 * 1000;
+          return now - windowSize;
+        },
+        max: (value: { min: number; max: number }) => {
+          if (!isRealtime) return value.max;
+          return Date.now();
+        },
+        animation: true,
+        animationDurationUpdate: 300,
+        animationEasingUpdate: 'linear'
       },
       yAxis: {
         type: "value",
@@ -345,25 +367,25 @@ export function useChartRenderer({
         nameLocation: "middle",
         nameGap: 40,
         nameTextStyle: {
-          color: theme === "dark" ? "#fff" : undefined,
+          color: currentTheme === "dark" ? "#fff" : undefined,
         },
         min: 0,
         scale: true,
         axisLabel: {
           show: true,
-          color: theme === "dark" ? "#ccc" : undefined,
+          color: currentTheme === "dark" ? "#ccc" : undefined,
         },
         axisLine: {
           lineStyle: {
-            color: theme === "dark" ? "#444" : "#ccc",
+            color: currentTheme === "dark" ? "#444" : "#ccc",
           },
         },
         splitLine: {
           show: true,
           lineStyle: {
             type: "dashed",
-            opacity: theme === "dark" ? 0.2 : 0.3,
-            color: theme === "dark" ? "#444" : "#ddd",
+            opacity: currentTheme === "dark" ? 0.2 : 0.3,
+            color: currentTheme === "dark" ? "#444" : "#ddd",
           },
         },
       },
@@ -377,10 +399,13 @@ export function useChartRenderer({
       series: [
         {
           name: "일반 요청",
-          type: "scatter",        
-          progressive: 1000,          
-          progressiveThreshold: 5000, 
+          type: "scatter",
+          progressive: 200,
+          progressiveThreshold: 500,
           progressiveRepaint: true,
+          animationDelay: (idx: number) => {
+            return isRealtime ? 0 : idx * 5;
+          },
           symbolSize: (value: number[]) => {
             if (!value || value.length < 2) return symbolSizes?.min || 8;
             
@@ -456,6 +481,15 @@ export function useChartRenderer({
           name: "고지연 요청",
           type: "effectScatter",
           symbol: "circle",
+          showEffectOn: 'render',
+          rippleEffect: {
+            brushType: "stroke",
+            scale: isRealtime ? 2.5 : 4,
+            period: isRealtime ? 5 : 4
+          },
+          animationDelay: (idx: number) => {
+            return isRealtime ? 0 : idx * 10;
+          },
           symbolSize: (value: number[]) => {
             if (!value || value.length < 2) return symbolSizes?.effectMin || 15;
             
@@ -479,12 +513,6 @@ export function useChartRenderer({
             const maxSize = symbolSizes?.effectMax || 30;
             
             return minSize + Math.min(thresholdRatio * 8, maxSize - minSize);
-          },
-          showEffectOn: "render",
-          rippleEffect: {
-            brushType: "stroke",
-            scale: 4,
-            period: 4
           },
           itemStyle: {
             color: (params: any) => {
@@ -524,28 +552,29 @@ export function useChartRenderer({
           },
           data: legendState.highLatency ? data.highLatencyData : [],
         },
-      ] as any, // series 타입 에러 방지를 위해 any로 처리
+      ],
     } as any;
   }, [
     mergedConfig, 
-    theme, 
+    currentTheme, 
     data, 
     legendState, 
     serviceThresholds, 
-    getTooltipFormatter
+    getTooltipFormatter,
+    isRealtime
   ]);
   
-  // Initialize chart instance
+  // Initialize chart instance - SSR Safe
   const initChart = useCallback(() => {
-    // Guard conditions
-    if (isInitializingRef.current || !isMountedRef.current || !chartContainerRef.current) {
+    // SSR 환경이거나 이미 초기화 중이면 건너뛰기
+    if (isSSR || isInitializingRef.current || !isMountedRef.current || !chartContainerRef.current) {
       return null;
     }
     
     try {
       isInitializingRef.current = true;
       
-      // Dispose previous instance
+      // 이전 차트 인스턴스 정리
       if (chartInstanceRef.current) {
         try {
           chartInstanceRef.current.dispose();
@@ -555,77 +584,107 @@ export function useChartRenderer({
         }
       }
       
-      // Create new chart
+      // 마운트 상태 재확인
       if (!isMountedRef.current || !chartContainerRef.current) {
         return null;
       }
       
-      const chartInstance = echarts.init(
+      // 차트 인스턴스 초기화 옵션
+      // const initOptions: echarts.InitOptions = {
+      const initOptions: any = {
+        renderer: 'canvas',
+        devicePixelRatio: window.devicePixelRatio,
+        useDirtyRect: true,
+        locale: 'KO'
+      };
+      
+      // 새 차트 인스턴스 생성
+      const instance = echarts.init(
         chartContainerRef.current,
-        theme === "dark" ? "dark" : undefined,
+        currentTheme === "dark" ? "dark" : undefined,
+        initOptions
       );
       
-      chartInstanceRef.current = chartInstance;
+      chartInstanceRef.current = instance;
       
-      // Set initial options
-      chartInstance.setOption(getChartOptions());
+      // 차트 옵션 설정
+      const options = getChartOptions();
+      instance.setOption(options);
       
-      // 브러시 선택 이벤트 리스너 등록 - 여기서 명시적 추가
-      chartInstance.off('brushselected');
-      chartInstance.on('brushselected', handleBrushSelected);
+      // 브러시 선택 이벤트 리스너 등록
+      if (onBrushSelected) {
+        instance.on('brushselected', handleBrushSelected);
+      }
       
       // 클릭 이벤트 핸들러 등록
       if (onDataPointClick) {
-        chartInstance.off('click');
-        chartInstance.on('click', function (params) {
+        instance.on('click', function (params) {
           if (params && params.value && Array.isArray(params.value) && params.value.length > 0) {
-            const timestamp = params.value[0] as number;
-            onDataPointClick(timestamp);
+            onDataPointClick(params.value[0]);
           }
         });
       }
       
-      return chartInstance;
+      // 리사이즈 이벤트 설정
+      const handleResize = () => {
+        if (chartInstanceRef.current && isMountedRef.current) {
+          chartInstanceRef.current.resize();
+        }
+      };
+      
+      window.addEventListener('resize', handleResize);
+      
+      // 정리 함수 반환
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        
+        if (chartInstanceRef.current) {
+          chartInstanceRef.current.off('brushselected');
+          chartInstanceRef.current.off('click');
+          
+          try {
+            chartInstanceRef.current.dispose();
+          } catch (e) {
+            console.error('Failed to dispose chart instance:', e);
+          }
+          chartInstanceRef.current = null;
+        }
+      };
     } catch (error) {
-      console.error("Error initializing chart:", error);
+      console.error('Error initializing chart:', error);
       return null;
     } finally {
       isInitializingRef.current = false;
     }
-  }, [theme, getChartOptions, handleBrushSelected, onDataPointClick]);
+  }, [
+    isSSR, 
+    currentTheme, 
+    getChartOptions, 
+    handleBrushSelected, 
+    onBrushSelected, 
+    onDataPointClick
+  ]);
   
-  // Handle resize
-  const handleResize = useMemo(() => 
-    debounce(() => {
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.resize();
-      }
-    }, 250), 
-  []);
-  
-  // Initialize chart on mount
+  // Initialize chart on mount - Client only
   useEffect(() => {
-    if (!isMountedRef.current) return;
+    // SSR 환경이면 건너뛰기
+    if (isSSR) return;
     
-    // Initialize chart with slight delay
-    const initTimer = setTimeout(() => {
-      initChart();
-      setIsReady(true);
-    }, 100);
-    
-    // Add resize listener
-    window.addEventListener("resize", handleResize);
+    const timer = setTimeout(() => {
+      if (isMountedRef.current) {
+        initChart();
+        setIsReady(true);
+      }
+    }, 50);
     
     return () => {
-      clearTimeout(initTimer);
-      window.removeEventListener("resize", handleResize);
-      handleResize.cancel();
+      clearTimeout(timer);
     };
-  }, [initChart, handleResize]);
+  }, [isSSR, initChart]);
   
-  // Update chart when data or config changes
+  // 데이터 또는 설정 변경 시 차트 업데이트
   useEffect(() => {
-    if (!chartInstanceRef.current || !isReady) return;
+    if (!chartInstanceRef.current || !isReady || isSSR) return;
     
     try {
       setIsLoading(true);
@@ -636,73 +695,169 @@ export function useChartRenderer({
         chartInstanceRef.current.on('brushselected', handleBrushSelected);
       }
       
-      // Update chart options
-      chartInstanceRef.current.setOption({
-        series: [
-          { 
-            data: legendState.normal ? data.timeSeriesData : [],
-          },
-          { 
-            data: legendState.highLatency ? data.highLatencyData : [],
-          },
-        ],
-      });
+      // 데이터가 있는지 확인
+      const hasTimeSeriesData = data.timeSeriesData && data.timeSeriesData.length > 0;
+      const hasHighLatencyData = data.highLatencyData && data.highLatencyData.length > 0;
       
-      // Auto adjust axis ranges if data available
-      if (data.timeSeriesData.length > 0 || data.highLatencyData.length > 0) {
+      if (hasTimeSeriesData || hasHighLatencyData) {
+        // 모든 데이터 포인트 통합
         const allPoints = [
-          ...data.timeSeriesData,
-          ...data.highLatencyData,
+          ...(legendState.normal && data.timeSeriesData ? data.timeSeriesData : []),
+          ...(legendState.highLatency && data.highLatencyData ? data.highLatencyData : []),
         ];
         
         if (allPoints.length > 0) {
-          // Calculate time axis range
+          // 타임스탬프 범위 계산
           const timestamps = allPoints.map(point => point[0]);
-          const minTime = Math.min(...timestamps);
-          const maxTime = Math.max(...timestamps);
-          
-          // Calculate latency axis range with margin
           const latencies = allPoints.map(point => point[1]);
-          const maxLatency = Math.max(...latencies, 1) * 1.2; // 20% margin
+          const currentMinTime = Math.min(...timestamps);
+          const currentMaxTime = Math.max(...timestamps);
+          const maxLatency = Math.max(...latencies, 1) * 1.2; // 20% 여유
           
-          // Set axis ranges
-          chartInstanceRef.current.setOption({
-            xAxis: { min: minTime, max: maxTime },
-            yAxis: { min: 0, max: maxLatency },
+          // 이전 x축 범위 가져오기 (없으면 현재 계산된 범위 사용)
+          const prevOption = chartInstanceRef.current.getOption();
+          console.log(">>> prevOption.xAxis: ", prevOption.xAxis);
+          const prevXAxis = (prevOption.xAxis as any[])?.[0] || {};
+          const prevMinTime = prevXAxis.min as number;
+          const prevMaxTime = prevXAxis.max as number;
+          
+          // 새로운 시간 범위 계산
+          let newMinTime = currentMinTime;
+          let newMaxTime = currentMaxTime;
+          
+          // 실시간 모드이고 이전 범위가 있는 경우
+          if (isRealtime && prevMinTime !== undefined && prevMaxTime !== undefined) {
+            // 윈도우 크기 유지 (시간 이동)
+            const timeWindow = prevMaxTime - prevMinTime;
+            
+            // 새 데이터가 이전 최대 시간보다 큰 경우에만 이동
+            if (currentMaxTime > prevMaxTime) {
+              newMinTime = currentMaxTime - timeWindow;
+              newMaxTime = currentMaxTime;
+            } else {
+              // 변경 없이 이전 범위 유지
+              newMinTime = prevMinTime;
+              newMaxTime = prevMaxTime;
+            }
+          }
+          
+          // 현재 범위 저장
+          prevRangeRef.current = {
+            min: newMinTime,
+            max: newMaxTime
+          };
+          
+          // 현재 데이터 저장
+          prevSeriesDataRef.current = {
+            timeSeriesData: [...(data.timeSeriesData || [])],
+            highLatencyData: [...(data.highLatencyData || [])]
+          };
+          
+          // 업데이트 옵션 생성
+          const updateOption = {
+            series: [
+              { 
+                // 기본 series는 항상 배열의 첫 번째 요소여야 함
+                name: "일반 요청",
+                type: "scatter",
+                data: legendState.normal ? data.timeSeriesData : [],
+                // 증분 업데이트 설정
+                progressive: 200,
+                progressiveThreshold: 500,
+                animation: !isRealtime,
+              },
+              { 
+                // highlight series는 항상 배열의 두 번째 요소여야 함
+                name: "고지연 요청",
+                type: "effectScatter",
+                data: legendState.highLatency ? data.highLatencyData : [],
+                animation: !isRealtime,
+              },
+            ],
+            xAxis: {
+              min: newMinTime,
+              max: newMaxTime,
+              // 애니메이션 설정
+              animation: isRealtime,
+              animationDurationUpdate: 300,
+              animationEasingUpdate: 'linear'
+            },
+            yAxis: {
+              min: 0,
+              max: maxLatency,
+              animation: false
+            },
+            // 차트 업데이트 시 트랜지션 설정
+            transition: isRealtime ? ['xAxis'] : [],
+            // notMerge: false 설정으로 부분 업데이트만 적용
+          };
+          
+          // 차트 인스턴스 업데이트
+          chartInstanceRef.current.setOption(updateOption, {
+            notMerge: false,
+            replaceMerge: ['series'],
+            lazyUpdate: true,
+            silent: isRealtime // 실시간 모드에서는 불필요한 이벤트 발생 최소화
           });
         }
+      } else {
+        // 데이터가 없는 경우 빈 시리즈 설정
+        chartInstanceRef.current.setOption({
+          series: [
+            { 
+              name: "일반 요청",
+              type: "scatter",
+              data: []
+            },
+            { 
+              name: "고지연 요청",
+              type: "effectScatter",
+              data: []
+            }
+          ]
+        }, {
+          notMerge: false
+        });
       }
     } catch (error) {
-      console.error("Error updating chart:", error);
+      console.error("차트 업데이트 중 오류:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [data, isReady, legendState, handleBrushSelected, onBrushSelected]);
+  }, [
+    data, 
+    isReady, 
+    legendState, 
+    handleBrushSelected, 
+    onBrushSelected, 
+    isRealtime,
+    isSSR
+  ]);
   
-  // Update for theme changes
+  // 테마 변경 시 차트 재초기화
   useEffect(() => {
-    if (!isReady || !chartInstanceRef.current) return;
+    if (!isReady || !chartInstanceRef.current || isSSR) return;
     
-    // Delay theme update to ensure DOM is ready
-    const themeTimer = setTimeout(() => {
+    // 테마 변경 시 차트 재초기화
+    const timer = setTimeout(() => {
       if (!isMountedRef.current) return;
       
       try {
-        // Reinitialize chart with new theme
         initChart();
       } catch (error) {
-        console.error("Error updating chart theme:", error);
+        console.error("테마 변경 시 차트 재초기화 오류:", error);
       }
     }, 100);
     
-    return () => clearTimeout(themeTimer);
-  }, [theme, initChart, isReady]);
+    return () => clearTimeout(timer);
+  }, [currentTheme, initChart, isReady, isSSR]);
   
   return {
     chartContainerRef,
     chartHeight: mergedConfig.height,
     isLoading,
     isReady,
+    isSSR,
     setIsLoading
   };
 }

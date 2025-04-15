@@ -1,7 +1,7 @@
-"use client";
-import React, { useState, useCallback } from "react";
-import { SearchIcon, XIcon } from "lucide-react";
-import { Button } from "@heroui/button";
+'use client';
+import React, { useState, useCallback } from 'react';
+import { SearchIcon, XIcon } from 'lucide-react';
+import { Button } from '@heroui/button';
 
 interface SearchBarProps {
   placeholder?: string;
@@ -12,11 +12,11 @@ interface SearchBarProps {
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({
-  placeholder = "검색어를 입력하세요...",
-  value = "",
+  placeholder = '검색어를 입력하세요...',
+  value = '',
   onChange,
   onSearch,
-  className = "",
+  className = '',
 }) => {
   const [searchValue, setSearchValue] = useState(value);
 
@@ -27,13 +27,13 @@ const SearchBar: React.FC<SearchBarProps> = ({
       setSearchValue(newValue);
       onChange?.(newValue);
     },
-    [onChange],
+    [onChange]
   );
 
   const handleClear = useCallback(() => {
-    setSearchValue("");
-    onChange?.("");
-    onSearch?.("");
+    setSearchValue('');
+    onChange?.('');
+    onSearch?.('');
   }, [onChange, onSearch]);
 
   const handleSubmit = useCallback(
@@ -41,7 +41,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
       e.preventDefault();
       onSearch?.(searchValue);
     },
-    [searchValue, onSearch],
+    [searchValue, onSearch]
   );
 
   return (
@@ -50,6 +50,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
         <SearchIcon className="absolute left-3 text-gray-400" size={18} />
         <input
           aria-label="검색어를 입력하세요..."
+          role="search"
           className="w-full pl-10 pr-10 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           placeholder={placeholder}
           type="text"
@@ -58,6 +59,9 @@ const SearchBar: React.FC<SearchBarProps> = ({
         />
         {searchValue && (
           <Button
+            aria-label="검색어 지우기"
+            role="button"
+            size="sm"
             className="absolute right-10 text-gray-400 hover:text-gray-600"
             type="button"
             onPress={handleClear}
@@ -65,13 +69,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
             <XIcon size={18} />
           </Button>
         )}
-        <Button
-          aria-label="검색"
-          className="absolute right-1"
-          color="primary"
-          size="sm"
-          type="submit"
-        >
+        <Button role="button" aria-label="검색" className="absolute right-1" color="primary" size="sm" type="submit">
           검색
         </Button>
       </div>

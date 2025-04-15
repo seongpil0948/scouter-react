@@ -221,7 +221,6 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
     [sortField, sortDirection]
   );
 
-  // Handle removing a filter
   const handleRemoveFilter = useCallback(
     (type: string, value?: string) => {
       switch (type) {
@@ -235,12 +234,14 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
           break;
         case 'service':
           if (value) {
-            setSelectedServices(selectedServices.filter((s) => s !== value));
+            const newServices = selectedServices.filter((s) => s !== value);
+            setSelectedServices(newServices);
           }
           break;
         case 'status':
           if (value) {
-            setSelectedStatuses(selectedStatuses.filter((s) => s !== value));
+            const newStatuses = selectedStatuses.filter((s) => s !== value) as ('OK' | 'ERROR' | 'UNSET')[];
+            setSelectedStatuses(newStatuses);
           }
           break;
         case 'minDuration':
@@ -258,7 +259,8 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
           setLimit(100);
           break;
       }
-      onFilterChange?.();
+      // 필터 변경 즉시 반영
+      setTimeout(() => onFilterChange?.(), 0);
     },
     [
       setSearchQuery,

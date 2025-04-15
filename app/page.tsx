@@ -1,18 +1,51 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { useState, useCallback, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 
 import { useFilterStore } from '@/lib/store/telemetryStore';
 import { useChartStore } from '@/lib/store/chartStore';
-import { useTraceData, RefreshIntervalOption, RealtimeRangeOption } from '@/lib/hooks/useTraceData'; // 개선된 훅 사용
+import { useTraceData, RefreshIntervalOption, RealtimeRangeOption } from '@/lib/hooks/useTraceData';
 
-import TraceVisualization from '@/components/traces/TraceVisualization';
-import TraceFilter from '@/components/traces/TraceFilter';
 import { Card, CardBody } from '@heroui/card';
 import { Button } from '@heroui/button';
 import { List, ArrowRight, Clock } from 'lucide-react';
-import DateRangePicker from '@/components/shared/DateRangePicker';
 import { ThemeSwitch } from '@/components/shared/theme-switch';
+import { Skeleton } from '@heroui/skeleton';
+
+// 클라이언트 사이드에서만 로드하도록 dynamic import
+const TraceFilter = dynamic(() => import('@/components/traces/TraceFilter'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+      <Skeleton className="h-10 w-40 mb-2" />
+      <div className="flex flex-wrap gap-2">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-8 w-32" />
+      </div>
+    </div>
+  ),
+});
+
+// 클라이언트 사이드에서만 로드하도록 dynamic import
+const TraceVisualization = dynamic(() => import('@/components/traces/TraceVisualization'), {
+  ssr: false,
+  loading: () => (
+    <Card className="w-full">
+      <CardBody className="p-4">
+        <Skeleton className="h-8 w-64 mb-4" />
+        <Skeleton className="h-[500px] w-full rounded" />
+      </CardBody>
+    </Card>
+  ),
+});
+
+// SSR에서 사용 가능한 단순 DateRangePicker
+const DateRangePicker = dynamic(() => import('@/components/shared/DateRangePicker'), {
+  ssr: true,
+  loading: () => <Skeleton className="h-10 w-80" />,
+});
 
 export default function Home() {
   const router = useRouter();
@@ -37,7 +70,7 @@ export default function Home() {
     rootSpansOnly: true,
   });
 
-  const [chartConfig] = useState<ChartConfig>({
+  const [chartConfig, setChartConfig] = useState<ChartConfig>({
     height: 500,
     title: '실시간 요청 지연 시간',
     latencyThreshold: 300,
@@ -53,7 +86,20 @@ export default function Home() {
       type: 'rect',
       mode: 'multiple',
     },
+    // 실시간 모드 관련 추가 설정
+    autoUpdate: false, // 초기값은 비활성화
   });
+
+  // 실시간 모드 상태 변경 시 chartConfig 업데이트
+  useEffect(() => {
+    if (isRealtime !== chartConfig.autoUpdate) {
+      setChartConfig((prev) => ({
+        ...prev,
+        autoUpdate: isRealtime,
+        realtimeRange: realtimeRange,
+      }));
+    }
+  }, [isRealtime, chartConfig.autoUpdate, realtimeRange]);
 
   // 트레이스 상세 보기 핸들러
   const handleTraceSelect = useCallback(
@@ -95,11 +141,17 @@ export default function Home() {
     [setRefreshInterval, refreshInterval]
   );
 
-  // 실시간 조회 범위 변경 - 디바운스 추가
+  // 실시간 조회 범위 변경 - 디바운스 추가 및 chartConfig 동기화
   const handleRealtimeRangeChange = useCallback(
     (range: RealtimeRangeOption) => {
       if (range === realtimeRange) return; // 같은 값이면 변경하지 않음
       setRealtimeRange(range);
+
+      // Chart 설정도 함께 업데이트
+      setChartConfig((prev) => ({
+        ...prev,
+        realtimeRange: range,
+      }));
     },
     [setRealtimeRange, realtimeRange]
   );

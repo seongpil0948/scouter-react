@@ -2,18 +2,6 @@
 import { LimitOption, SortDirection, SortField } from "@/lib/store/traceFilterStore";
 import { SelectFilter } from "@/lib/store/chartStore";
 
-/**
- * 트레이스 필터 파라미터를 API URL로 변환
- * @param baseUrl - 기본 API URL
- * @param filters - 필터 객체
- * @param timeRange - 시간 범위 객체
- * @param limit - 결과 수 제한
- * @param sortField - 정렬 필드
- * @param sortDirection - 정렬 방향
- * @param offset - 페이지네이션 오프셋
- * @param additionalParams - 추가 파라미터 (rootSpansOnly 등)
- * @returns 완성된 API URL 문자열
- */
 export function buildTraceApiUrl(
   baseUrl: string,
   filters: {
@@ -33,6 +21,7 @@ export function buildTraceApiUrl(
 ): string {
   const params = new URLSearchParams();
 
+  // 기본 파라미터 설정
   params.append("startTime", timeRange.startTime.toString());
   params.append("endTime", timeRange.endTime.toString());
   params.append("limit", limit.toString());
@@ -41,22 +30,28 @@ export function buildTraceApiUrl(
     params.append("offset", offset.toString());
   }
   
+  // 정렬 파라미터 설정
   params.append("sortField", sortField);
   params.append("sortDirection", sortDirection);
 
+  // 중요: 다중 선택 파라미터는 같은 이름으로 여러 번 추가해야 함
   if (filters.selectedServices && filters.selectedServices.length > 0) {
+    // 배열 처리를 위해 clear 후 각각 추가
     filters.selectedServices.forEach(service => {
       params.append("serviceName", service);
     });
   }
+  
   if (filters.selectedStatuses && filters.selectedStatuses.length > 0) {
     filters.selectedStatuses.forEach(status => {
       params.append("status", status);
     });
   }
+  
   if (filters.searchQuery && filters.searchQuery !== "") {
     params.append("query", filters.searchQuery);
   }
+  
   if (filters.minDuration !== undefined) {
     params.append("minDuration", filters.minDuration.toString());
   }
@@ -64,11 +59,13 @@ export function buildTraceApiUrl(
   if (filters.maxDuration !== undefined) {
     params.append("maxDuration", filters.maxDuration.toString());
   }
+  
+  // 속성 키 필터 처리 강화
   if (filters.attributeKey && filters.attributeKey !== "") {
-    params.append("attributeKey", filters.attributeKey);
+    params.append("attributeKey", filters.attributeKey.trim());
   }
     
-  // 추가 파라미터 처리 (루트 스팬만 조회 여부 등)
+  // 추가 파라미터 처리
   Object.entries(additionalParams).forEach(([key, value]) => {
     params.append(key, value.toString());
   });

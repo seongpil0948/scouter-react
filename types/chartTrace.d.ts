@@ -25,6 +25,7 @@ interface ChartConfig {
     throttleType?: 'debounce' | 'throttle';
     throttleDelay?: number;
   };
+  realtimeRange?: number; // 실시간 모드에서의 시간 범위
 }
 
 interface TraceVisualizationProps {

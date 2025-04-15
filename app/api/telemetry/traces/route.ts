@@ -98,6 +98,17 @@ export async function GET(request: NextRequest) {
       paramIndex++;
     }
 
+    if (attributeKey) {
+      // JSONB 속성 존재 여부 검사 쿼리 수정
+      whereClause += ` AND attributes ? $${paramIndex}`;
+      // 속성 키를 트림하여 파라미터에 추가
+      queryParams.push(attributeKey.trim());
+      paramIndex++;
+      
+      // 디버그용 로그 추가
+      console.log(`속성 키 필터 적용: "${attributeKey.trim()}"`);
+    }    
+
     // 정렬 필드 및 방향 생성 (SQL Injection 방지)
     const validSortFields: {[key: string]: string} = {
       "startTime": "start_time",

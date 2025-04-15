@@ -6,6 +6,7 @@ import { Badge } from '@heroui/badge';
 import { Button } from '@heroui/button';
 import { Select, SelectItem } from '@heroui/select';
 import { Filter, Clock, AlertTriangle, CheckCircle, BarChart2, Trash2 } from 'lucide-react';
+import { useIsSSR } from '@react-aria/ssr';
 
 import TraceChart from './TraceChart';
 import SelectedTracesTable from './SelectedTracesTable';
@@ -17,6 +18,19 @@ import { SharedSelection } from '@heroui/system';
 import { isEmpty } from 'lodash-es';
 import { SelectedTraceData } from './types';
 
+// Selection에서 Set을 추출하는 타입 가드
+const isSelectionSet = (selection: any): selection is Set<any> => {
+  return selection instanceof Set;
+};
+
+// key를 문자열로 변환
+const keyToString = (key: any): string => {
+  if (typeof key === 'string' || typeof key === 'number') {
+    return String(key);
+  }
+  return '';
+};
+
 const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   traceData,
   config = {},
@@ -26,56 +40,75 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   onFilterChange,
   onTraceSelect,
 }) => {
+  const isSSR = useIsSSR();
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedTraces, setSelectedTraces] = useState<SelectedTraceData[]>([]);
   const { legendState, dataFilters, updateDataFilters } = useChartStore();
 
-  const serviceThresholds = useMemo(() => buildServiceThresholds(traceData, propServiceThresholds), [traceData, propServiceThresholds]);
+  // SSR 환경에서는 빈 배열을 사용하여 하이드레이션 이슈 방지
+  const safeTraceData = useMemo(() => {
+    return isSSR ? [] : Array.isArray(traceData) ? traceData : [];
+  }, [traceData, isSSR]);
 
-  // 필터링은 이제 백엔드에서 처리되므로 filteredData는 바로 traceData 사용
-  const filteredData = traceData;
+  // 서비스 임계값 계산
+  const serviceThresholds = useMemo(
+    () => buildServiceThresholds(safeTraceData, propServiceThresholds),
+    [safeTraceData, propServiceThresholds]
+  );
+
+  // 필터링은 이제 백엔드에서 처리되므로 filteredData는 바로 safeTraceData 사용
+  const filteredData = safeTraceData;
 
   // Extract unique services for filtering
   const services = useMemo(() => {
+    if (isSSR) return [];
+
     const serviceSet = new Set<string>();
-    traceData.forEach((trace) => {
+    safeTraceData.forEach((trace) => {
       if (trace.serviceName) {
         serviceSet.add(trace.serviceName);
       }
     });
     return Array.from(serviceSet).sort();
-  }, [traceData]);
+  }, [safeTraceData, isSSR]);
 
-  const serviceStats = useMemo(() => calculateServiceStats(filteredData, serviceThresholds), [filteredData, serviceThresholds]);
+  const serviceStats = useMemo(
+    () => (isSSR ? new Map() : calculateServiceStats(filteredData, serviceThresholds)),
+    [filteredData, serviceThresholds, isSSR]
+  );
 
-  const latencyStats = useMemo(() => calculateLatencyStats(filteredData), [filteredData]);
+  const latencyStats = useMemo(
+    () => (isSSR ? { min: 0, max: 0, avg: 0, p90: 0, p95: 0, p99: 0 } : calculateLatencyStats(filteredData)),
+    [filteredData, isSSR]
+  );
 
   const chartData = useMemo(() => {
+    if (isSSR) {
+      return {
+        timeSeriesData: [],
+        highLatencyData: [],
+        metadataMap: new Map(),
+      };
+    }
+
     setIsProcessing(true);
     const result = processTraceData(filteredData, config.latencyThreshold, serviceThresholds);
     setIsProcessing(false);
     return result;
-  }, [filteredData, config.latencyThreshold, serviceThresholds]);
+  }, [filteredData, config.latencyThreshold, serviceThresholds, isSSR]);
 
-  // 브러시 선택 핸들러 - 완전히 개선된 버전
-  const handleBrushSelected = useCallback((selectedData: SelectedTraceData[]) => {
-    console.log('Selected traces from brush:', selectedData.length);
+  // 브러시 선택 핸들러
+  const handleBrushSelected = useCallback(
+    (selectedData: SelectedTraceData[]) => {
+      if (isSSR) return;
 
-    // 선택된 항목이 있을 때만 상태 업데이트
-    if (selectedData.length > 0) {
-      // 디버깅용 로그
-      console.log('First selected trace:', {
-        traceId: selectedData[0].traceId,
-        name: selectedData[0].name,
-        timestamp: new Date(selectedData[0].timestamp).toISOString(),
-      });
-
-      // 상태 업데이트
-      setSelectedTraces(selectedData);
-    } else {
-      console.log('No traces selected from brush');
-    }
-  }, []);
+      // 선택된 항목이 있을 때만 상태 업데이트
+      if (selectedData.length > 0) {
+        setSelectedTraces(selectedData);
+      }
+    },
+    [isSSR]
+  );
 
   // 선택 초기화 핸들러
   const handleClearSelection = useCallback(() => {
@@ -111,15 +144,27 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   }, [updateDataFilters, onFilterChange]);
 
   const getSelectedServiceKeys = useCallback(() => {
-    return dataFilters.serviceFilter === 'all' ? new Set<Key>([]) : dataFilters.serviceFilter;
+    if (dataFilters.serviceFilter === 'all') return new Set<string>([]);
+    if (isSelectionSet(dataFilters.serviceFilter)) {
+      // Set을 안전하게 문자열 Set으로 변환
+      return new Set(Array.from(dataFilters.serviceFilter).map(keyToString));
+    }
+    return new Set<string>([]);
   }, [dataFilters.serviceFilter]);
 
   const getSelectedStatusKeys = useCallback(() => {
-    return dataFilters.statusFilter === 'all' ? new Set<Key>([]) : dataFilters.statusFilter;
+    if (dataFilters.statusFilter === 'all') return new Set<string>([]);
+    if (isSelectionSet(dataFilters.statusFilter)) {
+      // Set을 안전하게 문자열 Set으로 변환
+      return new Set(Array.from(dataFilters.statusFilter).map(keyToString));
+    }
+    return new Set<string>([]);
   }, [dataFilters.statusFilter]);
 
   const handleServiceSelectionChange = useCallback(
     (keys: SharedSelection) => {
+      if (isSSR) return;
+
       const serviceFilter = isEmpty(keys) ? 'all' : keys;
       const newFilters = { ...dataFilters, serviceFilter };
       updateDataFilters({ serviceFilter });
@@ -129,11 +174,13 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         onFilterChange(newFilters);
       }
     },
-    [dataFilters, updateDataFilters, onFilterChange]
+    [dataFilters, updateDataFilters, onFilterChange, isSSR]
   );
 
   const handleStatusSelectionChange = useCallback(
     (keys: SharedSelection) => {
+      if (isSSR) return;
+
       const statusFilter = isEmpty(keys) ? 'all' : keys;
       const newFilters = { ...dataFilters, statusFilter };
       updateDataFilters({ statusFilter });
@@ -143,7 +190,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         onFilterChange(newFilters);
       }
     },
-    [dataFilters, updateDataFilters, onFilterChange]
+    [dataFilters, updateDataFilters, onFilterChange, isSSR]
   );
 
   // Calculate display values
@@ -157,6 +204,9 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     dataFilters.maxDuration !== undefined;
 
   const isLoading = isProcessing;
+
+  // 실시간 모드 감지
+  const isRealtime = useMemo(() => config.autoUpdate === true, [config.autoUpdate]);
 
   return (
     <div className="space-y-4">
@@ -179,6 +229,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                   onSelectionChange={handleServiceSelectionChange}
                   size="sm"
                   className="w-48"
+                  aria-label="서비스 필터"
                 >
                   {services.map((service) => (
                     <SelectItem key={service} textValue={service}>
@@ -195,6 +246,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                   onSelectionChange={handleStatusSelectionChange}
                   size="sm"
                   className="w-32"
+                  aria-label="상태 필터"
                 >
                   <SelectItem key="OK" textValue="성공">
                     성공
@@ -206,7 +258,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
 
                 {/* Reset Filters Button */}
                 {hasFilters && (
-                  <Button size="sm" variant="ghost" onPress={handleResetFilters}>
+                  <Button size="sm" variant="ghost" onPress={handleResetFilters} aria-label="필터 초기화">
                     필터 초기화
                   </Button>
                 )}
@@ -220,23 +272,23 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
           {filteredData.length > 0 && !isLoading && (
             <div className="mb-4 flex flex-wrap gap-4">
               <div className="flex items-center">
-                <Clock size={16} className="mr-1 text-blue-500" />
+                <Clock size={16} className="mr-1 text-blue-500" aria-hidden="true" />
                 <span className="text-sm">평균: {formatDuration(latencyStats.avg)}</span>
               </div>
               <div className="flex items-center">
-                <BarChart2 size={16} className="mr-1 text-blue-500" />
+                <BarChart2 size={16} className="mr-1 text-blue-500" aria-hidden="true" />
                 <span className="text-sm">P90: {formatDuration(latencyStats.p90)}</span>
               </div>
               <div className="flex items-center">
-                <AlertTriangle size={16} className="mr-1 text-orange-500" />
+                <AlertTriangle size={16} className="mr-1 text-orange-500" aria-hidden="true" />
                 <span className="text-sm">고지연: {highLatencyCount}개</span>
               </div>
               <div className="flex items-center">
-                <CheckCircle size={16} className="mr-1 text-green-500" />
+                <CheckCircle size={16} className="mr-1 text-green-500" aria-hidden="true" />
                 <span className="text-sm">성공: {successCount}개</span>
               </div>
               <div className="flex items-center">
-                <AlertTriangle size={16} className="mr-1 text-red-500" />
+                <AlertTriangle size={16} className="mr-1 text-red-500" aria-hidden="true" />
                 <span className="text-sm">오류: {errorCount}개</span>
               </div>
 
@@ -246,8 +298,8 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                   <Badge color="primary" variant="flat">
                     선택됨: {selectedTraces.length}개
                   </Badge>
-                  <Button size="sm" variant="ghost" color="danger" className="ml-2" onPress={handleClearSelection}>
-                    <Trash2 size={14} />
+                  <Button size="sm" variant="ghost" color="danger" className="ml-2" onPress={handleClearSelection} aria-label="선택 해제">
+                    <Trash2 size={14} aria-hidden="true" />
                     <span className="ml-1">선택 해제</span>
                   </Button>
                 </div>
@@ -290,6 +342,8 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                 throttleDelay: 300,
                 ...config.brush,
               },
+              // 실시간 모드 추가 정보
+              realtimeRange: config.realtimeRange || 5,
             }}
             onBrushSelected={handleBrushSelected}
             loading={isLoading}
@@ -300,9 +354,21 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
           {/* No Data Message */}
           {filteredData.length === 0 && !isLoading && (
             <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-              <p>
-                {hasFilters ? '필터 조건에 맞는 데이터가 없습니다.' : '데이터가 로드되지 않았습니다. 데이터가 수신되면 여기에 표시됩니다.'}
-              </p>
+              {isRealtime ? (
+                <div className="flex flex-col items-center">
+                  <div className="animate-pulse flex items-center justify-center mb-4">
+                    <Clock size={24} className="mr-2 text-blue-500" aria-hidden="true" />
+                    <span className="text-blue-500">실시간 데이터 대기 중...</span>
+                  </div>
+                  <p>{hasFilters ? '필터 조건에 맞는 데이터가 아직 수신되지 않았습니다.' : '데이터가 수신되면 여기에 표시됩니다.'}</p>
+                </div>
+              ) : (
+                <p>
+                  {hasFilters
+                    ? '필터 조건에 맞는 데이터가 없습니다.'
+                    : '데이터가 로드되지 않았습니다. 데이터가 수신되면 여기에 표시됩니다.'}
+                </p>
+              )}
             </div>
           )}
 
@@ -311,13 +377,13 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
               <div className="flex flex-wrap justify-between gap-2">
                 <span>표시된 트레이스: {filteredData.length}개</span>
 
-                {dataFilters.serviceFilter !== 'all' && (
+                {dataFilters.serviceFilter !== 'all' && isSelectionSet(dataFilters.serviceFilter) && (
                   <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
                     서비스: {Array.from(dataFilters.serviceFilter).join(', ')}
                   </Badge>
                 )}
 
-                {dataFilters.statusFilter !== 'all' && (
+                {dataFilters.statusFilter !== 'all' && isSelectionSet(dataFilters.statusFilter) && (
                   <Badge
                     className={
                       dataFilters.statusFilter.has('ERROR')
@@ -338,9 +404,13 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
 
                 {/* Reset Filters Link */}
                 {hasFilters && (
-                  <span className="text-xs text-blue-600 cursor-pointer dark:text-blue-400" onClick={handleResetFilters}>
+                  <button
+                    className="text-xs text-blue-600 cursor-pointer dark:text-blue-400"
+                    onClick={handleResetFilters}
+                    aria-label="필터 초기화"
+                  >
                     필터 초기화
-                  </span>
+                  </button>
                 )}
               </div>
             </div>
