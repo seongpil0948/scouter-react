@@ -19,7 +19,7 @@ COPY . .
 
 # Next.js telemetry 비활성화
 ENV NEXT_TELEMETRY_DISABLED=1
-
+COPY .env.production .env.production
 # 빌드 실행
 RUN corepack enable pnpm && pnpm run build
 
@@ -48,9 +48,6 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-
-# 헬스 체크를 위한 설정
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD wget -qO- http://localhost:3000/ || exit 1
 
 # 시작 명령
 CMD ["node", "server.js"]
