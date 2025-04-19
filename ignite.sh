@@ -2,7 +2,7 @@
 
 # 컨테이너 이름 설정
 CONTAINER_NAME="scouter-react"
-IMAGE_NAME="scouter-react"
+IMAGE_NAME="scouter-react:latest"
 PORT="3000"
 
 # 색상 설정
@@ -12,6 +12,8 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 echo -e "${YELLOW}Starting ${CONTAINER_NAME} deployment script...${NC}"
+
+docker build -t ${IMAGE_NAME} .
 
 # 1. 기존 컨테이너 확인 및 삭제
 echo -e "${YELLOW}Checking for existing ${CONTAINER_NAME} container...${NC}"
@@ -24,19 +26,20 @@ else
     echo -e "${GREEN}No existing container found.${NC}"
 fi
 
-# 2. 이미지 확인
-echo -e "${YELLOW}Checking for ${IMAGE_NAME} image...${NC}"
-if [[ "$(docker images -q ${IMAGE_NAME} 2> /dev/null)" == "" ]]; then
-    echo -e "${RED}Image ${IMAGE_NAME} not found! Building image first...${NC}"
-    docker build -t ${IMAGE_NAME} .
+
+# # 2. 이미지 확인
+# echo -e "${YELLOW}Checking for ${IMAGE_NAME} image...${NC}"
+# if [[ "$(docker images -q ${IMAGE_NAME} 2> /dev/null)" == "" ]]; then
+#     echo -e "${RED}Image ${IMAGE_NAME} not found! Building image first...${NC}"
+#     docker build -t ${IMAGE_NAME} .
     
-    # 빌드 실패 시 종료
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Failed to build image. Exiting.${NC}"
-        exit 1
-    fi
-    echo -e "${GREEN}Image built successfully.${NC}"
-fi
+#     # 빌드 실패 시 종료
+#     if [ $? -ne 0 ]; then
+#         echo -e "${RED}Failed to build image. Exiting.${NC}"
+#         exit 1
+#     fi
+#     echo -e "${GREEN}Image built successfully.${NC}"
+# fi
 
 # 3. 컨테이너 실행
 echo -e "${YELLOW}Starting new ${CONTAINER_NAME} container...${NC}"
