@@ -11,29 +11,29 @@ export async function GET(request: NextRequest) {
   const endTime = searchParams.get("endTime")
     ? parseInt(searchParams.get("endTime")!)
     : Date.now();
-  
+
   const serviceNames = searchParams.getAll("serviceName") || [];
   const statuses = searchParams.getAll("status") || [];
-  
+
   const minDuration = searchParams.get("minDuration")
     ? parseInt(searchParams.get("minDuration")!)
     : undefined;
   const maxDuration = searchParams.get("maxDuration")
     ? parseInt(searchParams.get("maxDuration")!)
     : undefined;
-    
+
   const limit = searchParams.get("limit")
     ? parseInt(searchParams.get("limit")!)
     : 100; // 기본값 100개
-    
+
   const sortField = searchParams.get("sortField") || "start_time";
   const sortDirection = searchParams.get("sortDirection") || "DESC";
-  
+
   const offset = searchParams.get("offset")
     ? parseInt(searchParams.get("offset")!)
     : 0;
   const attributeKey = searchParams.get("attributeKey") || null;
-  
+
   // 새로 추가: 루트 스팬만 조회할지 여부 (기본값 true)
   const rootSpansOnly = searchParams.get("rootSpansOnly") !== "false";
 
@@ -44,17 +44,19 @@ export async function GET(request: NextRequest) {
 
     // 기본 WHERE 조건
     let whereClause = "start_time >= $1 AND start_time <= $2";
-    
+
     // 루트 스팬만 조회하는 조건 추가 (parent_span_id가 NULL 또는 빈 문자열)
     if (rootSpansOnly) {
       whereClause += " AND (parent_span_id IS NULL OR parent_span_id = '')";
     }
-    
+
     let paramIndex = 3;
 
     // 서비스명 필터 (복수 선택 지원)
     if (serviceNames.length > 0) {
-      const placeholders = serviceNames.map((_, i) => `$${paramIndex + i}`).join(", ");
+      const placeholders = serviceNames
+        .map((_, i) => `$${paramIndex + i}`)
+        .join(", ");
       whereClause += ` AND service_name IN (${placeholders})`;
       queryParams.push(...serviceNames);
       paramIndex += serviceNames.length;
@@ -62,7 +64,9 @@ export async function GET(request: NextRequest) {
 
     // 상태 필터 (복수 선택 지원)
     if (statuses.length > 0) {
-      const placeholders = statuses.map((_, i) => `$${paramIndex + i}`).join(", ");
+      const placeholders = statuses
+        .map((_, i) => `$${paramIndex + i}`)
+        .join(", ");
       whereClause += ` AND status IN (${placeholders})`;
       queryParams.push(...statuses);
       paramIndex += statuses.length;
@@ -82,11 +86,22 @@ export async function GET(request: NextRequest) {
     }
 
     if (attributeKey) {
-      whereClause += ` AND attributes ? $${paramIndex}`;
-      queryParams.push(attributeKey);
-      paramIndex++;
-    }
+      // 여러 종류의 JSONB 검색 지원 (키 존재 여부, 포함 관계 등)
+      whereClause += ` AND (
+      attributes ? $${paramIndex} OR 
+      attributes::text ILIKE $${paramIndex + 1}
+    )`;
 
+      // 키 존재 여부 검사를 위한 값 (트림 처리)
+      queryParams.push(attributeKey.trim());
+      // 텍스트 검색을 위한 값 (키 값 찾기 위함)
+      queryParams.push(`%"${attributeKey.trim()}"%`);
+      paramIndex += 2;
+      // 디버그 로깅 추가
+      console.log(
+        `속성 키 필터 적용: "${attributeKey.trim()}" (파라미터 인덱스: ${paramIndex - 2}, ${paramIndex - 1})`
+      );
+    }
     // 검색어 필터 (name, serviceName 또는 traceId에 검색어 포함)
     if (query !== "*") {
       whereClause += ` AND (
@@ -104,22 +119,23 @@ export async function GET(request: NextRequest) {
       // 속성 키를 트림하여 파라미터에 추가
       queryParams.push(attributeKey.trim());
       paramIndex++;
-      
+
       // 디버그용 로그 추가
       console.log(`속성 키 필터 적용: "${attributeKey.trim()}"`);
-    }    
+    }
 
     // 정렬 필드 및 방향 생성 (SQL Injection 방지)
-    const validSortFields: {[key: string]: string} = {
-      "startTime": "start_time",
-      "duration": "duration",
-      "serviceName": "service_name",
-      "status": "status",
-      "name": "name"
+    const validSortFields: { [key: string]: string } = {
+      startTime: "start_time",
+      duration: "duration",
+      serviceName: "service_name",
+      status: "status",
+      name: "name",
     };
-    
+
     const validSortField = validSortFields[sortField] || "start_time";
-    const validSortDirection = sortDirection.toUpperCase() === "ASC" ? "ASC" : "DESC";
+    const validSortDirection =
+      sortDirection.toUpperCase() === "ASC" ? "ASC" : "DESC";
 
     // 트레이스 조회 쿼리
     const tracesQuery = `
@@ -159,7 +175,7 @@ export async function GET(request: NextRequest) {
     // 중요: countQuery에는 limit/offset 파라미터가 필요하지 않으므로
     // 쿼리에 실제로 사용된 파라미터만 전달합니다
     const countParams = queryParams.slice(0, paramIndex - 1);
-    
+
     // 쿼리 병렬 실행
     const [tracesResult, countResult] = await Promise.all([
       pool.query(tracesQuery, queryParams),
@@ -168,7 +184,7 @@ export async function GET(request: NextRequest) {
 
     const traces = tracesResult.rows.filter(isTraceItem);
     const totalCount = parseInt(countResult.rows[0].total);
-    
+
     const response = {
       traces,
       total: totalCount,
@@ -176,9 +192,9 @@ export async function GET(request: NextRequest) {
       offset,
       timeRange: {
         startTime,
-        endTime
+        endTime,
       },
-      rootSpansOnly // 응답에 루트 스팬 필터링 정보 포함
+      rootSpansOnly, // 응답에 루트 스팬 필터링 정보 포함
     };
 
     return NextResponse.json(response);
@@ -190,7 +206,7 @@ export async function GET(request: NextRequest) {
         error: "트레이스를 검색하는 중 오류가 발생했습니다",
         details: (error as Error).message,
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

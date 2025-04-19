@@ -69,20 +69,24 @@ export const AttributeKeyField = ({
       value={attributeKeyInput}
       onChange={(e) => setAttributeKeyInput(e.target.value)}
       onBlur={() => {
-        // 공백 제거 및 트림 처리
+        // 공백 제거 처리 후 상태 업데이트
         const trimmedValue = attributeKeyInput.trim();
         if (trimmedValue !== attributeKey) {
+          console.debug(`속성 키 변경: "${attributeKey}" -> "${trimmedValue}"`);
           setAttributeKey(trimmedValue);
-          onFilterChange?.();
+          // 필터 변경 즉시 적용
+          setTimeout(() => onFilterChange?.(), 0);
         }
       }}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
-          // 엔터키 누를 때도 공백 제거 및 트림 처리
+          e.preventDefault(); // 폼 전송 방지
           const trimmedValue = attributeKeyInput.trim();
           if (trimmedValue !== attributeKey) {
+            console.debug(`엔터 키로 속성 키 변경: "${attributeKey}" -> "${trimmedValue}"`);
             setAttributeKey(trimmedValue);
-            onFilterChange?.();
+            // 필터 변경 즉시 적용
+            setTimeout(() => onFilterChange?.(), 0);
           }
         }
       }}

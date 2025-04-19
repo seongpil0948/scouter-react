@@ -156,15 +156,16 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
 
   // Handle attribute key change (with debouncing)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (attributeKeyInput !== attributeKey) {
-        setAttributeKey(attributeKeyInput);
+    // attributeKey가 변경되면 즉시 필터 적용
+    if (attributeKeyInput !== attributeKey && attributeKey.trim() !== '') {
+      const timer = setTimeout(() => {
+        console.debug(`속성 키 상태 변경 감지: "${attributeKey}"`);
         onFilterChange?.();
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [attributeKeyInput, attributeKey, setAttributeKey, onFilterChange]);
+      }, 300); // 약간의 지연으로 여러 번 호출 방지
+      
+      return () => clearTimeout(timer);
+    }
+  }, [attributeKey, attributeKeyInput, onFilterChange]);
 
   // Handle min duration change
   const handleMinDurationChange = useCallback(() => {

@@ -59,8 +59,7 @@ export function buildTraceApiUrl(
     params.append("maxDuration", filters.maxDuration.toString());
   }
   
-  // 속성 키 필터 처리 강화
-  if (filters.attributeKey && filters.attributeKey !== "") {
+  if (filters.attributeKey && filters.attributeKey.trim() !== "") {
     params.append("attributeKey", filters.attributeKey.trim());
   }
     
@@ -69,8 +68,9 @@ export function buildTraceApiUrl(
     params.append(key, value.toString());
   });
 
-  // URL 구성
-  return `${baseUrl}?${params.toString()}`;
+  const url = `${baseUrl}?${params.toString()}`;
+  console.debug(`생성된 API URL: ${url}`);
+  return url;
 }
 
 /**
