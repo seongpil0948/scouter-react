@@ -15,6 +15,7 @@ import FilterSummary from './FilterSummary';
 import { useChartStore } from '@/lib/store/chartStore';
 import { buildServiceThresholds, calculateServiceStats, calculateLatencyStats, processTraceData } from './utils';
 import { SelectedTraceData } from './types';
+import { DEFAULT_FILTER } from './constant';
 
 const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   traceData,

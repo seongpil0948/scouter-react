@@ -7,6 +7,7 @@ import { Switch } from '@heroui/switch';
 import { Search, X, GitCommit } from 'lucide-react';
 
 import { formatDuration } from '@/lib/utils/dateFormatter';
+import { Chip } from '@heroui/chip';
 
 export const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -19,15 +20,16 @@ export const SearchField = ({
   setSearchInput: (value: string) => void;
   onSearch?: () => void;
 }) => (
-  <div className="flex-1 relative min-w-[220px]">
-    <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+  <div className="min-w-[180px] max-w-[300px]">
     <Input
       placeholder="이름, 서비스, 트레이스 ID 검색"
       value={searchInput}
       onChange={(e) => setSearchInput(e.target.value)}
       className="pl-10 w-full"
       aria-label="이름, 서비스, 트레이스 ID 검색"
+      label="ID 검색"
       role="search"
+      size='sm'
     />
     {searchInput && (
       <button
@@ -63,6 +65,7 @@ export const AttributeKeyField = ({
       role="textbox"
       type="text"
       placeholder="예: sql.query, http.method"
+      size='sm'
       value={attributeKeyInput}
       onChange={(e) => setAttributeKeyInput(e.target.value)}
       onBlur={() => {
@@ -83,7 +86,6 @@ export const AttributeKeyField = ({
           }
         }
       }}
-      size="sm"
       className="w-full"
     />
   </div>
@@ -125,7 +127,7 @@ export const DurationInput = ({
 export const RootSpansToggle = ({ rootSpansOnly, onChange }: { rootSpansOnly: boolean; onChange: (value: boolean) => void }) => (
   <div className="min-w-[140px] flex flex-col justify-end">
     <div className="flex items-center gap-2 py-2">
-      <Switch aria-label="루트 스팬만 보기" role="switch" isSelected={rootSpansOnly} onValueChange={onChange} size="sm" />
+      <Switch aria-label="루트 스팬만 보기" role="switch" isSelected={rootSpansOnly} onValueChange={onChange} size="md" />
       <div className="flex items-center text-sm">
         <GitCommit size={16} className="mr-1 text-gray-500" />
         <span>루트 스팬만 보기</span>
@@ -224,64 +226,55 @@ export const ActiveFilters = ({
 }) => (
   <div className="flex flex-wrap gap-2 mt-2">
     {filters.searchQuery && (
-      <Badge color="primary" variant="flat" className="flex items-center gap-1">
+      <Chip color="primary" variant="bordered">
         검색어: {filters.searchQuery}
-        <X size={14} className="ml-1 cursor-pointer" onClick={() => onRemoveFilter('searchQuery')} />
-      </Badge>
+      </Chip>
     )}
 
     {filters.attributeKey && (
-      <Badge color="primary" variant="flat" className="flex items-center gap-1">
+      <Chip color="primary" variant="flat" >
         속성 키: {filters.attributeKey}
-        <X size={14} className="ml-1 cursor-pointer" onClick={() => onRemoveFilter('attributeKey')} />
-      </Badge>
+      </Chip>
     )}
 
     {filters.selectedServices?.map((service) => (
-      <Badge key={service} color="secondary" variant="flat" className="flex items-center gap-1">
+      <Chip key={service} color="secondary" variant="bordered" >
         서비스: {service}
-        <X size={14} className="ml-1 cursor-pointer" onClick={() => onRemoveFilter('service', service)} />
-      </Badge>
+      </Chip>
     ))}
 
     {filters.selectedStatuses?.map((status) => (
-      <Badge
+      <Chip
         key={status}
         color={status === 'ERROR' ? 'danger' : status === 'OK' ? 'success' : 'default'}
-        variant="flat"
-        className="flex items-center gap-1"
+        variant="bordered"
       >
         상태: {status}
-        <X size={14} className="ml-1 cursor-pointer" onClick={() => onRemoveFilter('status', status)} />
-      </Badge>
+      </Chip>
     ))}
 
     {filters.minDuration !== undefined && (
-      <Badge color="warning" variant="flat" className="flex items-center gap-1">
+      <Chip color="warning" variant="bordered" >
         최소 지연: {formatDuration(filters.minDuration)}
-        <X size={14} className="ml-1 cursor-pointer" onClick={() => onRemoveFilter('minDuration')} />
-      </Badge>
+      </Chip>
     )}
 
     {filters.maxDuration !== undefined && (
-      <Badge color="warning" variant="flat" className="flex items-center gap-1">
+      <Chip color="warning" variant="bordered">
         최대 지연: {formatDuration(filters.maxDuration)}
-        <X size={14} className="ml-1 cursor-pointer" onClick={() => onRemoveFilter('maxDuration')} />
-      </Badge>
+      </Chip>
     )}
 
     {filters.rootSpansOnly === false && (
-      <Badge color="secondary" variant="flat" className="flex items-center gap-1">
+      <Chip color="secondary" variant="bordered">
         모든 스팬 보기
-        <X size={14} className="ml-1 cursor-pointer" onClick={() => onRemoveFilter('rootSpansOnly')} />
-      </Badge>
+      </Chip>
     )}
 
     {filters.limit !== 100 && (
-      <Badge color="default" variant="flat" className="flex items-center gap-1">
+      <Chip color="default" variant="bordered">
         표시 개수: {filters.limit}개
-        <X size={14} className="ml-1 cursor-pointer" onClick={() => onRemoveFilter('limit')} />
-      </Badge>
+      </Chip>
     )}
   </div>
 );

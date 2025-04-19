@@ -106,7 +106,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
         <div className="flex flex-wrap gap-3">
           {/* Service Filter */}
           <Select
-            label="서비스"
+            label="서비스 ㅋㅋ"
             placeholder="모든 서비스"
             selectedKeys={getSelectedServiceKeys()}
             selectionMode="multiple"

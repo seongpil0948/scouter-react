@@ -1,8 +1,12 @@
-import React, { useCallback } from 'react';
-import { Switch } from '@heroui/switch';
-import { Select, SelectItem } from '@heroui/select';
-import { Clock } from 'lucide-react';
-import { RefreshIntervalOption, RealtimeRangeOption } from '@/lib/hooks/useTraceData';
+import React, { useCallback } from "react";
+import { Switch } from "@heroui/switch";
+import { Select, SelectItem } from "@heroui/select";
+import { Clock } from "lucide-react";
+import {
+  RefreshIntervalOption,
+  RealtimeRangeOption,
+} from "@/lib/hooks/useTraceData";
+import clsx from "clsx";
 
 interface RealtimeSettingsProps {
   isRealtime: boolean;
@@ -24,7 +28,7 @@ const RealtimeSettings: React.FC<RealtimeSettingsProps> = ({
   // 실시간 갱신 간격 변경 핸들러
   const handleRefreshIntervalChange = useCallback(
     (keys: any) => {
-      if (typeof keys === 'string') return;
+      if (typeof keys === "string") return;
       const key = Array.from(keys)[0];
       const interval = parseInt(String(key)) as RefreshIntervalOption;
       if (interval !== refreshInterval) {
@@ -37,7 +41,7 @@ const RealtimeSettings: React.FC<RealtimeSettingsProps> = ({
   // 실시간 조회 범위 변경 핸들러
   const handleRealtimeRangeChange = useCallback(
     (keys: any) => {
-      if (typeof keys === 'string') return;
+      if (typeof keys === "string") return;
       const key = Array.from(keys)[0];
       const range = parseInt(String(key)) as RealtimeRangeOption;
       if (range !== realtimeRange) {
@@ -48,18 +52,25 @@ const RealtimeSettings: React.FC<RealtimeSettingsProps> = ({
   );
 
   return (
-    <div className="flex flex-col gap-2 min-w-[200px]">
-      <div className="flex items-center gap-2 py-1">
-        <Switch isSelected={isRealtime} onValueChange={onToggleRealtime} size="sm" aria-label="실시간 갱신 토글" />
-        <div className="flex items-center text-sm">
-          <Clock size={16} className={`mr-1 ${isRealtime ? 'text-blue-500' : 'text-gray-500'}`} />
-          <span className={isRealtime ? 'text-blue-500' : 'text-gray-500'}>실시간 갱신</span>
-        </div>
+    <div className="flex gap-2 min-w-[200px]">
+      <Switch
+        isSelected={isRealtime}
+        onValueChange={onToggleRealtime}
+        size="sm"
+        aria-label="실시간 갱신 토글"
+      />
+      <div className="flex items-center text-sm">
+        <Clock
+          size={16}
+          className={`mr-1 ${isRealtime ? "text-blue-500" : "text-gray-500"}`}
+        />
+        <span className={clsx(isRealtime ? "text-blue-500" : "text-gray-500", "min-w-[80px]")}>
+          실시간 갱신
+        </span>
       </div>
 
       {isRealtime && (
         <>
-          <div className="ml-6">
             <Select
               label="갱신 간격"
               aria-label="실시간 갱신 간격 선택"
@@ -81,9 +92,7 @@ const RealtimeSettings: React.FC<RealtimeSettingsProps> = ({
                 60초
               </SelectItem>
             </Select>
-          </div>
 
-          <div className="ml-6">
             <Select
               label="조회 범위"
               aria-label="실시간 조회 범위 선택"
@@ -108,7 +117,6 @@ const RealtimeSettings: React.FC<RealtimeSettingsProps> = ({
                 30분
               </SelectItem>
             </Select>
-          </div>
         </>
       )}
     </div>
