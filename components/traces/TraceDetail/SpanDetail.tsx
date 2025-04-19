@@ -11,6 +11,7 @@ import { formatDateTime } from '@/lib/utils/dateFormatter';
 import SpanAttributesViewer from './SpanAttributesViewer';
 import SqlAttributesViewer from './SqlAttributesViewer';
 import UrlAttributesViewer from './UrlAttributesViewer';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 
 interface Span {
   id: string;
@@ -36,25 +37,7 @@ interface SpanDetailProps {
 export const SpanDetail: React.FC<SpanDetailProps> = React.memo(({ span, formatDuration, childrenCount = 0, onParentClick }) => {
   const [activeTab, setActiveTab] = useState<string>('overview');
 
-  // 클립보드 복사 함수
-  const copyToClipboard = useCallback((text: string, label: string) => {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        addToast({
-          title: '복사 완료',
-          description: `${label}이(가) 클립보드에 복사되었습니다`,
-          color: 'success',
-        });
-      })
-      .catch(() => {
-        addToast({
-          title: '복사 실패',
-          description: '클립보드 접근에 실패했습니다',
-          color: 'danger',
-        });
-      });
-  }, []);
+
 
   // 상태에 따른 색상 결정
   const getStatusColor = useCallback((status?: string) => {

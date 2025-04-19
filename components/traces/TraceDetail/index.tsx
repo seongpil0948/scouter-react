@@ -16,6 +16,7 @@ import { SpanList } from './SpanList';
 import { useTraceData } from './hook/useTraceData';
 
 import { formatDateTime } from '@/lib/utils/dateFormatter';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 
 interface TraceDetailProps {
   traceId: string;
@@ -42,26 +43,6 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
     onBack?.();
     router.push('/traces');
   }, [router]);
-
-  // 클립보드 복사
-  const copyToClipboard = useCallback((text: string) => {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        addToast({
-          title: '복사 완료',
-          description: '클립보드에 복사되었습니다',
-          color: 'success',
-        });
-      })
-      .catch(() => {
-        addToast({
-          title: '복사 실패',
-          description: '클립보드 접근에 실패했습니다',
-          color: 'danger',
-        });
-      });
-  }, []);
 
   // 오류 발생 시
   if (error) {

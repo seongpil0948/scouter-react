@@ -5,6 +5,7 @@ import { Button } from '@heroui/button';
 import { Badge } from '@heroui/badge';
 import { Search, Check, X, Copy, Eye } from 'lucide-react';
 import { Tooltip } from '@heroui/tooltip';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 
 interface SpanAttributesViewerProps {
   attributes: Record<string, any> | undefined;
@@ -50,11 +51,10 @@ const SpanAttributesViewer: React.FC<SpanAttributesViewerProps> = ({ attributes,
     return groups;
   }, []);
 
-  // 값 복사 함수
-  const copyToClipboard = useCallback(
+  const copyToClipboardFormatted = useCallback(
     (key: string, value: any) => {
       const textValue = formatValue(value);
-      navigator.clipboard.writeText(textValue).then(() => {
+      copyToClipboard(textValue)?.then(() => {
         setCopiedKey(key);
         setTimeout(() => setCopiedKey(null), 2000);
       });
@@ -167,7 +167,7 @@ const SpanAttributesViewer: React.FC<SpanAttributesViewerProps> = ({ attributes,
                               </Tooltip>
                             )}
                             <Tooltip content="값 복사">
-                              <Button isIconOnly size="sm" variant="light" onPress={() => copyToClipboard(key, value)}>
+                              <Button isIconOnly size="sm" variant="light" onPress={() => copyToClipboardFormatted(key, value)}>
                                 {copiedKey === key ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
                               </Button>
                             </Tooltip>
