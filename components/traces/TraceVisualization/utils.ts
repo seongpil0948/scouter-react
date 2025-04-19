@@ -313,6 +313,23 @@ export function formatTraceInfo(trace: TraceItem, threshold: number) {
   };
 }
 
+/**
+ * Selection이 Set인지 확인하는 타입 가드
+ */
+export function isSelectionSet(selection: any): selection is Set<any> {
+  return selection instanceof Set;
+}
+
+/**
+ * key를 문자열로 변환
+ */
+export function keyToString(key: any): string {
+  if (typeof key === 'string' || typeof key === 'number') {
+    return String(key);
+  }
+  return '';
+}
+
 export default {
   DEFAULT_CHART_CONFIG,
   buildServiceThresholds,
@@ -322,5 +339,7 @@ export default {
   calculateLatencyStats,
   calculateServiceStats,
   getLatencyColor,
-  formatTraceInfo
+  formatTraceInfo,
+  isSelectionSet,
+  keyToString
 };

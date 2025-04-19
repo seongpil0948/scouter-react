@@ -7,7 +7,6 @@ import { Switch } from '@heroui/switch';
 import { Search, X, GitCommit } from 'lucide-react';
 
 import { formatDuration } from '@/lib/utils/dateFormatter';
-import { SortField } from '@/lib/store/traceFilterStore';
 
 export const fetcher = (url: string) => fetch(url).then((res) => res.json());
 

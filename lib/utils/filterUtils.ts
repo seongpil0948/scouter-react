@@ -1,5 +1,4 @@
 // lib/utils/filterUtils.ts
-import { LimitOption, SortDirection, SortField } from "@/lib/store/traceFilterStore";
 import { SelectFilter } from "@/lib/store/chartStore";
 
 export function buildTraceApiUrl(

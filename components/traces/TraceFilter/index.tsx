@@ -1,19 +1,18 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Badge } from '@heroui/badge';
 import { Button } from '@heroui/button';
 import { Select, SelectItem } from '@heroui/select';
-import { Filter, X, RefreshCw, SortAsc, SortDesc, GitCommit, Clock } from 'lucide-react';
-import { Switch } from '@heroui/switch';
+import { Filter, X, RefreshCw, SortAsc, SortDesc, GitCommit } from 'lucide-react';
 import { Tooltip } from '@heroui/tooltip';
 
-import { useTraceFilterStore, LimitOption, SortField, SortDirection } from '@/lib/store/traceFilterStore';
+import { useTraceFilterStore } from '@/lib/store/traceFilterStore';
 import { useFilterStore } from '@/lib/store/telemetryStore';
 import { buildServiceListApiUrl } from '@/lib/utils/filterUtils';
 import { useIsSSR } from '@react-aria/ssr';
 import { isEmpty } from 'lodash-es';
 import { SearchField, AttributeKeyField, DurationInput, SortButtons, ActiveFilters, RootSpansToggle } from './components';
+import RealtimeSettings from './RealtimeSettings';
 import { useDisclosure } from '@heroui/modal';
 import ModalBlushHelp from '../BrushHelp';
 import useSWR from 'swr';
@@ -280,32 +279,14 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
   // 실시간 모드 토글 처리 - 디바운스 추가
   const [isTogglingRealtime, setIsTogglingRealtime] = useState(false);
 
-  const handleToggleRealtime = useCallback(() => {
-    if (isTogglingRealtime) return; // 연속 실행 방지
-
-    setIsTogglingRealtime(true);
-    onToggleRealtime?.(!isRealtime);
-
-    // 토글 후 약간의 시간을 둬서 연속 호출 방지
-    setTimeout(() => setIsTogglingRealtime(false), 500);
-  }, [isRealtime, onToggleRealtime, isTogglingRealtime]);
-
-  // 실시간 갱신 간격 변경 핸들러 - 변경 시에만 호출
-  const handleRefreshIntervalChange = useCallback(
-    (interval: RefreshIntervalOption) => {
-      if (interval === refreshInterval) return;
-      onRefreshIntervalChange?.(interval);
+  const handleToggleRealtime = useCallback(
+    (enabled: boolean) => {
+      if (isTogglingRealtime) return;
+      setIsTogglingRealtime(true);
+      onToggleRealtime?.(enabled);
+      setTimeout(() => setIsTogglingRealtime(false), 500);
     },
-    [onRefreshIntervalChange, refreshInterval]
-  );
-
-  // 실시간 조회 범위 변경 핸들러 - 변경 시에만 호출
-  const handleRealtimeRangeChange = useCallback(
-    (range: RealtimeRangeOption) => {
-      if (range === realtimeRange) return;
-      onRealtimeRangeChange?.(range);
-    },
-    [onRealtimeRangeChange, realtimeRange]
+    [onToggleRealtime, isTogglingRealtime]
   );
 
   const disclosureHelper = useDisclosure();
@@ -382,13 +363,13 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
                 className="w-full"
               >
                 <SelectItem key="OK" textValue="성공">
-                  <Badge color="success">성공</Badge>
+                  성공
                 </SelectItem>
                 <SelectItem key="ERROR" textValue="오류">
-                  <Badge color="danger">오류</Badge>
+                  오류
                 </SelectItem>
                 <SelectItem key="UNSET" textValue="미설정">
-                  <Badge color="default">미설정</Badge>
+                  미설정
                 </SelectItem>
               </Select>
             </div>
@@ -447,78 +428,16 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
               </Select>
             </div>
 
-            {/* 실시간 모드 설정 영역 */}
+            {/* 실시간 설정 컴포넌트 사용 */}
             {onToggleRealtime && (
-              <div className="flex flex-col gap-2 min-w-[200px]">
-                <div className="flex items-center gap-2 py-1">
-                  <Switch isSelected={isRealtime} onValueChange={handleToggleRealtime} size="sm" />
-                  <div className="flex items-center text-sm">
-                    <Clock size={16} className={`mr-1 ${isRealtime ? 'text-blue-500' : 'text-gray-500'}`} />
-                    <span className={isRealtime ? 'text-blue-500' : 'text-gray-500'}>실시간 갱신</span>
-                  </div>
-                </div>
-
-                {isRealtime && onRefreshIntervalChange && (
-                  <div className="ml-6">
-                    <Select
-                      label="갱신 간격"
-                      size="sm"
-                      selectedKeys={[refreshInterval.toString()]}
-                      onSelectionChange={(keys) => {
-                        if (typeof keys === 'string') return;
-                        const key = Array.from(keys)[0];
-                        handleRefreshIntervalChange(parseInt(String(key)) as RefreshIntervalOption);
-                      }}
-                      className="w-full"
-                    >
-                      <SelectItem key="5" textValue="5초">
-                        5초
-                      </SelectItem>
-                      <SelectItem key="10" textValue="10초">
-                        10초
-                      </SelectItem>
-                      <SelectItem key="30" textValue="30초">
-                        30초
-                      </SelectItem>
-                      <SelectItem key="60" textValue="60초">
-                        60초
-                      </SelectItem>
-                    </Select>
-                  </div>
-                )}
-
-                {isRealtime && onRealtimeRangeChange && (
-                  <div className="ml-6">
-                    <Select
-                      label="조회 범위"
-                      size="sm"
-                      selectedKeys={[realtimeRange.toString()]}
-                      onSelectionChange={(keys) => {
-                        if (typeof keys === 'string') return;
-                        const key = Array.from(keys)[0];
-                        handleRealtimeRangeChange(parseInt(String(key)) as RealtimeRangeOption);
-                      }}
-                      className="w-full"
-                    >
-                      <SelectItem key="1" textValue="1분">
-                        1분
-                      </SelectItem>
-                      <SelectItem key="5" textValue="5분">
-                        5분
-                      </SelectItem>
-                      <SelectItem key="10" textValue="10분">
-                        10분
-                      </SelectItem>
-                      <SelectItem key="15" textValue="15분">
-                        15분
-                      </SelectItem>
-                      <SelectItem key="30" textValue="30분">
-                        30분
-                      </SelectItem>
-                    </Select>
-                  </div>
-                )}
-              </div>
+              <RealtimeSettings
+                isRealtime={isRealtime}
+                onToggleRealtime={handleToggleRealtime}
+                refreshInterval={refreshInterval}
+                onRefreshIntervalChange={onRefreshIntervalChange || (() => {})}
+                realtimeRange={realtimeRange}
+                onRealtimeRangeChange={onRealtimeRangeChange || (() => {})}
+              />
             )}
           </div>
 
