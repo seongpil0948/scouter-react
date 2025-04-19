@@ -32,7 +32,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   const { legendState, dataFilters, updateDataFilters } = useChartStore();
   
   // 모달 상태 관리를 위한 useDisclosure 훅 사용
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
 
   // SSR 환경에서는 빈 배열을 사용하여 하이드레이션 이슈 방지
   const safeTraceData = useMemo(() => {
@@ -108,14 +108,34 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     setSelectedTraces([]);
   }, []);
 
-  // 트레이스 상세 보기 핸들러
+  // 트레이스 상세 보기 핸들러 - 모달에서 Drawer로 전환
   const handleViewTraceDetails = useCallback(
     (traceId: string) => {
       if (onTraceSelect) {
         onTraceSelect(traceId);
+        // 모달 닫기
+        onClose();
       }
     },
-    [onTraceSelect]
+    [onTraceSelect, onOpenChange]
+  );
+
+  // 차트 데이터 포인트 클릭 핸들러
+  const handleDataPointClick = useCallback(
+    (timestamp: number) => {
+      // 해당 timestamp에 가장 가까운 트레이스 찾기
+      const closestTrace = filteredData.reduce((closest, trace) => {
+        const currentDiff = Math.abs(trace.startTime - timestamp);
+        const closestDiff = closest ? Math.abs(closest.startTime - timestamp) : Infinity;
+        
+        return currentDiff < closestDiff ? trace : closest;
+      }, null as TraceItem | null);
+      
+      if (closestTrace && onTraceSelect) {
+        onTraceSelect(closestTrace.traceId);
+      }
+    },
+    [filteredData, onTraceSelect]
   );
 
   // 계산된 값들
@@ -185,6 +205,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
               realtimeRange: config.realtimeRange || 5,
             }}
             onBrushSelected={handleBrushSelected}
+            onDataPointClick={handleDataPointClick}
             loading={isLoading}
             legendState={legendState}
             serviceThresholds={serviceThresholds}
@@ -216,7 +237,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         isOpen={isOpen}
         onOpenChange={onOpenChange}
         onClearSelection={handleClearSelection}
-        onViewDetails={onTraceSelect}
+        onViewDetails={handleViewTraceDetails}
       />
     </div>
   );

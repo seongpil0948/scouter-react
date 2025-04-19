@@ -2,16 +2,24 @@
 import { useRouter } from 'next/navigation';
 import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerBody,
+  DrawerHeader,
+} from "@heroui/drawer";
+import { X, List, ArrowRight, Clock } from 'lucide-react';
 
 import { useFilterStore } from '@/lib/store/telemetryStore';
 import { useChartStore } from '@/lib/store/chartStore';
 import { useTraceData, RefreshIntervalOption, RealtimeRangeOption } from '@/lib/hooks/useTraceData';
 
 import { Card, CardBody } from '@heroui/card';
-import { Button } from '@heroui/button';
-import { List, ArrowRight, Clock } from 'lucide-react';
 import { ThemeSwitch } from '@/components/shared/theme-switch';
 import { Skeleton } from '@heroui/skeleton';
+import TraceDetail from '@/components/traces/TraceDetail'; // 기존 TraceDetail 컴포넌트 사용
+import { Button } from '@heroui/button';
+import { useDisclosure } from '@heroui/modal';
 
 // 클라이언트 사이드에서만 로드하도록 dynamic import
 const TraceFilter = dynamic(() => import('@/components/traces/TraceFilter'), {
@@ -51,6 +59,10 @@ export default function Home() {
   const router = useRouter();
   const { timeRange } = useFilterStore();
   const { updateConfig } = useChartStore();
+  
+  // 선택된 트레이스 ID 상태 관리
+  const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
   // 개선된 useTraceData 훅 사용
   const {
@@ -101,13 +113,11 @@ export default function Home() {
     }
   }, [isRealtime, chartConfig.autoUpdate, realtimeRange]);
 
-  // 트레이스 상세 보기 핸들러
-  const handleTraceSelect = useCallback(
-    (traceId: string) => {
-      router.push(`/traces/${traceId}`);
-    },
-    [router]
-  );
+  // 트레이스 상세 보기 핸들러 - 이제 페이지 이동 대신 Drawer 사용
+  const handleTraceSelect = useCallback((traceId: string) => {
+    setSelectedTraceId(traceId);
+    onOpen(); // Drawer 열기
+  }, [onOpen]);
 
   // 시간 범위 변경 처리
   const handleTimeRangeChange = useCallback(() => {
@@ -252,6 +262,41 @@ export default function Home() {
           </Card>
         </div>
       )}
+
+      {/* 트레이스 상세 정보 Drawer */}
+      <Drawer 
+        isOpen={isOpen} 
+        onOpenChange={onOpenChange}
+        size="xl"
+        placement="right"
+        classNames={{
+          base: "max-w-[90%] sm:max-w-[800px]",
+          body: "p-0" // 패딩 제거하여 TraceDetail이 온전히 표시되도록
+        }}
+      >
+        <DrawerContent>
+          {(onClose) => (
+            <>
+              <DrawerHeader className="flex justify-between items-center border-b p-4">
+                <div className="flex items-center gap-2">
+                  <Button title="닫기" variant="light" isIconOnly onPress={onClose}>
+                    <X size={18} />
+                  </Button>
+                  <h2 className="text-xl">트레이스 상세</h2>
+                </div>
+              </DrawerHeader>
+              <DrawerBody>
+                {selectedTraceId && (
+                  <TraceDetail 
+                    traceId={selectedTraceId} 
+                    onBack={onClose} // 뒤로 가기 버튼은 Drawer 닫기로 처리
+                  />
+                )}
+              </DrawerBody>
+            </>
+          )}
+        </DrawerContent>
+      </Drawer>
     </section>
   );
 }

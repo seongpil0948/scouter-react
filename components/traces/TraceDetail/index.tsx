@@ -41,7 +41,6 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
   // 뒤로 가기
   const handleBack = useCallback(() => {
     onBack?.();
-    router.push('/traces');
   }, [router]);
 
   // 오류 발생 시
@@ -95,10 +94,10 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
       <h2 className="bg-gray-50 border-b px-6 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Button title="뒤로 가기" variant="ghost" onPress={handleBack}>
+            {onBack && <Button title="뒤로 가기" variant="ghost" onPress={handleBack}>
               <ArrowLeft size={18} />
               <span className="sr-only">뒤로 가기</span>
-            </Button>
+            </Button>}
             <h2 className="text-xl">트레이스 상세</h2>
           </div>
 
