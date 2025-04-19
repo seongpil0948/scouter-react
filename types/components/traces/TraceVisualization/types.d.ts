@@ -1,7 +1,6 @@
-// components/traces/TraceVisualization/types.ts
 
 // 브러시 선택 이벤트 인터페이스
-export interface BrushSelectedEvent {
+interface BrushSelectedEvent {
   selected: {
     dataIndex: number[];
     seriesIndex: number[];
@@ -22,7 +21,7 @@ export interface BrushSelectedEvent {
 }
 
 // 선택된 데이터를 위한 인터페이스
-export interface SelectedTraceData {
+interface SelectedTraceData {
   timestamp: number;
   latency: number;
   serviceName: string;
@@ -33,7 +32,7 @@ export interface SelectedTraceData {
 }
 
 // 브러시 설정 인터페이스
-export interface BrushConfig {
+interface BrushConfig {
   enabled: boolean;
   type: 'rect' | 'polygon' | 'lineX' | 'lineY';
   mode: 'single' | 'multiple';
@@ -42,10 +41,10 @@ export interface BrushConfig {
 }
 
 // ECharts BrushToolboxIconType 타입 정의
-export type BrushToolboxIconType = 'rect' | 'polygon' | 'lineX' | 'lineY' | 'keep' | 'clear';
+type BrushToolboxIconType = 'rect' | 'polygon' | 'lineX' | 'lineY' | 'keep' | 'clear';
 
 // 차트 렌더러 옵션 확장
-export interface ExtendedChartRendererOptions {
+interface ExtendedChartRendererOptions {
   data: {
     timeSeriesData: DataPoint[];
     highLatencyData: DataPoint[];
@@ -64,7 +63,7 @@ export interface ExtendedChartRendererOptions {
 }
 
 // 차트 컴포넌트 속성 확장
-export interface ExtendedTraceChartProps {
+interface ExtendedTraceChartProps {
   data: {
     timeSeriesData: DataPoint[];
     highLatencyData: DataPoint[];

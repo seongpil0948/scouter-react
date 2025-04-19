@@ -3,9 +3,10 @@
 import React, { useMemo, useCallback, useState } from 'react';
 import { Card, CardBody } from '@heroui/card';
 import { useIsSSR } from '@react-aria/ssr';
+import { useDisclosure } from '@heroui/modal';
 
 import TraceChart from './TraceChart';
-import SelectedTracesTable from './SelectedTracesTable';
+import SelectedTracesModal from './SelectedTracesModal';
 import StatsSummary from './StatsSummary';
 import FilterControls from './FilterControls';
 import ThresholdDisplay from './ThresholdDisplay';
@@ -14,7 +15,6 @@ import FilterSummary from './FilterSummary';
 
 import { useChartStore } from '@/lib/store/chartStore';
 import { buildServiceThresholds, calculateServiceStats, calculateLatencyStats, processTraceData } from './utils';
-import { SelectedTraceData } from './types';
 import { DEFAULT_FILTER } from './constant';
 
 const TraceVisualization: React.FC<TraceVisualizationProps> = ({
@@ -30,6 +30,9 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedTraces, setSelectedTraces] = useState<SelectedTraceData[]>([]);
   const { legendState, dataFilters, updateDataFilters } = useChartStore();
+  
+  // 모달 상태 관리를 위한 useDisclosure 훅 사용
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
   // SSR 환경에서는 빈 배열을 사용하여 하이드레이션 이슈 방지
   const safeTraceData = useMemo(() => {
@@ -91,12 +94,13 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     (selectedData: SelectedTraceData[]) => {
       if (isSSR) return;
 
-      // 선택된 항목이 있을 때만 상태 업데이트
+      // 선택된 항목이 있을 때만 상태 업데이트 및 모달 오픈
       if (selectedData.length > 0) {
         setSelectedTraces(selectedData);
+        onOpen(); // 모달 열기
       }
     },
-    [isSSR]
+    [isSSR, onOpen]
   );
 
   // 선택 초기화 핸들러
@@ -206,14 +210,14 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         </CardBody>
       </Card>
 
-      {/* 선택된 트레이스 테이블 */}
-      {selectedTraces.length > 0 && (
-        <SelectedTracesTable
-          selectedTraces={selectedTraces}
-          onClearSelection={handleClearSelection}
-          onViewDetails={onTraceSelect}
-        />
-      )}
+      {/* 선택된 트레이스 모달 */}
+      <SelectedTracesModal
+        selectedTraces={selectedTraces}
+        isOpen={isOpen}
+        onOpenChange={onOpenChange}
+        onClearSelection={handleClearSelection}
+        onViewDetails={onTraceSelect}
+      />
     </div>
   );
 };

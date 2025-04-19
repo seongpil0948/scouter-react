@@ -6,7 +6,6 @@ import { useTheme } from 'next-themes';
 import { useIsSSR } from '@react-aria/ssr';
 import { DEFAULT_CHART_CONFIG } from '../utils';
 import { generateChartOptions } from '../chartOptions';
-import { SelectedTraceData } from '../types';
 
 
 

@@ -7,7 +7,6 @@ import { Button } from '@heroui/button';
 import { Share2, X, ArrowRight, Eye } from 'lucide-react';
 import { addToast } from '@heroui/toast';
 import { formatDateTime, formatDuration } from '@/lib/utils/dateFormatter';
-import { SelectedTraceData } from './types';
 
 interface SelectedTracesTableProps {
   selectedTraces: SelectedTraceData[];
@@ -53,16 +52,6 @@ const SelectedTracesTable: React.FC<SelectedTracesTableProps> = ({ selectedTrace
 
   return (
     <div className={`mt-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm ${className}`} data-testid="selected-traces-table">
-      <div className="p-3 bg-gray-50 dark:bg-gray-750 border-b flex justify-between items-center">
-        <div className="flex items-center">
-          <h3 className="text-base font-medium">선택된 트레이스 ({selectedTraces.length}개)</h3>
-        </div>
-        <Button size="sm" variant="ghost" color="danger" onPress={onClearSelection}>
-          <X size={16} className="mr-1" />
-          선택 해제
-        </Button>
-      </div>
-
       <div className="overflow-x-auto">
         <Table aria-label="선택된 트레이스 목록" isHeaderSticky removeWrapper isStriped selectionMode="none">
           <TableHeader>
