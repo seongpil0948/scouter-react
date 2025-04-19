@@ -6,6 +6,8 @@ import { Badge } from '@heroui/badge';
 import { Card, CardBody, CardHeader } from '@heroui/card';
 import { Tooltip } from '@heroui/tooltip';
 import { Accordion, AccordionItem } from '@heroui/accordion';
+import { Snippet } from '@heroui/snippet';
+import { Chip } from '@heroui/chip';
 import { Search, Check, X, Copy, Eye } from 'lucide-react';
 import { copyToClipboard } from '@/lib/utils/clipboard';
 
@@ -27,12 +29,12 @@ const SpanAttributesViewer: React.FC<SpanAttributesViewerProps> = ({ attributes,
   }, []);
 
   // Get color by value type
-  const getValueColor = useCallback((value: any): string => {
-    if (value === null || value === undefined) return 'text-gray-400';
-    if (typeof value === 'number') return 'text-blue-600 dark:text-blue-400';
-    if (typeof value === 'boolean') return 'text-purple-600 dark:text-purple-400';
-    if (typeof value === 'object') return 'text-green-600 dark:text-green-400';
-    return 'text-gray-800 dark:text-gray-200';
+  const getValueTypeColor = useCallback((value: any): "default" | "primary" | "secondary" | "success" | "warning" | "danger" => {
+    if (value === null || value === undefined) return 'default';
+    if (typeof value === 'number') return 'primary';
+    if (typeof value === 'boolean') return 'secondary';
+    if (typeof value === 'object') return 'success';
+    return 'default';
   }, []);
 
   // Group attributes by prefix
@@ -108,7 +110,7 @@ const SpanAttributesViewer: React.FC<SpanAttributesViewerProps> = ({ attributes,
     return (
       <Card className={className}>
         <CardBody className="py-8 text-center">
-          <p className="text-gray-500">This span has no attributes.</p>
+          <p className="text-gray-500">이 스팬에는 속성이 없습니다.</p>
         </CardBody>
       </Card>
     );
@@ -117,12 +119,12 @@ const SpanAttributesViewer: React.FC<SpanAttributesViewerProps> = ({ attributes,
   return (
     <Card className={className}>
       {/* Search bar */}
-      <CardHeader className="sticky top-0 z-10 bg-white dark:bg-gray-800 p-2">
+      <CardHeader className="p-2 sticky top-0 z-10 bg-white dark:bg-gray-800">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
           <Input
-            className="pl-10 w-full"
-            placeholder="Search attribute name or value..."
+            startContent={<Search className="text-gray-400" size={16} />}
+            className="w-full"
+            placeholder="속성 이름 또는 값 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             endContent={
@@ -140,7 +142,7 @@ const SpanAttributesViewer: React.FC<SpanAttributesViewerProps> = ({ attributes,
       <CardBody className="p-0 max-h-96 overflow-auto">
         {Object.keys(groupedKeys).length === 0 ? (
           <div className="p-4 text-center">
-            <p className="text-gray-500">No results found.</p>
+            <p className="text-gray-500">검색 결과가 없습니다.</p>
           </div>
         ) : (
           <Accordion>
@@ -161,6 +163,7 @@ const SpanAttributesViewer: React.FC<SpanAttributesViewerProps> = ({ attributes,
                     const isLongValue = formattedValue.length > 50 || formattedValue.includes('\n');
                     const isExpanded = expandedValues.has(key);
                     const displayValue = isLongValue && !isExpanded ? formattedValue.substring(0, 50) + '...' : formattedValue;
+                    const valueTypeColor = getValueTypeColor(value);
 
                     return (
                       <div key={key} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-750">
@@ -168,25 +171,39 @@ const SpanAttributesViewer: React.FC<SpanAttributesViewerProps> = ({ attributes,
                           <div className="font-mono text-sm text-gray-700 dark:text-gray-300 break-all">{key}</div>
                           <div className="flex gap-1 ml-2">
                             {isLongValue && (
-                              <Tooltip content={isExpanded ? 'Collapse' : 'Expand'}>
+                              <Tooltip content={isExpanded ? '접기' : '펼치기'}>
                                 <Button isIconOnly size="sm" variant="light" onPress={() => toggleExpand(key)}>
                                   <Eye size={14} />
                                 </Button>
                               </Tooltip>
                             )}
-                            <Tooltip content="Copy value">
+                            <Tooltip content="값 복사">
                               <Button isIconOnly size="sm" variant="light" onPress={() => copyToClipboardFormatted(key, value)}>
-                                {copiedKey === key ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                                {copiedKey === key ? <Check size={14} className="text-success" /> : <Copy size={14} />}
                               </Button>
                             </Tooltip>
                           </div>
                         </div>
 
-                        <div className={`mt-1 font-mono text-sm break-all whitespace-pre-wrap ${getValueColor(value)}`}>
+                        <div className="mt-1 font-mono text-sm break-all">
                           {typeof value === 'object' && value !== null ? (
-                            <pre className="bg-gray-50 dark:bg-gray-800 p-2 rounded-md overflow-auto">{displayValue}</pre>
+                            <Snippet 
+                              hideSymbol
+                              variant="flat"
+                              color="secondary"
+                              className="w-full"
+                              size="sm"
+                            >
+                              {displayValue}
+                            </Snippet>
                           ) : (
-                            displayValue
+                            <Chip
+                              variant="flat"
+                              color={valueTypeColor}
+                              className="w-full justify-start font-mono"
+                            >
+                              {displayValue}
+                            </Chip>
                           )}
                         </div>
                       </div>

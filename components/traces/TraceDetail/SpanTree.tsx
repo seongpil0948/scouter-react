@@ -1,5 +1,8 @@
 "use client";
 import React, { useCallback } from "react";
+import { Badge } from "@heroui/badge";
+import { TableRow, TableCell } from "@heroui/table";
+import { Tooltip } from "@heroui/tooltip";
 
 interface Span {
   id: string;
@@ -44,10 +47,9 @@ export const SpanTree: React.FC<SpanTreeProps> = React.memo(
   }) => {
     // 상태에 따른 색상
     const getStatusColor = useCallback((status?: string) => {
-      if (status === "ERROR") return "bg-red-500";
-      if (status === "OK") return "bg-green-500";
-
-      return "bg-blue-500";
+      if (status === 'ERROR') return 'danger';
+      if (status === 'OK') return 'success';
+      return 'primary';
     }, []);
 
     // 계층 구조 렌더링 함수
@@ -67,50 +69,45 @@ export const SpanTree: React.FC<SpanTreeProps> = React.memo(
 
         return (
           <React.Fragment key={span.spanId}>
-            <div
-              className={`mb-1 cursor-pointer hover:bg-gray-50 ${isSelected ? "bg-blue-50" : ""}`}
-              role="button"
-              tabIndex={0}
+            <TableRow 
+              key={span.spanId} 
+              className={`${isSelected ? "bg-primary-50 dark:bg-primary-900/20" : ""} hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer`}
               onClick={() => setSelectedSpanId(span.spanId)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setSelectedSpanId(span.spanId);
-                }
-              }}
             >
-              <div className="flex items-center p-2">
-                <div className="w-3/12 flex items-center overflow-hidden">
-                  <div style={{ marginLeft: `${depth * 16}px` }}>
-                    <span
-                      aria-hidden="true"
-                      className={`w-2 h-2 inline-block rounded-full mr-2 ${getStatusColor(span.status)}`}
-                    />
-                    <span className="font-mono text-sm truncate">
-                      {span.name}
+              <TableCell className="font-mono text-sm">
+                <div style={{ marginLeft: `${depth * 16}px` }} className="flex items-center">
+                  
+                  <Tooltip content={span.name}>
+                    <span className="truncate max-w-xs inline-block">
+                      {span.name.length > 40 ? `${span.name.substring(0, 40)}...` : span.name}
                     </span>
-                  </div>
+                  </Tooltip>
                 </div>
-                <div className="w-2/12 font-mono text-sm truncate">
+              </TableCell>
+              <TableCell>
+                <Badge color="primary" variant="flat">
                   {span.serviceName}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <div className="relative h-6">
+                  <Tooltip content={`${formatDuration(span.duration)} (${span.duration}ms)`}>
+                    <div
+                      aria-hidden="true"
+                      className="absolute top-1/2 transform -translate-y-1/2 h-2 rounded-sm"
+                      style={{
+                        width: `${Math.min(spanWidth, 100)}%`,
+                        left: `${Math.min(spanOffset, 100)}%`,
+                        backgroundColor: span.status === 'ERROR' ? 'var(--danger)' : 'var(--primary)',
+                      }}
+                    />
+                  </Tooltip>
                 </div>
-                <div className="w-5/12 relative h-6">
-                  <div
-                    aria-hidden="true"
-                    className="absolute top-1/2 transform -translate-y-1/2 h-2 rounded-sm"
-                    style={{
-                      width: `${Math.min(spanWidth, 100)}%`,
-                      left: `${Math.min(spanOffset, 100)}%`,
-                      backgroundColor: getStatusColor(span.status),
-                    }}
-                    title={`지연 시간: ${formatDuration(span.duration)}`}
-                  />
-                </div>
-                <div className="w-2/12 text-right font-mono text-sm">
-                  {formatDuration(span.duration)}
-                </div>
-              </div>
-            </div>
+              </TableCell>
+              <TableCell align="right" className="font-mono">
+                {formatDuration(span.duration)}
+              </TableCell>
+            </TableRow>
             {children.map((child) =>
               renderSpanTree(child, depth + 1, childrenMap),
             )}
