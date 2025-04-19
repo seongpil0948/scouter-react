@@ -4,8 +4,10 @@ import React, { useMemo } from 'react';
 import { Tabs, Tab } from '@heroui/tabs';
 import { Badge } from '@heroui/badge';
 import { Button } from '@heroui/button';
-import { Card, CardBody } from '@heroui/card';
+import { Card, CardBody, CardHeader } from '@heroui/card';
 import { Tooltip } from '@heroui/tooltip';
+import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from '@heroui/table';
+import { Link } from '@heroui/link';
 import { Database, Globe, AlertTriangle, Clock, ChevronRight, Code, BarChart2, Filter } from 'lucide-react';
 
 import { analyzeTraceSpans } from '@/lib/utils/spanAnalyzer';
@@ -22,18 +24,18 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
   onSelectSpan,
   onToggleView
 }) => {
-  // 스팬 데이터 분석
+  // Analyze span data
   const analytics = useMemo(() => {
     return analyzeTraceSpans(spans);
   }, [spans]);
   
-  // 서비스별 통계 정렬
+  // Sort services by count
   const sortedServices = useMemo(() => {
     return Object.entries(analytics.byService)
       .sort((a, b) => b[1].count - a[1].count);
   }, [analytics.byService]);
   
-  // 상태코드별 통계에 색상 지정
+  // Get status code color
   const getStatusCodeColor = (code: string) => {
     if (code.startsWith('2')) return 'success';
     if (code.startsWith('3')) return 'warning';
@@ -42,12 +44,12 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
     return 'default';
   };
   
-  // SQL 탭 내용
+  // SQL tab content
   const renderSqlTab = () => {
     if (analytics.sql.count === 0) {
       return (
         <div className="text-center py-6 text-gray-500">
-          SQL 관련 정보가 없습니다
+          No SQL related information found
         </div>
       );
     }
@@ -55,32 +57,40 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md">
-            <div className="text-sm text-gray-500">SQL 쿼리 수</div>
-            <div className="text-2xl font-bold">{analytics.sql.count}</div>
-          </div>
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md">
-            <div className="text-sm text-gray-500">평균 실행 시간</div>
-            <div className="text-2xl font-bold">{formatDuration(analytics.sql.avgTime)}</div>
-          </div>
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md">
-            <div className="text-sm text-gray-500">최대 실행 시간</div>
-            <div className="text-2xl font-bold">{formatDuration(analytics.sql.maxTime)}</div>
-          </div>
+          <Card className="bg-blue-50 dark:bg-blue-900/20">
+            <CardBody className="p-4">
+              <div className="text-sm text-gray-500">SQL Query Count</div>
+              <div className="text-2xl font-bold">{analytics.sql.count}</div>
+            </CardBody>
+          </Card>
+          <Card className="bg-blue-50 dark:bg-blue-900/20">
+            <CardBody className="p-4">
+              <div className="text-sm text-gray-500">Average Execution Time</div>
+              <div className="text-2xl font-bold">{formatDuration(analytics.sql.avgTime)}</div>
+            </CardBody>
+          </Card>
+          <Card className="bg-blue-50 dark:bg-blue-900/20">
+            <CardBody className="p-4">
+              <div className="text-sm text-gray-500">Max Execution Time</div>
+              <div className="text-2xl font-bold">{formatDuration(analytics.sql.maxTime)}</div>
+            </CardBody>
+          </Card>
         </div>
         
-        <h3 className="text-lg font-medium mt-6 mb-2">SQL 쿼리 목록</h3>
-        <div className="overflow-auto max-h-96">
-          {analytics.sql.queries.map((sql, index) => (
-            <div 
-              key={`${sql.spanId}-${index}`} 
-              className="border-b last:border-b-0 py-3 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer"
-              onClick={() => onSelectSpan(sql.spanId)}
-            >
+        <h3 className="text-lg font-medium mt-6 mb-2">SQL Queries</h3>
+        {analytics.sql.queries.map((sql, index) => (
+          <Card 
+            key={`${sql.spanId}-${index}`} 
+            className="mb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750"
+            isPressable
+            as={Link}
+            onPress={() => onSelectSpan(sql.spanId)}
+          >
+            <CardBody className="p-3">
               <div className="flex justify-between mb-1">
                 <div className="flex items-center">
                   <Database size={14} className="mr-1 text-blue-500" />
-                  <span className="text-sm font-medium">SQL 쿼리</span>
+                  <span className="text-sm font-medium">SQL Query</span>
                 </div>
                 <Badge>{formatDuration(sql.time)}</Badge>
               </div>
@@ -96,22 +106,22 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
                   onPress={() => onSelectSpan(sql.spanId)}
                   endContent={<ChevronRight size={14} />}
                 >
-                  상세 보기
+                  View Details
                 </Button>
               </div>
-            </div>
-          ))}
-        </div>
+            </CardBody>
+          </Card>
+        ))}
       </div>
     );
   };
   
-  // HTTP 탭 내용
+  // HTTP tab content
   const renderHttpTab = () => {
     if (analytics.http.count === 0) {
       return (
         <div className="text-center py-6 text-gray-500">
-          HTTP/URL 관련 정보가 없습니다
+          No HTTP/URL related information found
         </div>
       );
     }
@@ -119,45 +129,52 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-md">
-            <div className="text-sm text-gray-500">HTTP 요청 수</div>
-            <div className="text-2xl font-bold">{analytics.http.count}</div>
-          </div>
-          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-md">
-            <div className="text-sm text-gray-500">HTTP 메서드</div>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {Object.entries(analytics.http.byMethod).map(([method, count]) => (
-                <Badge key={method} color="success" variant="flat">
-                  {method}: {count}
-                </Badge>
-              ))}
-            </div>
-          </div>
-          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-md">
-            <div className="text-sm text-gray-500">상태 코드</div>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {Object.entries(analytics.http.byStatusCode).map(([code, count]) => (
-                <Badge key={code} color={getStatusCodeColor(code)} variant="flat">
-                  {code}: {count}
-                </Badge>
-              ))}
-            </div>
-          </div>
+          <Card className="bg-green-50 dark:bg-green-900/20">
+            <CardBody className="p-4">
+              <div className="text-sm text-gray-500">HTTP Request Count</div>
+              <div className="text-2xl font-bold">{analytics.http.count}</div>
+            </CardBody>
+          </Card>
+          <Card className="bg-green-50 dark:bg-green-900/20">
+            <CardBody className="p-4">
+              <div className="text-sm text-gray-500">HTTP Methods</div>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {Object.entries(analytics.http.byMethod).map(([method, count]) => (
+                  <Badge key={method} color="success" variant="flat">
+                    {method}: {count}
+                  </Badge>
+                ))}
+              </div>
+            </CardBody>
+          </Card>
+          <Card className="bg-green-50 dark:bg-green-900/20">
+            <CardBody className="p-4">
+              <div className="text-sm text-gray-500">Status Codes</div>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {Object.entries(analytics.http.byStatusCode).map(([code, count]) => (
+                  <Badge key={code} color={getStatusCodeColor(code)} variant="flat">
+                    {code}: {count}
+                  </Badge>
+                ))}
+              </div>
+            </CardBody>
+          </Card>
         </div>
         
-        <h3 className="text-lg font-medium mt-6 mb-2">URL 목록</h3>
-        <div className="overflow-auto max-h-96">
-          {analytics.http.urls.map((http, index) => (
-            <div 
-              key={`${http.spanId}-${index}`} 
-              className="border-b last:border-b-0 py-3 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer"
-              onClick={() => onSelectSpan(http.spanId)}
-            >
+        <h3 className="text-lg font-medium mt-6 mb-2">URL List</h3>
+        {analytics.http.urls.map((http, index) => (
+          <Card 
+            key={`${http.spanId}-${index}`} 
+            className="mb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750"
+            isPressable
+            onPress={() => onSelectSpan(http.spanId)}
+          >
+            <CardBody className="p-3">
               <div className="flex justify-between mb-1">
                 <div className="flex items-center">
                   <Globe size={14} className="mr-1 text-green-500" />
                   <span className="text-sm font-medium">
-                    {http.method} 요청
+                    {http.method} Request
                   </span>
                 </div>
                 {http.statusCode && (
@@ -176,41 +193,44 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
                   onPress={() => onSelectSpan(http.spanId)}
                   endContent={<ChevronRight size={14} />}
                 >
-                  상세 보기
+                  View Details
                 </Button>
               </div>
-            </div>
-          ))}
-        </div>
+            </CardBody>
+          </Card>
+        ))}
       </div>
     );
   };
   
-  // 오류 탭 내용
+  // Errors tab content
   const renderErrorsTab = () => {
     if (analytics.errors.count === 0) {
       return (
         <div className="text-center py-6 text-gray-500">
-          오류 정보가 없습니다
+          No error information found
         </div>
       );
     }
     
     return (
       <div className="space-y-4">
-        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-md">
-          <div className="text-sm text-gray-500">총 오류 수</div>
-          <div className="text-2xl font-bold">{analytics.errors.count}</div>
-        </div>
+        <Card className="bg-red-50 dark:bg-red-900/20">
+          <CardBody className="p-4">
+            <div className="text-sm text-gray-500">Total Errors</div>
+            <div className="text-2xl font-bold">{analytics.errors.count}</div>
+          </CardBody>
+        </Card>
         
-        <h3 className="text-lg font-medium mt-6 mb-2">오류 메시지</h3>
-        <div className="overflow-auto max-h-96">
-          {analytics.errors.messages.map((error, index) => (
-            <div 
-              key={`${error.spanId}-${index}`} 
-              className="border-b last:border-b-0 py-3 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer"
-              onClick={() => onSelectSpan(error.spanId)}
-            >
+        <h3 className="text-lg font-medium mt-6 mb-2">Error Messages</h3>
+        {analytics.errors.messages.map((error, index) => (
+          <Card 
+            key={`${error.spanId}-${index}`} 
+            className="mb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750"
+            isPressable
+            onPress={() => onSelectSpan(error.spanId)}
+          >
+            <CardBody className="p-3">
               <div className="flex items-center mb-1">
                 <AlertTriangle size={14} className="mr-1 text-red-500" />
                 <span className="text-sm font-medium text-red-600 dark:text-red-400">Error</span>
@@ -226,136 +246,128 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
                   onPress={() => onSelectSpan(error.spanId)}
                   endContent={<ChevronRight size={14} />}
                 >
-                  상세 보기
+                  View Details
                 </Button>
               </div>
-            </div>
-          ))}
-        </div>
+            </CardBody>
+          </Card>
+        ))}
       </div>
     );
   };
   
-  // 서비스 탭 내용
+  // Services tab content
   const renderServicesTab = () => {
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-medium mb-2">서비스별 통계</h3>
-        <div className="overflow-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-gray-700">
-                <th className="px-4 py-2 text-left">서비스</th>
-                <th className="px-4 py-2 text-center">스팬 수</th>
-                <th className="px-4 py-2 text-center">오류 수</th>
-                <th className="px-4 py-2 text-right">평균 지연 시간</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedServices.map(([service, stats]) => (
-                <tr key={service} className="border-b hover:bg-gray-50 dark:hover:bg-gray-750">
-                  <td className="px-4 py-2">
-                    <Badge color="primary" variant="flat">{service}</Badge>
-                  </td>
-                  <td className="px-4 py-2 text-center">{stats.count}</td>
-                  <td className="px-4 py-2 text-center">
-                    {stats.errorCount > 0 ? (
-                      <Badge color="danger">{stats.errorCount}</Badge>
-                    ) : (
-                      <Badge color="success">0</Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-2 text-right font-mono">
-                    {formatDuration(stats.avgDuration)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <h3 className="text-lg font-medium mb-2">Service Statistics</h3>
+        <Table aria-label="Service statistics" removeWrapper>
+          <TableHeader>
+            <TableColumn>Service</TableColumn>
+            <TableColumn align="center">Span Count</TableColumn>
+            <TableColumn align="center">Error Count</TableColumn>
+            <TableColumn align="end">Average Latency</TableColumn>
+          </TableHeader>
+          <TableBody>
+            {sortedServices.map(([service, stats]) => (
+              <TableRow key={service} className="border-b hover:bg-gray-50 dark:hover:bg-gray-750">
+                <TableCell>
+                  <Badge color="primary" variant="flat">{service}</Badge>
+                </TableCell>
+                <TableCell align="center">{stats.count}</TableCell>
+                <TableCell align="center">
+                  {stats.errorCount > 0 ? (
+                    <Badge color="danger">{stats.errorCount}</Badge>
+                  ) : (
+                    <Badge color="success">0</Badge>
+                  )}
+                </TableCell>
+                <TableCell align="right" className="font-mono">
+                  {formatDuration(stats.avgDuration)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     );
   };
   
-  // 지연 시간 탭 내용
+  // Latency tab content
   const renderLatencyTab = () => {
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-medium mb-2">상위 지연 시간 스팬</h3>
-        <div className="overflow-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-gray-700">
-                <th className="px-4 py-2 text-left">이름</th>
-                <th className="px-4 py-2 text-center">서비스</th>
-                <th className="px-4 py-2 text-right">지연 시간</th>
-                <th className="px-4 py-2 text-center">상세</th>
-              </tr>
-            </thead>
-            <tbody>
-              {analytics.topLatencySpans.map((span) => (
-                <tr key={span.spanId} className="border-b hover:bg-gray-50 dark:hover:bg-gray-750">
-                  <td className="px-4 py-2 font-mono text-sm">
-                    <Tooltip content={span.name}>
-                      <span className="truncate block max-w-xs">
-                        {span.name.length > 50 ? span.name.substring(0, 50) + '...' : span.name}
-                      </span>
-                    </Tooltip>
-                  </td>
-                  <td className="px-4 py-2 text-center">
-                    <Badge color="primary" variant="flat">{span.serviceName}</Badge>
-                  </td>
-                  <td className="px-4 py-2 text-right font-mono">
-                    {formatDuration(span.duration)}
-                  </td>
-                  <td className="px-4 py-2 text-center">
-                    <Button 
-                      size="sm" 
-                      variant="light" 
-                      isIconOnly
-                      onPress={() => onSelectSpan(span.spanId)}
-                    >
-                      <ChevronRight size={14} />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <h3 className="text-lg font-medium mb-2">Top Latency Spans</h3>
+        <Table aria-label="Top latency spans" removeWrapper>
+          <TableHeader>
+            <TableColumn>Name</TableColumn>
+            <TableColumn align="center">Service</TableColumn>
+            <TableColumn align="end">Latency</TableColumn>
+            <TableColumn align="center">Details</TableColumn>
+          </TableHeader>
+          <TableBody>
+            {analytics.topLatencySpans.map((span) => (
+              <TableRow key={span.spanId} className="border-b hover:bg-gray-50 dark:hover:bg-gray-750">
+                <TableCell className="font-mono text-sm">
+                  <Tooltip content={span.name}>
+                    <span className="truncate block max-w-xs">
+                      {span.name.length > 50 ? span.name.substring(0, 50) + '...' : span.name}
+                    </span>
+                  </Tooltip>
+                </TableCell>
+                <TableCell align="center">
+                  <Badge color="primary" variant="flat">{span.serviceName}</Badge>
+                </TableCell>
+                <TableCell align="right" className="font-mono">
+                  {formatDuration(span.duration)}
+                </TableCell>
+                <TableCell align="center">
+                  <Button 
+                    size="sm" 
+                    variant="light" 
+                    isIconOnly
+                    onPress={() => onSelectSpan(span.spanId)}
+                  >
+                    <ChevronRight size={14} />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     );
   };
   
   return (
     <Card>
-      <CardBody className="p-0">
-        <div className="flex justify-between items-center px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b">
-          <h2 className="text-lg font-medium">트레이스 분석 요약</h2>
-          
-          {onToggleView && (
-            <div className="flex gap-2">
-              <Button 
-                size="sm" 
-                variant="flat" 
-                onPress={() => onToggleView('timeline')}
-                startContent={<Clock size={14} />}
-              >
-                타임라인 보기
-              </Button>
-              <Button 
-                size="sm" 
-                variant="flat" 
-                onPress={() => onToggleView('list')}
-                startContent={<Filter size={14} />}
-              >
-                스팬 목록 보기
-              </Button>
-            </div>
-          )}
-        </div>
+      <CardHeader className="flex justify-between items-center px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b">
+        <h2 className="text-lg font-medium">Trace Analysis Summary</h2>
         
-        <Tabs aria-label="트레이스 분석 탭">
+        {onToggleView && (
+          <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              variant="flat" 
+              onPress={() => onToggleView('timeline')}
+              startContent={<Clock size={14} />}
+            >
+              Timeline View
+            </Button>
+            <Button 
+              size="sm" 
+              variant="flat" 
+              onPress={() => onToggleView('list')}
+              startContent={<Filter size={14} />}
+            >
+              Span List View
+            </Button>
+          </div>
+        )}
+      </CardHeader>
+      
+      <CardBody className="p-0">
+        <Tabs aria-label="Trace analysis tabs">
           <Tab
             key="sql"
             title={
@@ -387,7 +399,7 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
             title={
               <div className="flex items-center">
                 <AlertTriangle size={16} className="mr-1" />
-                오류 ({analytics.errors.count})
+                Errors ({analytics.errors.count})
               </div>
             }
           >
@@ -400,7 +412,7 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
             title={
               <div className="flex items-center">
                 <Code size={16} className="mr-1" />
-                서비스 ({Object.keys(analytics.byService).length})
+                Services ({Object.keys(analytics.byService).length})
               </div>
             }
           >
@@ -413,7 +425,7 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
             title={
               <div className="flex items-center">
                 <BarChart2 size={16} className="mr-1" />
-                지연 시간
+                Latency
               </div>
             }
           >

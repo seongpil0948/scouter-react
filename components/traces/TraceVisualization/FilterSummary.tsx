@@ -1,5 +1,7 @@
 import React from 'react';
-import { Badge } from '@heroui/badge';
+import { Chip } from '@heroui/chip';
+import { Button } from '@heroui/button';
+import { Card, CardBody } from '@heroui/card';
 import { formatDuration } from '@/lib/utils/dateFormatter';
 import { isSelectionSet } from './utils';
 
@@ -10,49 +12,57 @@ interface FilterSummaryProps {
   onResetFilters: () => void;
 }
 
-const FilterSummary: React.FC<FilterSummaryProps> = ({ filteredDataLength, dataFilters, hasFilters, onResetFilters }) => {
+const FilterSummary: React.FC<FilterSummaryProps> = ({ 
+  filteredDataLength, 
+  dataFilters, 
+  hasFilters, 
+  onResetFilters 
+}) => {
   return (
-    <div className="mt-4 text-sm text-gray-600">
-      <div className="flex flex-wrap justify-between gap-2">
-        <span>표시된 트레이스: {filteredDataLength}개</span>
+    <Card className="mt-4">
+      <CardBody className="py-2 px-4">
+        <div className="flex flex-wrap justify-between gap-2 items-center">
+          <Chip color="primary" variant="flat">
+            Displaying {filteredDataLength} traces
+          </Chip>
 
-        {dataFilters.serviceFilter !== 'all' && isSelectionSet(dataFilters.serviceFilter) && (
-          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
-            서비스: {Array.from(dataFilters.serviceFilter).join(', ')}
-          </Badge>
-        )}
+          {dataFilters.serviceFilter !== 'all' && isSelectionSet(dataFilters.serviceFilter) && (
+            <Chip color="primary" variant="bordered">
+              Services: {Array.from(dataFilters.serviceFilter).join(', ')}
+            </Chip>
+          )}
 
-        {dataFilters.statusFilter !== 'all' && isSelectionSet(dataFilters.statusFilter) && (
-          <Badge
-            className={
-              dataFilters.statusFilter.has('ERROR')
-                ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
-                : 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
-            }
-          >
-            상태: {Array.from(dataFilters.statusFilter).join(', ')}
-          </Badge>
-        )}
+          {dataFilters.statusFilter !== 'all' && isSelectionSet(dataFilters.statusFilter) && (
+            <Chip
+              color={dataFilters.statusFilter.has('ERROR') ? 'danger' : 'success'}
+              variant="bordered"
+            >
+              Status: {Array.from(dataFilters.statusFilter).join(', ')}
+            </Chip>
+          )}
 
-        {(dataFilters.minDuration !== undefined || dataFilters.maxDuration !== undefined) && (
-          <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-            지연 시간: {dataFilters.minDuration !== undefined ? formatDuration(dataFilters.minDuration) : '0ms'} ~
-            {dataFilters.maxDuration !== undefined ? formatDuration(dataFilters.maxDuration) : '무제한'}
-          </Badge>
-        )}
+          {(dataFilters.minDuration !== undefined || dataFilters.maxDuration !== undefined) && (
+            <Chip color="warning" variant="bordered">
+              Latency: {dataFilters.minDuration !== undefined ? formatDuration(dataFilters.minDuration) : '0ms'} ~
+              {dataFilters.maxDuration !== undefined ? formatDuration(dataFilters.maxDuration) : 'unlimited'}
+            </Chip>
+          )}
 
-        {/* Reset Filters Link */}
-        {hasFilters && (
-          <button
-            className="text-xs text-blue-600 cursor-pointer dark:text-blue-400"
-            onClick={onResetFilters}
-            aria-label="필터 초기화"
-          >
-            필터 초기화
-          </button>
-        )}
-      </div>
-    </div>
+          {/* Reset Filters Button */}
+          {hasFilters && (
+            <Button
+              size="sm"
+              color="primary"
+              variant="light"
+              onPress={onResetFilters}
+              aria-label="Reset filters"
+            >
+              Reset Filters
+            </Button>
+          )}
+        </div>
+      </CardBody>
+    </Card>
   );
 };
 

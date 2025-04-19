@@ -1,10 +1,20 @@
-'use client';
-import React, { useState, useMemo } from 'react';
-import { Button } from '@heroui/button';
-import { Badge } from '@heroui/badge';
-import { EyeIcon, SearchIcon } from 'lucide-react';
-import { Input } from '@heroui/input';
-import { Select, SelectItem } from '@heroui/select';
+"use client";
+
+import React, { useState, useMemo } from "react";
+import { Button } from "@heroui/button";
+import { Badge, BadgeProps } from "@heroui/badge";
+import { EyeIcon, SearchIcon } from "lucide-react";
+import { Input } from "@heroui/input";
+import { Select, SelectItem } from "@heroui/select";
+import { Card, CardHeader, CardBody } from "@heroui/card";
+import {
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@heroui/table";
 
 interface Span {
   id: string;
@@ -26,174 +36,227 @@ interface SpanListProps {
   setSelectedSpanId: (spanId: string) => void;
 }
 
-export const SpanList: React.FC<SpanListProps> = React.memo(({ spans, formatDuration, setSelectedSpanId }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [serviceFilter, setServiceFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('duration');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+export const SpanList: React.FC<SpanListProps> = React.memo(
+  ({ spans, formatDuration, setSelectedSpanId }) => {
+    const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [serviceFilter, setServiceFilter] = useState<string>("all");
+    const [sortBy, setSortBy] = useState<string>("duration");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  // 서비스 목록 추출
-  const services = useMemo(() => {
-    const serviceSet = new Set<string>();
+    // Extract unique services for filtering
+    const services = useMemo(() => {
+      const serviceSet = new Set<string>();
+      spans.forEach((span) => serviceSet.add(span.serviceName));
+      return Array.from(serviceSet).sort();
+    }, [spans]);
 
-    spans.forEach((span) => serviceSet.add(span.serviceName));
+    // Filter and sort spans
+    const filteredSpans = useMemo(() => {
+      let result = spans;
 
-    return Array.from(serviceSet).sort();
-  }, [spans]);
-
-  // 필터링된 스팬 목록
-  const filteredSpans = useMemo(() => {
-    let result = spans;
-
-    // 검색어 필터링
-    if (searchTerm) {
-      const lowerSearchTerm = searchTerm.toLowerCase();
-
-      result = result.filter(
-        (span) => span.name.toLowerCase().includes(lowerSearchTerm) || span.serviceName.toLowerCase().includes(lowerSearchTerm)
-      );
-    }
-
-    // 상태 필터링
-    if (statusFilter !== 'all') {
-      result = result.filter((span) => span.status === statusFilter);
-    }
-
-    // 서비스 필터링
-    if (serviceFilter !== 'all') {
-      result = result.filter((span) => span.serviceName === serviceFilter);
-    }
-
-    // 정렬
-    result = [...result].sort((a, b) => {
-      let compareResult = 0;
-
-      switch (sortBy) {
-        case 'name':
-          compareResult = a.name.localeCompare(b.name);
-          break;
-        case 'service':
-          compareResult = a.serviceName.localeCompare(b.serviceName);
-          break;
-        case 'status':
-          compareResult = (a.status || '').localeCompare(b.status || '');
-          break;
-        case 'duration':
-        default:
-          compareResult = a.duration - b.duration;
-          break;
+      // Search term filtering
+      if (searchTerm) {
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        result = result.filter(
+          (span) =>
+            span.name.toLowerCase().includes(lowerSearchTerm) ||
+            span.serviceName.toLowerCase().includes(lowerSearchTerm)
+        );
       }
 
-      return sortOrder === 'asc' ? compareResult : -compareResult;
-    });
+      // Status filtering
+      if (statusFilter !== "all") {
+        result = result.filter((span) => span.status === statusFilter);
+      }
 
-    return result;
-  }, [spans, searchTerm, statusFilter, serviceFilter, sortBy, sortOrder]);
+      // Service filtering
+      if (serviceFilter !== "all") {
+        result = result.filter((span) => span.serviceName === serviceFilter);
+      }
 
-  const toggleSort = (field: string) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
-      setSortOrder('desc');
-    }
-  };
+      // Sort results
+      result = [...result].sort((a, b) => {
+        let compareResult = 0;
 
-  const getSortIndicator = (field: string) => {
-    if (sortBy === field) {
-      return sortOrder === 'asc' ? ' ↑' : ' ↓';
-    }
+        switch (sortBy) {
+          case "name":
+            compareResult = a.name.localeCompare(b.name);
+            break;
+          case "service":
+            compareResult = a.serviceName.localeCompare(b.serviceName);
+            break;
+          case "status":
+            compareResult = (a.status || "").localeCompare(b.status || "");
+            break;
+          case "duration":
+          default:
+            compareResult = a.duration - b.duration;
+            break;
+        }
 
-    return '';
-  };
+        return sortOrder === "asc" ? compareResult : -compareResult;
+      });
 
-  return (
-    <div>
-      <h3 className="text-lg font-medium mb-4">스팬 목록</h3>
+      return result;
+    }, [spans, searchTerm, statusFilter, serviceFilter, sortBy, sortOrder]);
 
-      <div className="mb-4 flex flex-wrap gap-3">
-        <div className="flex-1 min-w-[200px]">
-          <div className="relative">
-            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-            <Input
-              className="pl-10"
-              placeholder="스팬 이름 또는 서비스 검색..."
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+    // Handle sort column click
+    const toggleSort = (field: string) => {
+      if (sortBy === field) {
+        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      } else {
+        setSortBy(field);
+        setSortOrder("desc");
+      }
+    };
+
+    // Get sort indicator
+    const getSortIndicator = (field: string) => {
+      if (sortBy === field) {
+        return sortOrder === "asc" ? " ↑" : " ↓";
+      }
+      return "";
+    };
+
+    // Get status color for badge
+    const getStatusColor = (status?: string): BadgeProps["color"] => {
+      switch (status) {
+        case "ERROR":
+          return "danger";
+        case "OK":
+          return "success";
+        default:
+          return "default";
+      }
+    };
+
+    return (
+      <Card>
+        <CardHeader>
+          <h3 className="text-lg font-medium">Span List</h3>
+        </CardHeader>
+
+        <CardBody>
+          <div className="mb-4 flex flex-wrap gap-3">
+            {/* Search input */}
+            <div className="flex-1 min-w-[200px]">
+              <Input
+                startContent={
+                  <SearchIcon className="text-gray-400" size={16} />
+                }
+                placeholder="Search span name or service..."
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            {/* Status filter */}
+            <div className="w-auto">
+              <Select
+                aria-label="Status filter"
+                value={statusFilter}
+                onSelectionChange={(key) => setStatusFilter(key as string)}
+                className="min-w-[150px]"
+              >
+                <SelectItem key="all">All Statuses</SelectItem>
+                <SelectItem key="OK">Success</SelectItem>
+                <SelectItem key="ERROR">Error</SelectItem>
+                <SelectItem key="UNSET">Unset</SelectItem>
+              </Select>
+            </div>
+
+            {/* Service filter */}
+            <div className="w-auto">
+              <Select
+                aria-label="Service filter"
+                value={serviceFilter}
+                onSelectionChange={(key) => setServiceFilter(key as string)}
+                className="min-w-[150px]"
+              >
+                <SelectItem key="all">All Services</SelectItem>
+                {services.map((service) => (
+                  <SelectItem key={service}>{service}</SelectItem>
+                )) as any}
+              </Select>
+            </div>
           </div>
-        </div>
 
-        <div className="w-auto">
-          <Select aria-label="상태 필터" value={statusFilter} onSelectionChange={(key) => setStatusFilter(key as string)}>
-            <SelectItem key="all">모든 상태</SelectItem>
-            <SelectItem key="OK">성공</SelectItem>
-            <SelectItem key="ERROR">오류</SelectItem>
-            <SelectItem key="UNSET">미설정</SelectItem>
-          </Select>
-        </div>
-
-        <div className="w-auto">
-          <Select aria-label="서비스 필터" value={serviceFilter} onSelectionChange={(key) => setServiceFilter(key as string)}>
-            <SelectItem key="all">모든 서비스</SelectItem>
-            {services.map((service) => <SelectItem key={service}>{service}</SelectItem>) as any}
-          </Select>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto max-h-96">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-50">
-              <th className="border px-4 py-2 text-left cursor-pointer hover:bg-gray-100" onClick={() => toggleSort('name')}>
-                이름{getSortIndicator('name')}
-              </th>
-              <th className="border px-4 py-2 text-left cursor-pointer hover:bg-gray-100" onClick={() => toggleSort('service')}>
-                서비스{getSortIndicator('service')}
-              </th>
-              <th className="border px-4 py-2 text-left cursor-pointer hover:bg-gray-100" onClick={() => toggleSort('status')}>
-                상태{getSortIndicator('status')}
-              </th>
-              <th className="border px-4 py-2 text-right cursor-pointer hover:bg-gray-100" onClick={() => toggleSort('duration')}>
-                지연 시간{getSortIndicator('duration')}
-              </th>
-              <th className="border px-4 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {filteredSpans.length === 0 ? (
-              <tr>
-                <td className="border px-4 py-8 text-center text-gray-500" colSpan={5}>
-                  검색 조건에 맞는 스팬이 없습니다
-                </td>
-              </tr>
-            ) : (
-              filteredSpans.map((span) => (
-                <tr key={span.spanId} className="hover:bg-gray-50">
-                  <td className="border px-4 py-2 font-mono text-sm">{span.name}</td>
-                  <td className="border px-4 py-2">{span.serviceName}</td>
-                  <td className="border px-4 py-2">
-                    <Badge className={span.status === 'ERROR' ? 'bg-red-500' : span.status === 'OK' ? 'bg-green-500' : 'bg-gray-500'}>
-                      {span.status || 'UNSET'}
+          {/* Span table */}
+          <Table
+            aria-label="Span list"
+            removeWrapper
+            className="max-h-96 overflow-y-auto"
+          >
+            <TableHeader>
+              <TableColumn
+                className="cursor-pointer hover:bg-gray-100"
+                onClick={() => toggleSort("name")}
+              >
+                Name{getSortIndicator("name")}
+              </TableColumn>
+              <TableColumn
+                className="cursor-pointer hover:bg-gray-100"
+                onClick={() => toggleSort("service")}
+              >
+                Service{getSortIndicator("service")}
+              </TableColumn>
+              <TableColumn
+                className="cursor-pointer hover:bg-gray-100"
+                onClick={() => toggleSort("status")}
+              >
+                Status{getSortIndicator("status")}
+              </TableColumn>
+              <TableColumn
+                className="cursor-pointer hover:bg-gray-100 text-right"
+                onClick={() => toggleSort("duration")}
+              >
+                Latency{getSortIndicator("duration")}
+              </TableColumn>
+              <TableColumn align="center">Action</TableColumn>
+            </TableHeader>
+            <TableBody
+              emptyContent={
+                <div className="text-center py-8 text-gray-500">
+                  No spans match your search criteria
+                </div>
+              }
+            >
+              {filteredSpans.map((span) => (
+                <TableRow key={span.spanId} className="hover:bg-gray-50">
+                  <TableCell className="font-mono text-sm">
+                    {span.name}
+                  </TableCell>
+                  <TableCell>{span.serviceName}</TableCell>
+                  <TableCell>
+                    <Badge color={getStatusColor(span.status)}>
+                      {span.status || "UNSET"}
                     </Badge>
-                  </td>
-                  <td className="border px-4 py-2 text-right font-mono">{formatDuration(span.duration)}</td>
-                  <td className="border px-4 py-2 text-center">
-                    <Button size="sm" title="스팬 상세 보기" variant="ghost" onPress={() => setSelectedSpanId(span.spanId)}>
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    {formatDuration(span.duration)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Button
+                      size="sm"
+                      title="View span details"
+                      variant="ghost"
+                      isIconOnly
+                      onPress={() => setSelectedSpanId(span.spanId)}
+                    >
                       <EyeIcon size={16} />
-                      <span className="sr-only">상세 보기</span>
                     </Button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-});
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardBody>
+      </Card>
+    );
+  }
+);
 
-SpanList.displayName = 'SpanList';
+SpanList.displayName = "SpanList";

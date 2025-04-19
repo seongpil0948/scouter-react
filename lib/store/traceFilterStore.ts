@@ -94,19 +94,19 @@ export const useTraceFilterStore = create<TraceFilterStore>()(
       }),
       {
         name: "trace-filter-storage",
-        partialize: (state) => ({
-          searchQuery: state.searchQuery,
-          limit: state.limit,
-          selectedServices: state.selectedServices,
-          selectedStatuses: state.selectedStatuses,
-          minDuration: state.minDuration,
-          maxDuration: state.maxDuration,
-          attributeKey: state.attributeKey,
-          rootSpansOnly: state.rootSpansOnly,
-          timeRangeOption: state.timeRangeOption,
-          sortField: state.sortField,
-          sortDirection: state.sortDirection,
-        }),
+        // partialize: (state) => ({
+        //   searchQuery: state.searchQuery,
+        //   limit: state.limit,
+        //   selectedServices: state.selectedServices,
+        //   selectedStatuses: state.selectedStatuses,
+        //   minDuration: state.minDuration,
+        //   maxDuration: state.maxDuration,
+        //   attributeKey: state.attributeKey,
+        //   rootSpansOnly: state.rootSpansOnly,
+        //   timeRangeOption: state.timeRangeOption,
+        //   sortField: state.sortField,
+        //   sortDirection: state.sortDirection,
+        // }),
       }
     )
   )

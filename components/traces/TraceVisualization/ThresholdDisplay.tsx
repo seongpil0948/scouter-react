@@ -1,5 +1,7 @@
 import React from 'react';
-import { Badge } from '@heroui/badge';
+import { Tooltip } from '@heroui/tooltip';
+import { Chip } from '@heroui/chip';
+import { Card, CardBody } from '@heroui/card';
 import { formatDuration } from '@/lib/utils/dateFormatter';
 
 interface ThresholdDisplayProps {
@@ -11,23 +13,31 @@ const ThresholdDisplay: React.FC<ThresholdDisplayProps> = ({ serviceThresholds, 
   if (serviceThresholds.size === 0) return null;
 
   return (
-    <div className="mb-4 text-xs text-gray-500">
-      <div className="flex items-center mb-1">
-        <span className="font-medium">서비스별 임계값:</span>
-      </div>
-      <div className="flex flex-wrap gap-1">
-        {Array.from(serviceThresholds.entries()).map(([service, threshold]) => {
-          const stats = serviceStats.get(service);
-          const tooltip = stats ? `총 ${stats.total}개 중 ${stats.exceeded}개 초과` : '데이터 없음';
+    <Card className="mb-4">
+      <CardBody className="py-2 px-4">
+        <div className="flex items-center mb-1">
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Service Thresholds:</span>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {Array.from(serviceThresholds.entries()).map(([service, threshold]) => {
+            const stats = serviceStats.get(service);
+            const tooltip = stats ? `${stats.total} total, ${stats.exceeded} exceeded threshold` : 'No data';
 
-          return (
-            <Badge key={service} className="bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300" title={tooltip}>
-              {service}: {formatDuration(threshold)}
-            </Badge>
-          );
-        })}
-      </div>
-    </div>
+            return (
+              <Tooltip key={service} content={tooltip}>
+                <Chip 
+                  color="default" 
+                  variant="flat" 
+                  className="bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                >
+                  {service}: {formatDuration(threshold)}
+                </Chip>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </CardBody>
+    </Card>
   );
 };
 
