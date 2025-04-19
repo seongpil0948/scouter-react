@@ -52,7 +52,7 @@ const SelectedTracesTable: React.FC<SelectedTracesTableProps> = ({ selectedTrace
   };
 
   return (
-    <div className={`mt-4 bg-white dark:bg-gray-800 rounded-lg shadow ${className}`} data-testid="selected-traces-table">
+    <div className={`mt-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm ${className}`} data-testid="selected-traces-table">
       <div className="p-3 bg-gray-50 dark:bg-gray-750 border-b flex justify-between items-center">
         <div className="flex items-center">
           <h3 className="text-base font-medium">선택된 트레이스 ({selectedTraces.length}개)</h3>

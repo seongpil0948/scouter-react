@@ -17,7 +17,7 @@ import { Skeleton } from '@heroui/skeleton';
 const TraceFilter = dynamic(() => import('@/components/traces/TraceFilter'), {
   ssr: false,
   loading: () => (
-    <div className="w-full bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+    <div className="w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
       <Skeleton className="h-10 w-40 mb-2" />
       <div className="flex flex-wrap gap-2">
         <Skeleton className="h-8 w-32" />
@@ -35,7 +35,7 @@ const TraceVisualization = dynamic(() => import('@/components/traces/TraceVisual
     <Card className="w-full">
       <CardBody className="p-4">
         <Skeleton className="h-8 w-64 mb-4" />
-        <Skeleton className="h-[500px] w-full rounded" />
+        <Skeleton className="h-[500px] w-full rounded-sm" />
       </CardBody>
     </Card>
   ),
@@ -168,7 +168,7 @@ export default function Home() {
 
   return (
     <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
-      <div className="w-full flex justify-between items-center bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+      <div className="w-full flex justify-between items-center bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
         <h2 className="text-xl font-semibold">IDS APM</h2>
         <div className="flex items-center gap-4">
           <DateRangePicker onChange={handleTimeRangeChange} isRealtime={isRealtime} />

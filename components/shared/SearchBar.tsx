@@ -51,7 +51,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
         <input
           aria-label="검색어를 입력하세요..."
           role="search"
-          className="w-full pl-10 pr-10 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full pl-10 pr-10 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-hidden"
           placeholder={placeholder}
           type="text"
           value={searchValue}

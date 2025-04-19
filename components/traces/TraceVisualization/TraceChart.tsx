@@ -82,7 +82,7 @@ const TraceChart: React.FC<ExtendedTraceChartProps> = React.memo(
       return (
         <div className="relative w-full" style={{ height: typeof height === 'number' ? `${height}px` : height }}>
           <div
-            className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-800 rounded"
+            className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-800 rounded-sm"
             aria-label="차트 로딩 중"
             role="status"
           >

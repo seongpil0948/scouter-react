@@ -22,7 +22,7 @@ export default function Error({
         {error.message || "An unexpected error occurred"}
       </p>
       <button
-        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        className="px-4 py-2 bg-blue-500 text-white rounded-sm hover:bg-blue-600"
         onClick={() => {
           // Safely attempt to recover by trying to re-render the segment
           try {

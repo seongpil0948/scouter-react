@@ -287,7 +287,7 @@ export const SpanDetail: React.FC<SpanDetailProps> = React.memo(({ span, formatD
               <div className="h-12 relative bg-gray-100 dark:bg-gray-700 rounded-md">
                 <Tooltip content={`${formatDuration(span.duration)} (${span.duration}ms)`}>
                   <div
-                    className="absolute top-1/2 transform -translate-y-1/2 h-6 rounded"
+                    className="absolute top-1/2 transform -translate-y-1/2 h-6 rounded-sm"
                     style={{
                       width: '100%',
                       backgroundColor: span.status === 'ERROR' ? '#f87171' : '#60a5fa',

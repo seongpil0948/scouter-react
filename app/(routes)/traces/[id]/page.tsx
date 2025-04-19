@@ -17,24 +17,24 @@ function TraceDetailSkeleton() {
       <div className="bg-gray-50 border-b px-6 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Skeleton className="h-6 w-6 rounded" />
-            <Skeleton className="h-7 w-40 rounded" />
+            <Skeleton className="h-6 w-6 rounded-sm" />
+            <Skeleton className="h-7 w-40 rounded-sm" />
           </div>
         </div>
       </div>
       <div className="p-6">
         <div className="mb-4">
-          <Skeleton className="h-10 w-full rounded mb-4" />
+          <Skeleton className="h-10 w-full rounded-sm mb-4" />
           <div className="space-y-2">
-            <Skeleton className="h-8 w-full rounded" />
-            <Skeleton className="h-8 w-full rounded" />
-            <Skeleton className="h-8 w-full rounded" />
-            <Skeleton className="h-8 w-full rounded" />
+            <Skeleton className="h-8 w-full rounded-sm" />
+            <Skeleton className="h-8 w-full rounded-sm" />
+            <Skeleton className="h-8 w-full rounded-sm" />
+            <Skeleton className="h-8 w-full rounded-sm" />
           </div>
         </div>
         <div className="mt-6 space-y-2">
-          <Skeleton className="h-6 w-32 rounded mb-4" />
-          <Skeleton className="h-64 w-full rounded" />
+          <Skeleton className="h-6 w-32 rounded-sm mb-4" />
+          <Skeleton className="h-64 w-full rounded-sm" />
         </div>
       </div>
     </div>

@@ -98,7 +98,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange, isRealtime 
       />
 
       {isRealtime && (
-        <div className="flex items-center px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded text-blue-600 dark:text-blue-300 text-sm">
+        <div className="flex items-center px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-sm text-blue-600 dark:text-blue-300 text-sm">
           <Clock size={14} className="mr-1" />
           <span>실시간 모드</span>
         </div>

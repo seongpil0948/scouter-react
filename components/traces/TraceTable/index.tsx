@@ -109,7 +109,7 @@ const TraceTable: React.FC<TraceTableProps> = ({
         classNames={{
           base: 'max-w-full',
           th: ['bg-default-100', 'text-default-800', 'border-b', 'border-divider', 'px-4', 'py-3', 'text-sm'],
-          td: ['group-data-[first=true]:first:before:rounded-none', 'group-data-[first=true]:last:before:rounded-none', 'p-4', 'text-sm'],
+          td: ['first:group-data-[first=true]:before:rounded-none', 'last:group-data-[first=true]:before:rounded-none', 'p-4', 'text-sm'],
         }}
         bottomContent={
           pageCount > 1 ? (

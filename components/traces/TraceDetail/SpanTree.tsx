@@ -97,7 +97,7 @@ export const SpanTree: React.FC<SpanTreeProps> = React.memo(
                 <div className="w-5/12 relative h-6">
                   <div
                     aria-hidden="true"
-                    className="absolute top-1/2 transform -translate-y-1/2 h-2 rounded"
+                    className="absolute top-1/2 transform -translate-y-1/2 h-2 rounded-sm"
                     style={{
                       width: `${Math.min(spanWidth, 100)}%`,
                       left: `${Math.min(spanOffset, 100)}%`,

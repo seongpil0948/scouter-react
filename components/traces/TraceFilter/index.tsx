@@ -316,7 +316,7 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
   return (
     <>
       <ModalBlushHelp disclosureHelper={disclosureHelper} />
-      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 ${className}`}>
+      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 ${className}`}>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
             <div className="flex items-center gap-2">

@@ -23,7 +23,7 @@ export function ModalBlushHelp(p: { disclosureHelper: ReturnType<typeof useDiscl
                   <li>차트 영역에서 마우스로 드래그하여 데이터 포인트를 선택하세요</li>
                   <li>선택된 트레이스가 아래 표에 표시됩니다</li>
                 </ol>
-                <div className="flex items-center mt-2 bg-blue-50 dark:bg-blue-900/30 p-1 rounded">
+                <div className="flex items-center mt-2 bg-blue-50 dark:bg-blue-900/30 p-1 rounded-sm">
                   <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
                   <p className="text-blue-700 dark:text-blue-300">여러 영역을 선택하려면 Shift 키를 누른 상태에서 드래그하세요</p>
                 </div>
