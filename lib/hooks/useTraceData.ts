@@ -45,6 +45,7 @@ export function useTraceData({
     sortField,
     sortDirection,
     lastRefreshed,
+    attributeKey,
     refreshData: triggerRefresh = () => {}
   } = useTraceFilterStore();
 
@@ -103,7 +104,6 @@ export function useTraceData({
 
   // API URL 생성 전 현재 시간 범위 확인
   const getApiUrl = useCallback(() => {
-    // 초기화 전이거나 시간 범위가 비어있으면
     if (!isInitialized.current || isTimeRangeEmpty) {
       const now = Date.now();
       const rangeInMs = currentRealtimeRange * 60 * 1000;
@@ -118,6 +118,7 @@ export function useTraceData({
           selectedStatuses,
           minDuration,
           maxDuration,
+          attributeKey, // 추가: attributeKey 전달
         },
         { startTime, endTime: now },
         limit,
@@ -137,6 +138,7 @@ export function useTraceData({
         selectedStatuses,
         minDuration,
         maxDuration,
+        attributeKey, // 추가: attributeKey 전달
       },
       timeRange,
       limit,
@@ -153,6 +155,7 @@ export function useTraceData({
     selectedStatuses,
     minDuration,
     maxDuration,
+    attributeKey, // 추가: 의존성 배열에 attributeKey 추가
     timeRange,
     limit,
     sortField,
@@ -179,6 +182,7 @@ export function useTraceData({
           selectedStatuses,
           minDuration,
           maxDuration,
+          attributeKey, // 추가: attributeKey 전달
         },
         { startTime, endTime: now },
         limit,
@@ -202,6 +206,7 @@ export function useTraceData({
     selectedStatuses,
     minDuration,
     maxDuration,
+    attributeKey, // 추가: 의존성 배열에 attributeKey 추가
     limit,
     sortField,
     sortDirection,
