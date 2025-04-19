@@ -33,6 +33,7 @@
     "@heroui/code": "2.2.14-beta.1",
     "@heroui/date-picker": "2.3.18-beta.1",
     "@heroui/divider": "2.2.13-beta.1",
+    "@heroui/drawer": "^2.2.14",
     "@heroui/dropdown": "2.3.18-beta.1",
     "@heroui/form": "2.1.17-beta.1",
     "@heroui/image": "2.2.12-beta.1",
