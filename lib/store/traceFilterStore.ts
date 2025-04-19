@@ -78,7 +78,7 @@ interface TraceFilterStore {
 // 기본 필터 설정
 const DEFAULT_FILTERS = {
   searchQuery: '',
-  limit: 100 as LimitOption,
+  limit: 500 as LimitOption,
   selectedServices: [],
   selectedStatuses: [],
   minDuration: undefined,
