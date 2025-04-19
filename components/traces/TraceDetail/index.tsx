@@ -4,16 +4,16 @@ import { Badge } from '@heroui/badge';
 import React, { useCallback, useState, useMemo } from 'react';
 import { Card, CardBody } from '@heroui/card';
 import { Tabs, Tab } from '@heroui/tabs';
-import { CopyIcon, ArrowLeft } from 'lucide-react';
+import { CopyIcon, ArrowLeft, BarChart2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ErrorBoundary } from 'react-error-boundary';
-import { addToast } from '@heroui/toast';
 
 import { SpanTree } from './SpanTree';
 import { SpanDetail } from './SpanDetail';
 import { TraceSummary } from './TraceSummary';
 import { SpanList } from './SpanList';
 import { useTraceData } from './hook/useTraceData';
+import TraceAnalyticsSummary from './TraceAnalyticsSummary';
 
 import { formatDateTime } from '@/lib/utils/dateFormatter';
 import { copyToClipboard } from '@/lib/utils/clipboard';
@@ -25,23 +25,25 @@ interface TraceDetailProps {
 
 const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
   const [selectedSpanId, setSelectedSpanId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string | number>('timeline');
-  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<string | number>('analytics');
 
   const { traceData, error, isLoading, formatTime, formatDuration, spanHierarchy } = useTraceData(traceId);
 
   // 선택된 스팬 정보
   const selectedSpan = useMemo(() => {
     if (!selectedSpanId || !traceData) return null;
-    traceData.spans[0].attributes;
-
     return traceData.spans.find((span) => span.spanId === selectedSpanId);
   }, [selectedSpanId, traceData]);
 
   // 뒤로 가기
   const handleBack = useCallback(() => {
     onBack?.();
-  }, [router]);
+  }, [onBack]);
+
+  // 뷰 전환 핸들러
+  const handleToggleView = useCallback((view: string) => {
+    setActiveTab(view);
+  }, []);
 
   // 오류 발생 시
   if (error) {
@@ -111,15 +113,33 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
       </h2>
 
       <Tabs className="w-full" selectedKey={activeTab} onSelectionChange={setActiveTab}>
+        <Tab 
+          key="analytics" 
+          title={
+            <div className="flex items-center">
+              <BarChart2 size={16} className="mr-1" />
+              분석 요약
+            </div>
+          } 
+        />
         <Tab key="timeline" title="타임라인" />
-        <Tab key="details" title="상세 정보" />
+        <Tab key="list" title="스팬 목록" />
         {selectedSpan && <Tab key="span" title="선택된 스팬" />}
       </Tabs>
 
-      <CardBody className="p-6">
+      <CardBody className="p-0">
         <ErrorBoundary fallback={<div className="p-4 bg-red-50 text-red-700 rounded-md">컴포넌트 렌더링 중 오류가 발생했습니다.</div>}>
+          {/* 새로운 분석 요약 탭 */}
+          {activeTab === 'analytics' && (
+            <TraceAnalyticsSummary 
+              spans={traceData.spans} 
+              onSelectSpan={setSelectedSpanId}
+              onToggleView={handleToggleView}
+            />
+          )}
+          
           {activeTab === 'timeline' && (
-            <div className="mt-4">
+            <div className="p-6">
               <TraceSummary formatDuration={formatDuration} formatTime={formatTime} traceData={traceData} />
 
               <div className="overflow-x-auto">
@@ -148,8 +168,8 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
             </div>
           )}
 
-          {activeTab === 'details' && (
-            <div className="mt-4 space-y-6">
+          {activeTab === 'list' && (
+            <div className="p-6 space-y-6">
               <div>
                 <h3 className="text-lg font-medium mb-4">트레이스 정보</h3>
                 <table className="w-full border-collapse">
@@ -198,7 +218,11 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
             </div>
           )}
 
-          {activeTab === 'span' && selectedSpan && <SpanDetail formatDuration={formatDuration} span={selectedSpan} />}
+          {activeTab === 'span' && selectedSpan && (
+            <div className="p-6">
+              <SpanDetail formatDuration={formatDuration} span={selectedSpan} />
+            </div>
+          )}
         </ErrorBoundary>
       </CardBody>
     </Card>

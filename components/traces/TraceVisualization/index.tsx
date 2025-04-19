@@ -2,10 +2,13 @@
 
 import React, { useMemo, useCallback, useState } from 'react';
 import { Card, CardBody } from '@heroui/card';
+import { Tabs, Tab } from '@heroui/tabs';
 import { useIsSSR } from '@react-aria/ssr';
 import { useDisclosure } from '@heroui/modal';
+import { BarChart2, LineChart } from 'lucide-react';
 
 import TraceChart from './TraceChart';
+import TraceAnalytics from './TraceAnalytics';
 import SelectedTracesModal from './SelectedTracesModal';
 import StatsSummary from './StatsSummary';
 import FilterControls from './FilterControls';
@@ -27,6 +30,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   onTraceSelect,
 }) => {
   const isSSR = useIsSSR();
+  const [activeTab, setActiveTab] = useState<string>('chart');
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedTraces, setSelectedTraces] = useState<SelectedTraceData[]>([]);
   const { legendState, dataFilters, updateDataFilters } = useChartStore();
@@ -108,7 +112,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     setSelectedTraces([]);
   }, []);
 
-  // 트레이스 상세 보기 핸들러 - 모달에서 Drawer로 전환
+  // 트레이스 상세 보기 핸들러
   const handleViewTraceDetails = useCallback(
     (traceId: string) => {
       if (onTraceSelect) {
@@ -117,7 +121,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         onClose();
       }
     },
-    [onTraceSelect, onOpenChange]
+    [onTraceSelect, onClose]
   );
 
   // 차트 데이터 포인트 클릭 핸들러
@@ -166,66 +170,103 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
             hasFilters={hasFilters}
           />
         )}
+        
+        <Tabs 
+          aria-label="트레이스 시각화 모드" 
+          selectedKey={activeTab}
+          onSelectionChange={(key) => setActiveTab(key as string)}
+          className="px-4 pt-2"
+        >
+          <Tab
+            key="chart"
+            title={
+              <div className="flex items-center">
+                <LineChart size={16} className="mr-1" />
+                차트 보기
+              </div>
+            }
+          />
+          <Tab
+            key="analytics"
+            title={
+              <div className="flex items-center">
+                <BarChart2 size={16} className="mr-1" />
+                분석 보기
+              </div>
+            }
+          />
+        </Tabs>
 
         <CardBody className="p-4">
-          {/* 통계 요약 - 데이터가 있을 때만 표시 */}
-          {filteredData.length > 0 && !isLoading && (
-            <StatsSummary
-              latencyStats={latencyStats}
-              highLatencyCount={highLatencyCount}
-              successCount={successCount}
-              errorCount={errorCount}
-              selectedTracesCount={selectedTraces.length}
-              onClearSelection={handleClearSelection}
-            />
+          {activeTab === 'chart' && (
+            <>
+              {/* 통계 요약 - 데이터가 있을 때만 표시 */}
+              {filteredData.length > 0 && !isLoading && (
+                <StatsSummary
+                  latencyStats={latencyStats}
+                  highLatencyCount={highLatencyCount}
+                  successCount={successCount}
+                  errorCount={errorCount}
+                  selectedTracesCount={selectedTraces.length}
+                  onClearSelection={handleClearSelection}
+                />
+              )}
+
+              {/* 서비스별 임계값 표시 - 필터가 활성화된 경우에만 표시 */}
+              {showFilters && filteredData.length > 0 && (
+                <ThresholdDisplay
+                  serviceThresholds={serviceThresholds}
+                  serviceStats={serviceStats}
+                />
+              )}
+
+              {/* 차트 컴포넌트 */}
+              <TraceChart
+                data={chartData}
+                height={config.height}
+                config={{
+                  ...config,
+                  brush: {
+                    enabled: true,
+                    type: 'rect',
+                    mode: 'multiple',
+                    throttleType: 'debounce',
+                    throttleDelay: 300,
+                    ...config.brush,
+                  },
+                  realtimeRange: config.realtimeRange || 5,
+                }}
+                onBrushSelected={handleBrushSelected}
+                onDataPointClick={handleDataPointClick}
+                loading={isLoading}
+                legendState={legendState}
+                serviceThresholds={serviceThresholds}
+              />
+
+              {/* 데이터 없음 메시지 */}
+              {filteredData.length === 0 && !isLoading && (
+                <NoData 
+                  isRealtime={isRealtime} 
+                  hasFilters={hasFilters} 
+                />
+              )}
+
+              {/* 필터 요약 */}
+              {filteredData.length > 0 && !isLoading && (
+                <FilterSummary
+                  filteredDataLength={filteredData.length}
+                  dataFilters={dataFilters}
+                  hasFilters={hasFilters}
+                  onResetFilters={() => updateDataFilters(DEFAULT_FILTER)}
+                />
+              )}
+            </>
           )}
-
-          {/* 서비스별 임계값 표시 - 필터가 활성화된 경우에만 표시 */}
-          {showFilters && filteredData.length > 0 && (
-            <ThresholdDisplay
-              serviceThresholds={serviceThresholds}
-              serviceStats={serviceStats}
-            />
-          )}
-
-          {/* 차트 컴포넌트 */}
-          <TraceChart
-            data={chartData}
-            height={config.height}
-            config={{
-              ...config,
-              brush: {
-                enabled: true,
-                type: 'rect',
-                mode: 'multiple',
-                throttleType: 'debounce',
-                throttleDelay: 300,
-                ...config.brush,
-              },
-              realtimeRange: config.realtimeRange || 5,
-            }}
-            onBrushSelected={handleBrushSelected}
-            onDataPointClick={handleDataPointClick}
-            loading={isLoading}
-            legendState={legendState}
-            serviceThresholds={serviceThresholds}
-          />
-
-          {/* 데이터 없음 메시지 */}
-          {filteredData.length === 0 && !isLoading && (
-            <NoData 
-              isRealtime={isRealtime} 
-              hasFilters={hasFilters} 
-            />
-          )}
-
-          {/* 필터 요약 */}
-          {filteredData.length > 0 && !isLoading && (
-            <FilterSummary
-              filteredDataLength={filteredData.length}
-              dataFilters={dataFilters}
-              hasFilters={hasFilters}
-              onResetFilters={() => updateDataFilters(DEFAULT_FILTER)}
+          
+          {activeTab === 'analytics' && (
+            <TraceAnalytics 
+              traces={filteredData}
+              onTraceSelect={onTraceSelect}
             />
           )}
         </CardBody>

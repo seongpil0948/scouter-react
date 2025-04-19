@@ -8,7 +8,7 @@ import {
   DrawerBody,
   DrawerHeader,
 } from "@heroui/drawer";
-import { X, List, ArrowRight, Clock } from 'lucide-react';
+import { X, List, ArrowRight, Clock, BarChart2 } from 'lucide-react';
 
 import { useFilterStore } from '@/lib/store/telemetryStore';
 import { useChartStore } from '@/lib/store/chartStore';
@@ -17,9 +17,10 @@ import { useTraceData, RefreshIntervalOption, RealtimeRangeOption } from '@/lib/
 import { Card, CardBody } from '@heroui/card';
 import { ThemeSwitch } from '@/components/shared/theme-switch';
 import { Skeleton } from '@heroui/skeleton';
-import TraceDetail from '@/components/traces/TraceDetail'; // 기존 TraceDetail 컴포넌트 사용
+import TraceDetail from '@/components/traces/TraceDetail';
 import { Button } from '@heroui/button';
 import { useDisclosure } from '@heroui/modal';
+import { Tabs, Tab } from '@heroui/tabs';
 
 // 클라이언트 사이드에서만 로드하도록 dynamic import
 const TraceFilter = dynamic(() => import('@/components/traces/TraceFilter'), {
@@ -49,6 +50,19 @@ const TraceVisualization = dynamic(() => import('@/components/traces/TraceVisual
   ),
 });
 
+// 트레이스 분석 컴포넌트도 dynamic import
+const TraceAnalytics = dynamic(() => import('@/components/traces/TraceVisualization/TraceAnalytics'), {
+  ssr: false,
+  loading: () => (
+    <Card className="w-full">
+      <CardBody className="p-4">
+        <Skeleton className="h-8 w-64 mb-4" />
+        <Skeleton className="h-[400px] w-full rounded-sm" />
+      </CardBody>
+    </Card>
+  ),
+});
+
 // SSR에서 사용 가능한 단순 DateRangePicker
 const DateRangePicker = dynamic(() => import('@/components/shared/DateRangePicker'), {
   ssr: true,
@@ -59,6 +73,9 @@ export default function Home() {
   const router = useRouter();
   const { timeRange } = useFilterStore();
   const { updateConfig } = useChartStore();
+  
+  // 활성 탭 상태 관리
+  const [activeTab, setActiveTab] = useState<string>('visualization');
   
   // 선택된 트레이스 ID 상태 관리
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
@@ -113,7 +130,7 @@ export default function Home() {
     }
   }, [isRealtime, chartConfig.autoUpdate, realtimeRange]);
 
-  // 트레이스 상세 보기 핸들러 - 이제 페이지 이동 대신 Drawer 사용
+  // 트레이스 상세 보기 핸들러
   const handleTraceSelect = useCallback((traceId: string) => {
     setSelectedTraceId(traceId);
     onOpen(); // Drawer 열기
@@ -142,7 +159,7 @@ export default function Home() {
     }, 300);
   }, [refresh, isChangingFilter]);
 
-  // 실시간 갱신 간격 변경 - 디바운스 추가
+  // 실시간 갱신 간격 변경
   const handleRefreshIntervalChange = useCallback(
     (interval: RefreshIntervalOption) => {
       if (interval === refreshInterval) return; // 같은 값이면 변경하지 않음
@@ -151,7 +168,7 @@ export default function Home() {
     [setRefreshInterval, refreshInterval]
   );
 
-  // 실시간 조회 범위 변경 - 디바운스 추가 및 chartConfig 동기화
+  // 실시간 조회 범위 변경
   const handleRealtimeRangeChange = useCallback(
     (range: RealtimeRangeOption) => {
       if (range === realtimeRange) return; // 같은 값이면 변경하지 않음
@@ -189,6 +206,7 @@ export default function Home() {
         </Button>
         <ThemeSwitch className="absolute top-4 right-4" />
       </div>
+      
       <div className="w-full max-w-7xl space-y-4">
         <TraceFilter
           onFilterChange={handleFilterChange}
@@ -198,20 +216,59 @@ export default function Home() {
           onRefreshIntervalChange={handleRefreshIntervalChange}
           realtimeRange={realtimeRange}
           onRealtimeRangeChange={handleRealtimeRangeChange}
-          onRefresh={refresh} // 통합된 새로고침 함수 전달
+          onRefresh={refresh}
         />
-        <TraceVisualization
-          config={{
-            ...chartConfig,
-            title: error ? '데이터 로드 중 오류 발생' : isRealtime ? `실시간 요청 지연 시간 (${realtimeRange}분)` : chartConfig.title,
-            // 실시간 모드일 때 자동 업데이트를 활성화
-            autoUpdate: isRealtime,
-          }}
-          traceData={traces}
-          onTraceSelect={handleTraceSelect}
-          showFilters={false} /* 이미 TraceFilter 컴포넌트가 있으므로 내부 필터는 비활성화 */
-          onFilterChange={handleFilterChange}
-        />
+        
+        <Card className="w-full">
+          <Tabs 
+            aria-label="데이터 시각화 모드" 
+            selectedKey={activeTab}
+            onSelectionChange={(key) => setActiveTab(key as string)}
+            className="px-4 pt-2"
+          >
+            <Tab
+              key="visualization"
+              title={
+                <div className="flex items-center">
+                  <Clock size={16} className="mr-1" />
+                  타임라인 시각화
+                </div>
+              }
+            />
+            <Tab
+              key="analytics"
+              title={
+                <div className="flex items-center">
+                  <BarChart2 size={16} className="mr-1" />
+                  분석 요약
+                </div>
+              }
+            />
+          </Tabs>
+          
+          <CardBody className="p-4">
+            {activeTab === 'visualization' && (
+              <TraceVisualization
+                config={{
+                  ...chartConfig,
+                  title: error ? '데이터 로드 중 오류 발생' : isRealtime ? `실시간 요청 지연 시간 (${realtimeRange}분)` : chartConfig.title,
+                  autoUpdate: isRealtime,
+                }}
+                traceData={traces}
+                onTraceSelect={handleTraceSelect}
+                showFilters={false}
+                onFilterChange={handleFilterChange}
+              />
+            )}
+            
+            {activeTab === 'analytics' && (
+              <TraceAnalytics 
+                traces={traces} 
+                onTraceSelect={handleTraceSelect}
+              />
+            )}
+          </CardBody>
+        </Card>
       </div>
 
       {/* 로딩 상태 표시 */}
@@ -271,7 +328,7 @@ export default function Home() {
         placement="right"
         classNames={{
           base: "max-w-[90%] sm:max-w-[800px]",
-          body: "p-0" // 패딩 제거하여 TraceDetail이 온전히 표시되도록
+          body: "p-0"
         }}
       >
         <DrawerContent>
@@ -289,7 +346,7 @@ export default function Home() {
                 {selectedTraceId && (
                   <TraceDetail 
                     traceId={selectedTraceId} 
-                    onBack={onClose} // 뒤로 가기 버튼은 Drawer 닫기로 처리
+                    onBack={onClose}
                   />
                 )}
               </DrawerBody>
