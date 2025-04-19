@@ -1,12 +1,21 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from '@heroui/table';
 import { Badge } from '@heroui/badge';
 import { Button } from '@heroui/button';
 import { Pagination } from '@heroui/pagination';
 import { Tooltip } from '@heroui/tooltip';
-import { Eye as EyeIcon, Clock, Share2, AlertTriangle, Check, HelpCircle } from 'lucide-react';
+import { 
+  Eye as EyeIcon, 
+  Clock, 
+  Share2, 
+  AlertTriangle, 
+  Check, 
+  HelpCircle, 
+  Database, 
+  Globe 
+} from 'lucide-react';
 import { Chip } from '@heroui/chip';
 import { Spinner } from '@heroui/spinner';
 
@@ -72,28 +81,154 @@ const TraceTable: React.FC<TraceTableProps> = ({
   const renderAttributes = useCallback((trace: TraceItem) => {
     if (!trace.attributes) return null;
 
-    // 중요 속성 추출
-    const importantAttrs = ['http.method', 'http.url', 'http.status_code', 'db.operation', 'error.message'];
-    const attrEntries = Object.entries(trace.attributes)
-      .filter(([key]) => importantAttrs.includes(key))
-      .slice(0, 2); // 최대 2개만 표시
+    // 필수 속성 먼저 추출 (우선순위 높은 순)
+    const priorityAttrs = [
+      'url.query',
+      'sql.elapsed',
+      'sql.query',
+      'url.path',
+      'http.method',
+      'http.url',
+      'http.status_code',
+      'db.operation',
+      'db.statement',
+      'error.message'
+    ];
+    
+    // 속성 타입에 따른 배지 색상과 아이콘 결정
+    const getAttributeBadgeInfo = (key: string, value: any) => {
+      if (key.startsWith('sql.') || key === 'db.statement' || key === 'db.operation') {
+        return { 
+          color: 'secondary', 
+          icon: <Database size={12} className="mr-1" /> 
+        };
+      }
+      if (key.startsWith('url.') || key.startsWith('http.')) {
+        return { 
+          color: 'primary', 
+          icon: <Globe size={12} className="mr-1" /> 
+        };
+      }
+      if (key.includes('error')) {
+        return { 
+          color: 'danger', 
+          icon: <AlertTriangle size={12} className="mr-1" /> 
+        };
+      }
+      return { 
+        color: 'default', 
+        icon: null 
+      };
+    };
+
+    // 우선 순위 속성 먼저 찾기
+    const priorityEntries = priorityAttrs
+      .map(key => {
+        if (trace.attributes && trace.attributes[key] !== undefined) {
+          return [key, trace.attributes[key]];
+        }
+        return null;
+      })
+      .filter(Boolean)
+      .slice(0, 3); // 최대 3개만
+
+    // 우선 순위 속성이 없으면 다른 속성 중에서 2개 추출
+    const attrEntries = priorityEntries.length > 0 
+      ? priorityEntries 
+      : Object.entries(trace.attributes).slice(0, 2);
 
     if (attrEntries.length === 0) return null;
 
     return (
       <div className="flex flex-wrap gap-1 mt-1">
-        {attrEntries.map(([key, value]) => (
-          <Chip key={key} size="sm" variant="flat" color={key.includes('error') ? 'danger' : 'default'} className="text-xs">
-            {key.split('.').pop()}: {String(value).substring(0, 20)}
-            {String(value).length > 20 ? '...' : ''}
-          </Chip>
-        ))}
-        {Object.keys(trace.attributes).length > 2 && (
-          <Chip size="sm" variant="flat" className="text-xs">
-            +{Object.keys(trace.attributes).length - 2}
-          </Chip>
+        {attrEntries.filter(x => !!x).map(([key, value]) => {
+          const { color, icon } = getAttributeBadgeInfo(key as string, value);
+          
+          // SQL 쿼리는 짧게 표시
+          if (key === 'sql.query' || key === 'db.statement') {
+            const query = String(value);
+            const shortQuery = query.length > 25 ? `${query.substring(0, 25)}...` : query;
+            
+            return (
+              <Tooltip key={key} content={query}>
+                <Chip size="sm" variant="flat" color={color as any} className="text-xs flex items-center">
+                  {icon}
+                  SQL: {shortQuery}
+                </Chip>
+              </Tooltip>
+            );
+          }
+          
+          // URL 경로는 짧게 표시
+          if (key === 'url.path' || key === 'http.path') {
+            const path = String(value);
+            const shortPath = path.length > 20 ? `${path.substring(0, 20)}...` : path;
+            
+            return (
+              <Tooltip key={key} content={path}>
+                <Chip size="sm" variant="flat" color={color as any} className="text-xs flex items-center">
+                  {icon}
+                  Path: {shortPath}
+                </Chip>
+              </Tooltip>
+            );
+          }
+          
+          // SQL 실행 시간
+          if (key === 'sql.elapsed' || key === 'db.elapsed') {
+            return (
+              <Chip key={key} size="sm" variant="flat" color={color as any} className="text-xs flex items-center">
+                {icon}
+                SQL Time: {formatDuration(Number(value))}
+              </Chip>
+            );
+          }
+          
+          // URL 쿼리
+          if (key === 'url.query' || key === 'http.query') {
+            const query = String(value);
+            const shortQuery = query.length > 15 ? `${query.substring(0, 15)}...` : query;
+            
+            return (
+              <Tooltip key={key} content={query}>
+                <Chip size="sm" variant="flat" color={color as any} className="text-xs flex items-center">
+                  {icon}
+                  Query: {shortQuery}
+                </Chip>
+              </Tooltip>
+            );
+          }
+          
+          // 기타 속성
+          return (
+            <Chip key={key} size="sm" variant="flat" color={color as any} className="text-xs flex items-center">
+              {icon}
+              {key.split('.').pop()}: {String(value).substring(0, 15)}
+              {String(value).length > 15 ? '...' : ''}
+            </Chip>
+          );
+        })}
+        
+        {/* 추가 속성 개수 표시 */}
+        {Object.keys(trace.attributes).length > attrEntries.length && (
+          <Tooltip content="더 많은 속성이 있습니다. 상세 보기를 클릭하세요.">
+            <Chip size="sm" variant="flat" className="text-xs">
+              +{Object.keys(trace.attributes).length - attrEntries.length}
+            </Chip>
+          </Tooltip>
         )}
       </div>
+    );
+  }, []);
+
+  // SQL 속성 유무 확인 (하이라이트용)
+  const hasSqlAttributes = useCallback((trace: TraceItem) => {
+    if (!trace.attributes) return false;
+    
+    return Object.keys(trace.attributes).some(key => 
+      key.startsWith('sql.') || 
+      key === 'db.statement' || 
+      key === 'db.operation'
     );
   }, []);
 
@@ -139,60 +274,75 @@ const TraceTable: React.FC<TraceTableProps> = ({
           isLoading={isLoading}
           loadingContent={<Spinner />}
         >
-          {(trace) => (
-            <TableRow key={trace.id} className="cursor-pointer hover:bg-gray-50">
-              <TableCell>
-                <div className="flex flex-col">
-                  <span>{formatDateTime(trace.startTime)}</span>
-                  <span className="text-xs text-gray-500">{formatRelativeTime(trace.startTime)}</span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge color="primary" variant="flat">
-                  {trace.serviceName}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col">
-                  {renderName(trace)}
-                  {renderAttributes(trace)}
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge color={getStatusColor(trace.status)} className="flex items-center">
-                  {renderStatusIcon(trace.status)}
-                  {trace.status || 'UNSET'}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center">
-                  <Clock className="mr-1 text-gray-500" size={14} />
-                  <span title={`${trace.duration}ms`}>{formatDuration(trace.duration)}</span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex justify-center gap-2">
-                  <Tooltip content="상세 보기">
-                    <Button isIconOnly size="sm" variant="light" onPress={() => onSelectTrace(trace)}>
-                      <EyeIcon size={16} />
-                    </Button>
-                  </Tooltip>
-                  <Tooltip content="트레이스 ID 복사">
-                    <Button
-                      isIconOnly
-                      size="sm"
-                      variant="light"
-                      onPress={() => {
-                        navigator.clipboard.writeText(trace.traceId);
-                      }}
-                    >
-                      <Share2 size={16} />
-                    </Button>
-                  </Tooltip>
-                </div>
-              </TableCell>
-            </TableRow>
-          )}
+          {(trace) => {
+            const sqlAttrs = hasSqlAttributes(trace);
+            
+            return (
+              <TableRow 
+                key={trace.id} 
+                className={`cursor-pointer hover:bg-gray-50 ${sqlAttrs ? 'border-l-4 border-l-indigo-500' : ''}`}
+              >
+                <TableCell>
+                  <div className="flex flex-col">
+                    <span>{formatDateTime(trace.startTime)}</span>
+                    <span className="text-xs text-gray-500">{formatRelativeTime(trace.startTime)}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge color="primary" variant="flat">
+                    {trace.serviceName}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col">
+                    {renderName(trace)}
+                    {renderAttributes(trace)}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge color={getStatusColor(trace.status)} className="flex items-center">
+                    {renderStatusIcon(trace.status)}
+                    {trace.status || 'UNSET'}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center">
+                    <Clock className="mr-1 text-gray-500" size={14} />
+                    <span title={`${trace.duration}ms`}>{formatDuration(trace.duration)}</span>
+                    {sqlAttrs && trace.attributes && trace.attributes['sql.elapsed'] && (
+                      <Tooltip content={`SQL 실행 시간: ${formatDuration(Number(trace.attributes['sql.elapsed']))}`}>
+                        <Badge variant="flat" color="secondary" className="ml-2 text-xs">
+                          <Database size={10} className="mr-1" />
+                          {formatDuration(Number(trace.attributes['sql.elapsed']))}
+                        </Badge>
+                      </Tooltip>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex justify-center gap-2">
+                    <Tooltip content="상세 보기">
+                      <Button isIconOnly size="sm" variant="light" onPress={() => onSelectTrace(trace)}>
+                        <EyeIcon size={16} />
+                      </Button>
+                    </Tooltip>
+                    <Tooltip content="트레이스 ID 복사">
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        onPress={() => {
+                          navigator.clipboard.writeText(trace.traceId);
+                        }}
+                      >
+                        <Share2 size={16} />
+                      </Button>
+                    </Tooltip>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          }}
         </TableBody>
       </Table>
     </div>

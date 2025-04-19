@@ -1,14 +1,16 @@
 'use client';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Badge } from '@heroui/badge';
 import { Button } from '@heroui/button';
 import { Tabs, Tab } from '@heroui/tabs';
-import { CopyIcon, ClockIcon, ServerIcon } from 'lucide-react';
+import { CopyIcon, ClockIcon, ServerIcon, Database, Globe } from 'lucide-react';
 import { Tooltip } from '@heroui/tooltip';
 import { addToast } from '@heroui/toast';
 
 import { formatDateTime } from '@/lib/utils/dateFormatter';
 import SpanAttributesViewer from './SpanAttributesViewer';
+import SqlAttributesViewer from './SqlAttributesViewer';
+import UrlAttributesViewer from './UrlAttributesViewer';
 
 interface Span {
   id: string;
@@ -61,6 +63,29 @@ export const SpanDetail: React.FC<SpanDetailProps> = React.memo(({ span, formatD
     return 'default';
   }, []);
 
+  // SQL 관련 속성 여부 확인
+  const hasSqlAttributes = useMemo(() => {
+    if (!span.attributes) return false;
+    
+    return Object.keys(span.attributes).some(key => 
+      key.startsWith('sql.') || 
+      key === 'db.statement' || 
+      key === 'db.operation' ||
+      key.includes('query')
+    );
+  }, [span.attributes]);
+
+  // URL 관련 속성 여부 확인
+  const hasUrlAttributes = useMemo(() => {
+    if (!span.attributes) return false;
+    
+    return Object.keys(span.attributes).some(key => 
+      key.startsWith('url.') || 
+      key.startsWith('http.') || 
+      key.includes('path')
+    );
+  }, [span.attributes]);
+
   return (
     <div className="mt-4 space-y-6">
       {/* 스팬 요약 정보 */}
@@ -100,6 +125,28 @@ export const SpanDetail: React.FC<SpanDetailProps> = React.memo(({ span, formatD
       {/* 상세 정보 탭 */}
       <Tabs selectedKey={activeTab} onSelectionChange={(k) => setActiveTab(String(k))}>
         <Tab key="overview" title="개요" />
+        {hasSqlAttributes && (
+          <Tab 
+            key="sql" 
+            title={
+              <div className="flex items-center">
+                <Database size={16} className="mr-1" />
+                SQL
+              </div>
+            } 
+          />
+        )}
+        {hasUrlAttributes && (
+          <Tab 
+            key="url" 
+            title={
+              <div className="flex items-center">
+                <Globe size={16} className="mr-1" />
+                URL
+              </div>
+            } 
+          />
+        )}
         <Tab key="attributes" title={`속성 (${span.attributes ? Object.keys(span.attributes).length : 0})`} />
         <Tab key="timeline" title="타임라인" />
       </Tabs>
@@ -205,14 +252,32 @@ export const SpanDetail: React.FC<SpanDetailProps> = React.memo(({ span, formatD
               <div className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700">
                 <div className="px-4 py-3 bg-gray-50 dark:bg-gray-750 border-b dark:border-gray-700 font-medium flex justify-between">
                   <span>주요 속성</span>
-                  <Button size="sm" variant="ghost" onPress={() => setActiveTab('attributes')}>
-                    모든 속성 보기
-                  </Button>
+                  <div className="flex gap-2">
+                    {hasSqlAttributes && (
+                      <Button size="sm" variant="ghost" onPress={() => setActiveTab('sql')}>
+                        <Database size={14} className="mr-1" />
+                        SQL 보기
+                      </Button>
+                    )}
+                    {hasUrlAttributes && (
+                      <Button size="sm" variant="ghost" onPress={() => setActiveTab('url')}>
+                        <Globe size={14} className="mr-1" />
+                        URL 보기
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" onPress={() => setActiveTab('attributes')}>
+                      모든 속성 보기
+                    </Button>
+                  </div>
                 </div>
                 <div className="p-4">
                   {(() => {
-                    // 중요 속성 우선순위
+                    // 중요 속성 우선순위 (필수 속성 우선)
                     const importantKeys = [
+                      'url.query',
+                      'sql.elapsed',
+                      'sql.query',
+                      'url.path',
                       'http.method',
                       'http.url',
                       'http.status_code',
@@ -220,9 +285,6 @@ export const SpanDetail: React.FC<SpanDetailProps> = React.memo(({ span, formatD
                       'db.statement',
                       'error.message',
                       'error.stack',
-                      'messaging.destination',
-                      'rpc.method',
-                      'rpc.service',
                     ];
 
                     // 우선순위에 따라 중요 속성 추출
@@ -269,6 +331,13 @@ export const SpanDetail: React.FC<SpanDetailProps> = React.memo(({ span, formatD
           </div>
         )}
 
+        {/* SQL 전용 탭 */}
+        {activeTab === 'sql' && <SqlAttributesViewer attributes={span.attributes} />}
+
+        {/* URL 전용 탭 */}
+        {activeTab === 'url' && <UrlAttributesViewer attributes={span.attributes} />}
+
+        {/* 모든 속성 탭 */}
         {activeTab === 'attributes' && <SpanAttributesViewer attributes={span.attributes} />}
 
         {activeTab === 'timeline' && (
