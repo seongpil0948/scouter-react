@@ -36,10 +36,6 @@ interface SpanDetailProps {
 
 export const SpanDetail: React.FC<SpanDetailProps> = React.memo(({ span, formatDuration, childrenCount = 0, onParentClick }) => {
   const [activeTab, setActiveTab] = useState<string>('overview');
-
-
-
-  // 상태에 따른 색상 결정
   const getStatusColor = useCallback((status?: string) => {
     if (status === 'ERROR') return 'danger';
     if (status === 'OK') return 'success';

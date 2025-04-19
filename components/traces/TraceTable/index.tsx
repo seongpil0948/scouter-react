@@ -120,7 +120,6 @@ const TraceTable: React.FC<TraceTableProps> = ({
         icon: null 
       };
     };
-
     // 우선 순위 속성 먼저 찾기
     const priorityEntries = priorityAttrs
       .map(key => {
