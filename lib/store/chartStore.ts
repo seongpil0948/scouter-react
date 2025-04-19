@@ -95,11 +95,11 @@ export const useChartStore = create<ChartState>()(
       }),
       {
         name: "chart-store",
-        partialize: (state) => ({
-          // Only persist these parts of the state
-          config: state.config,
-          legendState: state.legendState,
-        }),
+        // partialize: (state) => ({
+        //   // Only persist these parts of the state
+        //   config: state.config,
+        //   legendState: state.legendState,
+        // }),
       }
     )
   )

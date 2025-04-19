@@ -97,11 +97,11 @@ export const useUIStore = create<UIState>()(
       }),
       {
         name: "telemetry-ui-storage",
-        partialize: (state) => ({
-          isSidebarOpen: state.isSidebarOpen,
-          isDarkMode: state.isDarkMode,
-          currentPage: state.currentPage,
-        }),
+        // partialize: (state) => ({
+        //   isSidebarOpen: state.isSidebarOpen,
+        //   isDarkMode: state.isDarkMode,
+        //   currentPage: state.currentPage,
+        // }),
       },
     ),
   ),

@@ -194,7 +194,7 @@ export default function Home() {
   }, [chartConfig, updateConfig]);
 
   return (
-    <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
+    <section className="flex flex-col items-center justify-center gap-4 pb-4 md:pb-5">
       <div className="w-full flex justify-between items-center bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
         <h2 className="text-xl font-semibold">IDS APM</h2>
         <div className="flex items-center gap-4">

@@ -12,6 +12,7 @@ import { Database, Globe, AlertTriangle, Clock, ChevronRight, Code, BarChart2, F
 
 import { analyzeTraceSpans } from '@/lib/utils/spanAnalyzer';
 import { formatDuration } from '@/lib/utils/dateFormatter';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 
 interface TraceAnalyticsSummaryProps {
   spans: Span[];
@@ -84,7 +85,9 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
             className="mb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750"
             isPressable
             as={Link}
-            onPress={() => onSelectSpan(sql.spanId)}
+            onPress={() => {
+              copyToClipboard(sql.query)
+            }}
           >
             <CardBody className="p-3">
               <div className="flex justify-between mb-1">

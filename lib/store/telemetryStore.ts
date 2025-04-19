@@ -59,11 +59,11 @@ export const useFilterStore = create<FilterStore>()(
       }),
       {
         name: "telemetry-filter-storage",
-        partialize: (state) => ({
-          logFilters: state.logFilters,
-          traceFilters: state.traceFilters,
-          timeRange: state.timeRange,
-        }),
+        // partialize: (state) => ({
+        //   logFilters: state.logFilters,
+        //   traceFilters: state.traceFilters,
+        //   timeRange: state.timeRange,
+        // }),
       },
     ),
   ),
