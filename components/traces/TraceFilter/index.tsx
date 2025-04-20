@@ -42,20 +42,12 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 interface TraceFilterProps {
   onFilterChange?: () => void;
   className?: string;
-  refreshInterval?: RefreshIntervalOption;
-  onRefreshIntervalChange?: (interval: RefreshIntervalOption) => void;
-  realtimeRange?: RealtimeRangeOption;
-  onRealtimeRangeChange?: (range: RealtimeRangeOption) => void;
   onRefresh?: () => void;
 }
 
 const TraceFilter: React.FC<TraceFilterProps> = ({
   onFilterChange,
   className = "",
-  refreshInterval = 5,
-  onRefreshIntervalChange,
-  realtimeRange = 5,
-  onRealtimeRangeChange,
   onRefresh,
 }) => {
   // Get filter state from store
@@ -85,7 +77,15 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
   } = useTraceFilterStore();
 
   // Get time range from global store
-  const { timeRange, isRealtime, setIsRealtime } = useFilterStore();
+  const {
+    timeRange,
+    isRealtime,
+    toggleRealtime,
+    refreshInterval,
+    setRefreshInterval,
+    realtimeRange,
+    setRealtimeRange,
+  } = useFilterStore();
   const isSSR = useIsSSR();
 
   // Local state for input fields
@@ -321,7 +321,7 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
     (enabled: boolean) => {
       if (isTogglingRealtime) return;
       setIsTogglingRealtime(true);
-      setIsRealtime(enabled);
+      toggleRealtime(enabled);
       setTimeout(() => setIsTogglingRealtime(false), 500);
     },
     [isTogglingRealtime]
@@ -514,15 +514,11 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
                   <div className="w-full sm:col-span-2 lg:col-span-1">
                     <RealtimeSettings
                       isRealtime={isRealtime}
-                      onToggleRealtime={handleToggleRealtime}
+                      onToggleRealtime={toggleRealtime}
                       refreshInterval={refreshInterval}
-                      onRefreshIntervalChange={
-                        onRefreshIntervalChange || (() => {})
-                      }
+                      onRefreshIntervalChange={setRefreshInterval}
                       realtimeRange={realtimeRange}
-                      onRealtimeRangeChange={
-                        onRealtimeRangeChange || (() => {})
-                      }
+                      onRealtimeRangeChange={setRealtimeRange}
                     />
                   </div>
                 }

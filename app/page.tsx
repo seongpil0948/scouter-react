@@ -1,3 +1,4 @@
+// app/page.tsx
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useCallback, useEffect } from "react";
@@ -12,11 +13,7 @@ import { X, List, ArrowRight, Clock, BarChart2 } from "lucide-react";
 
 import { useFilterStore } from "@/lib/store/telemetryStore";
 import { useChartStore } from "@/lib/store/chartStore";
-import {
-  useTraceData,
-  RefreshIntervalOption,
-  RealtimeRangeOption,
-} from "@/lib/hooks/useTraceData";
+import { useTraceData } from "@/lib/hooks/useTraceData";
 
 import { Card, CardBody } from "@heroui/card";
 import { ThemeSwitch } from "@/components/shared/theme-switch";
@@ -74,7 +71,6 @@ const TraceAnalytics = dynamic(
   }
 );
 
-// SSR에서 사용 가능한 단순 DateRangePicker
 const DateRangePicker = dynamic(
   () => import("@/components/shared/DateRangePicker"),
   {
@@ -95,20 +91,8 @@ export default function Home() {
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
-  // 개선된 useTraceData 훅 사용
-  const {
-    traces,
-    error,
-    refresh,
-    isLoading,
-    toggleRealtime,
-    refreshInterval,
-    setRefreshInterval,
-    realtimeRange,
-    setRealtimeRange,
-  } = useTraceData({
-    refreshInterval: 5, // 기본 5초 갱신
-    realtimeRange: 5, // 기본 5분 범위
+  // useTraceData 훅 사용 - 실시간 관련 props 전달 제거
+  const { traces, error, refresh, isLoading } = useTraceData({
     rootSpansOnly: true,
   });
 
@@ -117,19 +101,18 @@ export default function Home() {
     title: "실시간 요청 지연 시간",
     latencyThreshold: 300,
     colors: {
-      low: "#52c41a", // 낮은 지연시간
-      medium: "#1890ff", // 보통 지연시간
-      high: "#faad14", // 높은 지연시간
-      critical: "#ff4d4f", // 임계치 초과 지연시간
-      error: "#ff4d4f", // 에러 상태 색상
+      low: "#52c41a",
+      medium: "#1890ff",
+      high: "#faad14",
+      critical: "#ff4d4f",
+      error: "#ff4d4f",
     },
     brush: {
       enabled: true,
       type: "rect",
       mode: "multiple",
     },
-    // 실시간 모드 관련 추가 설정
-    autoUpdate: false, // 초기값은 비활성화
+    autoUpdate: false,
   });
 
   // 실시간 모드 상태 변경 시 chartConfig 업데이트
@@ -138,10 +121,9 @@ export default function Home() {
       setChartConfig((prev) => ({
         ...prev,
         autoUpdate: isRealtime,
-        realtimeRange: realtimeRange,
       }));
     }
-  }, [isRealtime, chartConfig.autoUpdate, realtimeRange]);
+  }, [isRealtime, chartConfig.autoUpdate]);
 
   // 트레이스 상세 보기 핸들러
   const handleTraceSelect = useCallback(
@@ -153,51 +135,22 @@ export default function Home() {
   );
 
   // 시간 범위 변경 처리
-  const handleTimeRangeChange = useCallback(() => {
-    // 시간 범위가 변경되면 실시간 데이터 조회 비활성화
-    if (isRealtime) {
-      toggleRealtime(false);
-    }
-    refresh();
-  }, [refresh, isRealtime, toggleRealtime]);
+  const handleTimeRangeChange = useCallback(
+    (startTime: number, endTime: number) => {
+      // 시간 범위가 변경되면 데이터 새로고침
+      setTimeout(() => {
+        refresh();
+      }, 200);
+    },
+    [refresh]
+  );
 
-  // 디바운스를 위한 상태
-  const [isChangingFilter, setIsChangingFilter] = useState(false);
-
-  // 필터 변경 핸들러 - 디바운스 추가
+  // 필터 변경 핸들러
   const handleFilterChange = useCallback(() => {
-    if (isChangingFilter) return;
-
-    setIsChangingFilter(true);
     setTimeout(() => {
       refresh();
-      setIsChangingFilter(false);
     }, 300);
-  }, [refresh, isChangingFilter]);
-
-  // 실시간 갱신 간격 변경
-  const handleRefreshIntervalChange = useCallback(
-    (interval: RefreshIntervalOption) => {
-      if (interval === refreshInterval) return; // 같은 값이면 변경하지 않음
-      setRefreshInterval(interval);
-    },
-    [setRefreshInterval, refreshInterval]
-  );
-
-  // 실시간 조회 범위 변경
-  const handleRealtimeRangeChange = useCallback(
-    (range: RealtimeRangeOption) => {
-      if (range === realtimeRange) return; // 같은 값이면 변경하지 않음
-      setRealtimeRange(range);
-
-      // Chart 설정도 함께 업데이트
-      setChartConfig((prev) => ({
-        ...prev,
-        realtimeRange: range,
-      }));
-    },
-    [setRealtimeRange, realtimeRange]
-  );
+  }, [refresh]);
 
   // 트레이스 목록 페이지로 이동
   const navigateToTraces = useCallback(() => {
@@ -228,14 +181,8 @@ export default function Home() {
       </div>
 
       <div className="w-full max-w-7xl space-y-4">
-        <TraceFilter
-          onFilterChange={handleFilterChange}
-          refreshInterval={refreshInterval}
-          onRefreshIntervalChange={handleRefreshIntervalChange}
-          realtimeRange={realtimeRange}
-          onRealtimeRangeChange={handleRealtimeRangeChange}
-          onRefresh={refresh}
-        />
+        {/* TraceFilter에 불필요한 props 제거 */}
+        <TraceFilter onFilterChange={handleFilterChange} onRefresh={refresh} />
 
         <Card className="w-full">
           <Tabs
@@ -272,7 +219,7 @@ export default function Home() {
                   title: error
                     ? "데이터 로드 중 오류 발생"
                     : isRealtime
-                      ? `실시간 요청 지연 시간 (${realtimeRange}분)`
+                      ? `실시간 요청 지연 시간`
                       : chartConfig.title,
                   autoUpdate: isRealtime,
                 }}
@@ -293,59 +240,7 @@ export default function Home() {
         </Card>
       </div>
 
-      {/* 로딩 상태 표시 */}
-      {isLoading && traces.length === 0 && (
-        <Card className="w-full max-w-7xl">
-          <CardBody className="p-8 flex justify-center">
-            <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-              <p className="mt-4 text-gray-500">데이터를 불러오는 중...</p>
-            </div>
-          </CardBody>
-        </Card>
-      )}
-
-      {/* 에러 표시 */}
-      {error && (
-        <Card className="w-full max-w-7xl mt-4">
-          <CardBody className="p-4">
-            <div className="text-center text-red-500">
-              <p>데이터를 불러오는 중 오류가 발생했습니다:</p>
-              <p className="text-sm mt-2">{error.message}</p>
-            </div>
-          </CardBody>
-        </Card>
-      )}
-
-      {/* 데이터 요약 표시 */}
-      {traces.length > 0 && (
-        <div className="w-full max-w-7xl">
-          <Card>
-            <CardBody className="p-4">
-              <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-500">
-                  {isRealtime ? (
-                    <span className="flex items-center">
-                      <Clock size={14} className="mr-1 text-blue-500" />
-                      <span>
-                        실시간 데이터 {refreshInterval}초마다 자동 갱신 중 (최근{" "}
-                        {realtimeRange}분 데이터)
-                      </span>
-                    </span>
-                  ) : (
-                    <span>선택된 기간에 대한 데이터</span>
-                  )}
-                </div>
-                <div className="text-sm text-gray-500">
-                  총 {traces.length}개 트레이스 표시 중 (루트 스팬만 표시)
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-        </div>
-      )}
-
-      {/* 트레이스 상세 정보 Drawer */}
+      {/* 드로어 부분 - 변경 없음 */}
       <Drawer
         isOpen={isOpen}
         onOpenChange={onOpenChange}
