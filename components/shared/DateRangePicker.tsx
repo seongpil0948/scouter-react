@@ -1,19 +1,23 @@
-'use client';
-import React, { useEffect, useState, useCallback } from 'react';
-import { DateRangePicker as HeroDateRangePicker } from '@heroui/date-picker';
-import { Clock } from 'lucide-react';
-import { parseDateTime, getLocalTimeZone, CalendarDateTime } from '@internationalized/date';
-import { RangeValue } from '@react-types/shared';
+"use client";
+import React, { useEffect, useState, useCallback } from "react";
+import { DateRangePicker as HeroDateRangePicker } from "@heroui/date-picker";
+import { Clock } from "lucide-react";
+import {
+  parseDateTime,
+  getLocalTimeZone,
+  CalendarDateTime,
+} from "@internationalized/date";
+import { RangeValue } from "@react-types/shared";
 
-import { useFilterStore } from '@/lib/store/telemetryStore';
+import { useFilterStore } from "@/lib/store/telemetryStore";
+import { Chip } from "@heroui/chip";
 
 interface DateRangePickerProps {
   onChange?: (startTime: number, endTime: number) => void;
-  isRealtime?: boolean;
 }
 
-const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange, isRealtime }) => {
-  const { timeRange, setTimeRange } = useFilterStore();
+const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange }) => {
+  const { timeRange, setTimeRange, isRealtime } = useFilterStore();
 
   // Initialize with timeRange values converted to CalendarDateTime to include time
   const [value, setValue] = useState<RangeValue<CalendarDateTime> | null>(null);
@@ -43,23 +47,26 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange, isRealtime 
   }, [timeRange]);
 
   // timestamp를 CalendarDateTime으로 변환하는 함수
-  const updateValueFromTimeRange = useCallback((startTime: number, endTime: number) => {
-    const startDate = new Date(startTime);
-    const endDate = new Date(endTime);
+  const updateValueFromTimeRange = useCallback(
+    (startTime: number, endTime: number) => {
+      const startDate = new Date(startTime);
+      const endDate = new Date(endTime);
 
-    // ISO 문자열로 변환 후 시간대 정보 제거
-    const startISO = startDate.toISOString().slice(0, 19);
-    const endISO = endDate.toISOString().slice(0, 19);
+      // ISO 문자열로 변환 후 시간대 정보 제거
+      const startISO = startDate.toISOString().slice(0, 19);
+      const endISO = endDate.toISOString().slice(0, 19);
 
-    try {
-      setValue({
-        start: parseDateTime(startISO),
-        end: parseDateTime(endISO),
-      });
-    } catch (error) {
-      console.error('날짜 변환 오류:', error);
-    }
-  }, []);
+      try {
+        setValue({
+          start: parseDateTime(startISO),
+          end: parseDateTime(endISO),
+        });
+      } catch (error) {
+        console.error("날짜 변환 오류:", error);
+      }
+    },
+    []
+  );
 
   // 날짜 범위 변경 핸들러 - 디바운스 추가
   const [isChangingRange, setIsChangingRange] = useState(false);
@@ -98,10 +105,14 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ onChange, isRealtime 
       />
 
       {isRealtime && (
-        <div className="flex items-center px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-sm text-blue-600 dark:text-blue-300 text-sm">
-          <Clock size={14} className="mr-1" />
-          <span>실시간 모드</span>
-        </div>
+        <Chip
+          size="lg"
+          color="primary"
+          startContent={<Clock size={14} />}
+          variant="faded"
+        >
+          실시간
+        </Chip>
       )}
     </div>
   );

@@ -19,7 +19,7 @@ interface TraceItem {
   duration: number;
   serviceName: string;
   spanCount?: number;
-  status?: 'UNSET' | 'ERROR' | 'OK';
+  status?: "UNSET" | "ERROR" | "OK";
   attributes?: Record<string, any>;
   services?: string[];
   isRootSpan?: boolean; // 루트 스팬 여부 플래그 추가
@@ -93,4 +93,7 @@ interface FilterStore {
 
   selectedService: string | null;
   setSelectedService: (name: string | null) => void;
+
+  isRealtime: boolean;
+  setIsRealtime: (isRealtime: boolean) => void;
 }

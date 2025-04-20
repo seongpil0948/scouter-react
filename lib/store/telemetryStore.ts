@@ -10,13 +10,13 @@ const genDefaultFilter = () => ({
   status: null,
   hasTrace: false,
   startTime: 0, // 초기값은 0으로 설정 (클라이언트 사이드에서 실제 시간으로 초기화)
-  endTime: 0,   // 초기값은 0으로 설정 (클라이언트 사이드에서 실제 시간으로 초기화)
+  endTime: 0, // 초기값은 0으로 설정 (클라이언트 사이드에서 실제 시간으로 초기화)
   attributeKey: null,
 });
 
 // 기본 필터 값
 const DEFAULT_LOG_FILTERS: LogFilters = genDefaultFilter();
-const DEFAULT_TRACE_FILTERS  = genDefaultFilter() as TraceFilters;
+const DEFAULT_TRACE_FILTERS = genDefaultFilter() as TraceFilters;
 
 // 필터 스토어 생성
 export const useFilterStore = create<FilterStore>()(
@@ -42,7 +42,7 @@ export const useFilterStore = create<FilterStore>()(
         // 시간 범위
         timeRange: {
           startTime: 0, // 초기값은 0으로 설정 (하이드레이션 문제 방지)
-          endTime: 0,   // 초기값은 0으로 설정 (하이드레이션 문제 방지)
+          endTime: 0, // 초기값은 0으로 설정 (하이드레이션 문제 방지)
         },
         setTimeRange: (startTime, endTime) =>
           set({ timeRange: { startTime, endTime } }),
@@ -56,6 +56,9 @@ export const useFilterStore = create<FilterStore>()(
 
         selectedService: null,
         setSelectedService: (name) => set({ selectedService: name }),
+
+        isRealtime: false,
+        setIsRealtime: (isRealtime) => set({ isRealtime }),
       }),
       {
         name: "telemetry-filter-storage",
@@ -64,9 +67,9 @@ export const useFilterStore = create<FilterStore>()(
         //   traceFilters: state.traceFilters,
         //   timeRange: state.timeRange,
         // }),
-      },
-    ),
-  ),
+      }
+    )
+  )
 );
 
 // 텔레메트리 데이터 스토어
@@ -93,5 +96,5 @@ export const useTelemetryStore = create<TelemetryStore>()(
 
     isLoadingTraces: false,
     setIsLoadingTraces: (isLoadingTraces) => set({ isLoadingTraces }),
-  })),
+  }))
 );

@@ -42,8 +42,6 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 interface TraceFilterProps {
   onFilterChange?: () => void;
   className?: string;
-  isRealtime?: boolean;
-  onToggleRealtime?: (enabled: boolean) => void;
   refreshInterval?: RefreshIntervalOption;
   onRefreshIntervalChange?: (interval: RefreshIntervalOption) => void;
   realtimeRange?: RealtimeRangeOption;
@@ -54,8 +52,6 @@ interface TraceFilterProps {
 const TraceFilter: React.FC<TraceFilterProps> = ({
   onFilterChange,
   className = "",
-  isRealtime = false,
-  onToggleRealtime,
   refreshInterval = 5,
   onRefreshIntervalChange,
   realtimeRange = 5,
@@ -89,7 +85,7 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
   } = useTraceFilterStore();
 
   // Get time range from global store
-  const { timeRange } = useFilterStore();
+  const { timeRange, isRealtime, setIsRealtime } = useFilterStore();
   const isSSR = useIsSSR();
 
   // Local state for input fields
@@ -157,12 +153,12 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
   // Handle attribute key change (with debouncing)
   useEffect(() => {
     // attributeKey가 변경되면 즉시 필터 적용
-    if (attributeKeyInput !== attributeKey && attributeKey.trim() !== '') {
+    if (attributeKeyInput !== attributeKey && attributeKey.trim() !== "") {
       const timer = setTimeout(() => {
         console.debug(`속성 키 상태 변경 감지: "${attributeKey}"`);
         onFilterChange?.();
       }, 300); // 약간의 지연으로 여러 번 호출 방지
-      
+
       return () => clearTimeout(timer);
     }
   }, [attributeKey, attributeKeyInput, onFilterChange]);
@@ -325,10 +321,10 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
     (enabled: boolean) => {
       if (isTogglingRealtime) return;
       setIsTogglingRealtime(true);
-      onToggleRealtime?.(enabled);
+      setIsRealtime(enabled);
       setTimeout(() => setIsTogglingRealtime(false), 500);
     },
-    [onToggleRealtime, isTogglingRealtime]
+    [isTogglingRealtime]
   );
 
   const disclosureHelper = useDisclosure();
@@ -514,7 +510,7 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
                 </div>
 
                 {/* 실시간 설정 컴포넌트 사용 */}
-                {onToggleRealtime && (
+                {
                   <div className="w-full sm:col-span-2 lg:col-span-1">
                     <RealtimeSettings
                       isRealtime={isRealtime}
@@ -529,7 +525,7 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
                       }
                     />
                   </div>
-                )}
+                }
               </div>
 
               {/* Sort controls */}

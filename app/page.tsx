@@ -1,29 +1,34 @@
-'use client';
-import { useRouter } from 'next/navigation';
-import { useState, useCallback, useEffect } from 'react';
-import dynamic from 'next/dynamic';
+"use client";
+import { useRouter } from "next/navigation";
+import { useState, useCallback, useEffect } from "react";
+import dynamic from "next/dynamic";
 import {
   Drawer,
   DrawerContent,
   DrawerBody,
   DrawerHeader,
 } from "@heroui/drawer";
-import { X, List, ArrowRight, Clock, BarChart2 } from 'lucide-react';
+import { X, List, ArrowRight, Clock, BarChart2 } from "lucide-react";
 
-import { useFilterStore } from '@/lib/store/telemetryStore';
-import { useChartStore } from '@/lib/store/chartStore';
-import { useTraceData, RefreshIntervalOption, RealtimeRangeOption } from '@/lib/hooks/useTraceData';
+import { useFilterStore } from "@/lib/store/telemetryStore";
+import { useChartStore } from "@/lib/store/chartStore";
+import {
+  useTraceData,
+  RefreshIntervalOption,
+  RealtimeRangeOption,
+} from "@/lib/hooks/useTraceData";
 
-import { Card, CardBody } from '@heroui/card';
-import { ThemeSwitch } from '@/components/shared/theme-switch';
-import { Skeleton } from '@heroui/skeleton';
-import TraceDetail from '@/components/traces/TraceDetail';
-import { Button } from '@heroui/button';
-import { useDisclosure } from '@heroui/modal';
-import { Tabs, Tab } from '@heroui/tabs';
+import { Card, CardBody } from "@heroui/card";
+import { ThemeSwitch } from "@/components/shared/theme-switch";
+import { Skeleton } from "@heroui/skeleton";
+import TraceDetail from "@/components/traces/TraceDetail";
+import { Button } from "@heroui/button";
+import { useDisclosure } from "@heroui/modal";
+import { Tabs, Tab } from "@heroui/tabs";
+import { siteConfig } from "@/config/site";
 
 // 클라이언트 사이드에서만 로드하도록 dynamic import
-const TraceFilter = dynamic(() => import('@/components/traces/TraceFilter'), {
+const TraceFilter = dynamic(() => import("@/components/traces/TraceFilter"), {
   ssr: false,
   loading: () => (
     <div className="w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
@@ -38,45 +43,54 @@ const TraceFilter = dynamic(() => import('@/components/traces/TraceFilter'), {
 });
 
 // 클라이언트 사이드에서만 로드하도록 dynamic import
-const TraceVisualization = dynamic(() => import('@/components/traces/TraceVisualization'), {
-  ssr: false,
-  loading: () => (
-    <Card className="w-full">
-      <CardBody className="p-4">
-        <Skeleton className="h-8 w-64 mb-4" />
-        <Skeleton className="h-[500px] w-full rounded-sm" />
-      </CardBody>
-    </Card>
-  ),
-});
+const TraceVisualization = dynamic(
+  () => import("@/components/traces/TraceVisualization"),
+  {
+    ssr: false,
+    loading: () => (
+      <Card className="w-full">
+        <CardBody className="p-4">
+          <Skeleton className="h-8 w-64 mb-4" />
+          <Skeleton className="h-[500px] w-full rounded-sm" />
+        </CardBody>
+      </Card>
+    ),
+  }
+);
 
 // 트레이스 분석 컴포넌트도 dynamic import
-const TraceAnalytics = dynamic(() => import('@/components/traces/TraceVisualization/TraceAnalytics'), {
-  ssr: false,
-  loading: () => (
-    <Card className="w-full">
-      <CardBody className="p-4">
-        <Skeleton className="h-8 w-64 mb-4" />
-        <Skeleton className="h-[400px] w-full rounded-sm" />
-      </CardBody>
-    </Card>
-  ),
-});
+const TraceAnalytics = dynamic(
+  () => import("@/components/traces/TraceVisualization/TraceAnalytics"),
+  {
+    ssr: false,
+    loading: () => (
+      <Card className="w-full">
+        <CardBody className="p-4">
+          <Skeleton className="h-8 w-64 mb-4" />
+          <Skeleton className="h-[400px] w-full rounded-sm" />
+        </CardBody>
+      </Card>
+    ),
+  }
+);
 
 // SSR에서 사용 가능한 단순 DateRangePicker
-const DateRangePicker = dynamic(() => import('@/components/shared/DateRangePicker'), {
-  ssr: true,
-  loading: () => <Skeleton className="h-10 w-80" />,
-});
+const DateRangePicker = dynamic(
+  () => import("@/components/shared/DateRangePicker"),
+  {
+    ssr: true,
+    loading: () => <Skeleton className="h-10 w-80" />,
+  }
+);
 
 export default function Home() {
   const router = useRouter();
-  const { timeRange } = useFilterStore();
+  const { isRealtime } = useFilterStore();
   const { updateConfig } = useChartStore();
-  
+
   // 활성 탭 상태 관리
-  const [activeTab, setActiveTab] = useState<string>('visualization');
-  
+  const [activeTab, setActiveTab] = useState<string>("visualization");
+
   // 선택된 트레이스 ID 상태 관리
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
@@ -87,7 +101,6 @@ export default function Home() {
     error,
     refresh,
     isLoading,
-    isRealtime,
     toggleRealtime,
     refreshInterval,
     setRefreshInterval,
@@ -101,19 +114,19 @@ export default function Home() {
 
   const [chartConfig, setChartConfig] = useState<ChartConfig>({
     height: 500,
-    title: '실시간 요청 지연 시간',
+    title: "실시간 요청 지연 시간",
     latencyThreshold: 300,
     colors: {
-      low: '#52c41a', // 낮은 지연시간
-      medium: '#1890ff', // 보통 지연시간
-      high: '#faad14', // 높은 지연시간
-      critical: '#ff4d4f', // 임계치 초과 지연시간
-      error: '#ff4d4f', // 에러 상태 색상
+      low: "#52c41a", // 낮은 지연시간
+      medium: "#1890ff", // 보통 지연시간
+      high: "#faad14", // 높은 지연시간
+      critical: "#ff4d4f", // 임계치 초과 지연시간
+      error: "#ff4d4f", // 에러 상태 색상
     },
     brush: {
       enabled: true,
-      type: 'rect',
-      mode: 'multiple',
+      type: "rect",
+      mode: "multiple",
     },
     // 실시간 모드 관련 추가 설정
     autoUpdate: false, // 초기값은 비활성화
@@ -131,10 +144,13 @@ export default function Home() {
   }, [isRealtime, chartConfig.autoUpdate, realtimeRange]);
 
   // 트레이스 상세 보기 핸들러
-  const handleTraceSelect = useCallback((traceId: string) => {
-    setSelectedTraceId(traceId);
-    onOpen(); // Drawer 열기
-  }, [onOpen]);
+  const handleTraceSelect = useCallback(
+    (traceId: string) => {
+      setSelectedTraceId(traceId);
+      onOpen(); // Drawer 열기
+    },
+    [onOpen]
+  );
 
   // 시간 범위 변경 처리
   const handleTimeRangeChange = useCallback(() => {
@@ -185,7 +201,7 @@ export default function Home() {
 
   // 트레이스 목록 페이지로 이동
   const navigateToTraces = useCallback(() => {
-    router.push('/traces');
+    router.push("/traces");
   }, [router]);
 
   // 컴포넌트 마운트 시 차트 설정 초기화
@@ -196,32 +212,34 @@ export default function Home() {
   return (
     <section className="flex flex-col items-center justify-center gap-4 pb-4 md:pb-5">
       <div className="w-full flex justify-between items-center bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
-        <h2 className="text-xl font-semibold">IDS APM</h2>
+        <h2 className="text-xl font-semibold">{siteConfig.name}</h2>
         <div className="flex items-center gap-4">
-          <DateRangePicker onChange={handleTimeRangeChange} isRealtime={isRealtime} />
+          <DateRangePicker onChange={handleTimeRangeChange} />
         </div>
-        <Button color="primary" endContent={<ArrowRight size={16} />} onPress={navigateToTraces}>
+        <Button
+          color="primary"
+          endContent={<ArrowRight size={16} />}
+          onPress={navigateToTraces}
+        >
           <List size={16} className="mr-1" />
-          트레이스 목록 보기
+          목록 보기
         </Button>
         <ThemeSwitch className="absolute top-4 right-4" />
       </div>
-      
+
       <div className="w-full max-w-7xl space-y-4">
         <TraceFilter
           onFilterChange={handleFilterChange}
-          isRealtime={isRealtime}
-          onToggleRealtime={toggleRealtime}
           refreshInterval={refreshInterval}
           onRefreshIntervalChange={handleRefreshIntervalChange}
           realtimeRange={realtimeRange}
           onRealtimeRangeChange={handleRealtimeRangeChange}
           onRefresh={refresh}
         />
-        
+
         <Card className="w-full">
-          <Tabs 
-            aria-label="데이터 시각화 모드" 
+          <Tabs
+            aria-label="데이터 시각화 모드"
             selectedKey={activeTab}
             onSelectionChange={(key) => setActiveTab(key as string)}
             className="px-4 pt-2"
@@ -245,13 +263,17 @@ export default function Home() {
               }
             />
           </Tabs>
-          
+
           <CardBody className="p-4">
-            {activeTab === 'visualization' && (
+            {activeTab === "visualization" && (
               <TraceVisualization
                 config={{
                   ...chartConfig,
-                  title: error ? '데이터 로드 중 오류 발생' : isRealtime ? `실시간 요청 지연 시간 (${realtimeRange}분)` : chartConfig.title,
+                  title: error
+                    ? "데이터 로드 중 오류 발생"
+                    : isRealtime
+                      ? `실시간 요청 지연 시간 (${realtimeRange}분)`
+                      : chartConfig.title,
                   autoUpdate: isRealtime,
                 }}
                 traceData={traces}
@@ -260,10 +282,10 @@ export default function Home() {
                 onFilterChange={handleFilterChange}
               />
             )}
-            
-            {activeTab === 'analytics' && (
-              <TraceAnalytics 
-                traces={traces} 
+
+            {activeTab === "analytics" && (
+              <TraceAnalytics
+                traces={traces}
                 onTraceSelect={handleTraceSelect}
               />
             )}
@@ -306,14 +328,17 @@ export default function Home() {
                     <span className="flex items-center">
                       <Clock size={14} className="mr-1 text-blue-500" />
                       <span>
-                        실시간 데이터 {refreshInterval}초마다 자동 갱신 중 (최근 {realtimeRange}분 데이터)
+                        실시간 데이터 {refreshInterval}초마다 자동 갱신 중 (최근{" "}
+                        {realtimeRange}분 데이터)
                       </span>
                     </span>
                   ) : (
                     <span>선택된 기간에 대한 데이터</span>
                   )}
                 </div>
-                <div className="text-sm text-gray-500">총 {traces.length}개 트레이스 표시 중 (루트 스팬만 표시)</div>
+                <div className="text-sm text-gray-500">
+                  총 {traces.length}개 트레이스 표시 중 (루트 스팬만 표시)
+                </div>
               </div>
             </CardBody>
           </Card>
@@ -321,14 +346,14 @@ export default function Home() {
       )}
 
       {/* 트레이스 상세 정보 Drawer */}
-      <Drawer 
-        isOpen={isOpen} 
+      <Drawer
+        isOpen={isOpen}
         onOpenChange={onOpenChange}
         size="xl"
         placement="right"
         classNames={{
           base: "max-w-[90%] sm:max-w-[800px]",
-          body: "p-0"
+          body: "p-0",
         }}
       >
         <DrawerContent>
@@ -336,7 +361,12 @@ export default function Home() {
             <>
               <DrawerHeader className="flex justify-between items-center border-b p-4">
                 <div className="flex items-center gap-2">
-                  <Button title="닫기" variant="light" isIconOnly onPress={onClose}>
+                  <Button
+                    title="닫기"
+                    variant="light"
+                    isIconOnly
+                    onPress={onClose}
+                  >
                     <X size={18} />
                   </Button>
                   <h2 className="text-xl">트레이스 상세</h2>
@@ -344,10 +374,7 @@ export default function Home() {
               </DrawerHeader>
               <DrawerBody>
                 {selectedTraceId && (
-                  <TraceDetail 
-                    traceId={selectedTraceId} 
-                    onBack={onClose}
-                  />
+                  <TraceDetail traceId={selectedTraceId} onBack={onClose} />
                 )}
               </DrawerBody>
             </>
