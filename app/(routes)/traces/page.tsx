@@ -94,17 +94,17 @@ export default function TracesPage() {
       if (timeRangeChangeTimeoutRef.current) {
         clearTimeout(timeRangeChangeTimeoutRef.current);
       }
-      // 전역 시간 범위 업데이트 (이미 DateRangePicker에서 수행했을 수 있음)
-      setTimeRange(startTime, endTime);
 
       // 데이터 리프레시 전 약간의 지연 추가
       timeRangeChangeTimeoutRef.current = setTimeout(() => {
+        // DateRangePicker에서 이미 setTimeRange를 호출했으므로 여기서는 중복 호출 제거
+
+        // 즉시 데이터 새로고침 수행
         refresh();
         setIsChangingTimeRange(false);
         timeRangeChangeTimeoutRef.current = null;
       }, 300);
 
-      // 컴포넌트 언마운트 시 타이머 정리
       return () => {
         if (timeRangeChangeTimeoutRef.current) {
           clearTimeout(timeRangeChangeTimeoutRef.current);
@@ -112,7 +112,7 @@ export default function TracesPage() {
         }
       };
     },
-    [refresh, isRealtime, isChangingTimeRange, setTimeRange]
+    [refresh, isChangingTimeRange]
   );
 
   // 필터 변경 핸들러 - 디바운싱 적용

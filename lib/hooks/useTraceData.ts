@@ -5,12 +5,6 @@ import { useFilterStore } from "@/lib/store/telemetryStore";
 import { useTraceFilterStore } from "@/lib/store/traceFilterStore";
 import { buildTraceApiUrl } from "@/lib/utils/filterUtils";
 
-// 실시간 갱신 간격 옵션 (초)
-export type RefreshIntervalOption = 5 | 10 | 30 | 60;
-
-// 실시간 시간 범위 옵션 (분)
-export type RealtimeRangeOption = 1 | 5 | 10 | 15 | 30;
-
 interface UseTraceDataOptions {
   refreshInterval?: RefreshIntervalOption; // 기본 실시간 데이터 조회 간격 (초)
   realtimeRange?: RealtimeRangeOption; // 기본 실시간 시간 범위 (분)

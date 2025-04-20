@@ -1,51 +1,14 @@
-// lib/store/telemetryStore.ts
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import {
-  RefreshIntervalOption,
-  RealtimeRangeOption,
-} from "@/lib/hooks/useTraceData";
 
-// 기존의 필터 스토어 인터페이스에 실시간 관련 필드 추가
-interface FilterStore {
-  // 기존 필드 유지
-  logFilters: LogFilters;
-  setLogFilters: (filters: Partial<LogFilters>) => void;
-  resetLogFilters: () => void;
-
-  traceFilters: TraceFilters;
-  setTraceFilters: (filters: Partial<TraceFilters>) => void;
-  resetTraceFilters: () => void;
-
-  timeRange: {
-    startTime: number;
-    endTime: number;
+// 기본 시간 범위 생성 - 지난 1시간
+const getDefaultTimeRange = () => {
+  const now = Date.now();
+  return {
+    startTime: now - 3600000, // 1시간 전
+    endTime: now,
   };
-  setTimeRange: (startTime: number, endTime: number) => void;
-
-  selectedTraceId: string | null;
-  setSelectedTraceId: (id: string | null) => void;
-
-  selectedLogId: string | null;
-  setSelectedLogId: (id: string | null) => void;
-
-  selectedService: string | null;
-  setSelectedService: (name: string | null) => void;
-
-  // 실시간 모드 상태 (기존 필드)
-  isRealtime: boolean;
-  setIsRealtime: (isRealtime: boolean) => void;
-
-  // 추가 필드: 실시간 모드 토글 함수
-  toggleRealtime: (enabled?: boolean) => void;
-
-  // 추가 필드: 실시간 관련 설정
-  refreshInterval: RefreshIntervalOption;
-  setRefreshInterval: (interval: RefreshIntervalOption) => void;
-
-  realtimeRange: RealtimeRangeOption;
-  setRealtimeRange: (range: RealtimeRangeOption) => void;
-}
+};
 
 // 기본 필터 값 생성 함수 (기존 코드 유지)
 const genDefaultFilter = () => ({
@@ -83,12 +46,23 @@ export const useFilterStore = create<FilterStore>()(
           })),
         resetTraceFilters: () => set({ traceFilters: DEFAULT_TRACE_FILTERS }),
 
-        timeRange: {
-          startTime: 0,
-          endTime: 0,
+        // 기본값으로 지난 1시간 데이터를 보도록 설정
+        timeRange: getDefaultTimeRange(),
+        setTimeRange: (startTime, endTime) => {
+          // 유효성 검사 추가
+          if (startTime <= 0 || endTime <= 0 || startTime >= endTime) {
+            console.warn("[FilterStore] Invalid time range", {
+              startTime,
+              endTime,
+            });
+            return;
+          }
+
+          set({ timeRange: { startTime, endTime } });
+          console.log(
+            `[FilterStore] Time range updated: ${new Date(startTime).toLocaleString()} - ${new Date(endTime).toLocaleString()}`
+          );
         },
-        setTimeRange: (startTime, endTime) =>
-          set({ timeRange: { startTime, endTime } }),
 
         selectedTraceId: null,
         setSelectedTraceId: (id) => set({ selectedTraceId: id }),
@@ -148,6 +122,7 @@ export const useFilterStore = create<FilterStore>()(
           // 기존 저장 필드 유지
           logFilters: state.logFilters,
           traceFilters: state.traceFilters,
+          // 중요: timeRange를 명시적으로 저장
           timeRange: state.timeRange,
           // 실시간 모드는 기본적으로 off로 저장
           isRealtime: false,
@@ -155,34 +130,74 @@ export const useFilterStore = create<FilterStore>()(
           refreshInterval: state.refreshInterval,
           realtimeRange: state.realtimeRange,
         }),
+        // storage 설정 - 로컬 스토리지에 저장
+        storage: {
+          getItem: (name) => {
+            const value = localStorage.getItem(name);
+            if (value) {
+              try {
+                return JSON.parse(value);
+              } catch (e) {
+                console.error(
+                  `[FilterStore] Error parsing storage item ${name}:`,
+                  e
+                );
+                return null;
+              }
+            }
+            return null;
+          },
+          setItem: (name, value) => {
+            try {
+              localStorage.setItem(name, JSON.stringify(value));
+            } catch (e) {
+              console.error(`[FilterStore] Error storing item ${name}:`, e);
+            }
+          },
+          removeItem: (name) => {
+            try {
+              localStorage.removeItem(name);
+            } catch (e) {
+              console.error(`[FilterStore] Error removing item ${name}:`, e);
+            }
+          },
+        },
+        // 로드 시 마이그레이션 추가
+        onRehydrateStorage: (state) => {
+          return (hydrated, error) => {
+            if (error) {
+              console.error("[FilterStore] Failed to rehydrate state:", error);
+            }
+
+            if (hydrated) {
+              // 유효한 시간 범위가 없으면 기본값 설정
+              const { timeRange } = hydrated;
+              if (
+                !timeRange ||
+                !timeRange.startTime ||
+                !timeRange.endTime ||
+                timeRange.startTime <= 0 ||
+                timeRange.endTime <= 0 ||
+                timeRange.startTime >= timeRange.endTime
+              ) {
+                console.log(
+                  "[FilterStore] Setting default time range on rehydration"
+                );
+                hydrated.setTimeRange(
+                  getDefaultTimeRange().startTime,
+                  getDefaultTimeRange().endTime
+                );
+              } else {
+                console.log(
+                  "[FilterStore] Rehydrated with time range:",
+                  new Date(timeRange.startTime).toLocaleString(),
+                  new Date(timeRange.endTime).toLocaleString()
+                );
+              }
+            }
+          };
+        },
       }
     )
   )
 );
-
-// 기존 텔레메트리 데이터 스토어 유지 - 변경 없음
-export const useTelemetryStore = create<TelemetryStore>()(
-  devtools((set) => ({
-    traces: [],
-    setTraces: (traces) => set({ traces }),
-    addTraces: (traces) =>
-      set((state) => ({
-        traces: [...state.traces, ...traces],
-      })),
-    clearTraces: () => set({ traces: [] }),
-
-    isLoadingTraces: false,
-    setIsLoadingTraces: (isLoadingTraces) => set({ isLoadingTraces }),
-  }))
-);
-
-interface TelemetryStore {
-  // 트레이스 데이터
-  traces: TraceItem[];
-  setTraces: (traces: TraceItem[]) => void;
-  addTraces: (traces: TraceItem[]) => void;
-  clearTraces: () => void;
-
-  isLoadingTraces: boolean;
-  setIsLoadingTraces: (isLoading: boolean) => void;
-}
