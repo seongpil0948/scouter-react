@@ -1,6 +1,6 @@
 // lib/hooks/useTraceData.ts
 import useSWR from "swr";
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import { useFilterStore } from "@/lib/store/telemetryStore";
 import { useTraceFilterStore } from "@/lib/store/traceFilterStore";
 import { buildTraceApiUrl } from "@/lib/utils/filterUtils";
@@ -207,7 +207,23 @@ export function useTraceData({
   ]);
 
   // API URL 변경 감지 및 로깅
-  const apiUrl = getApiUrl();
+  const apiUrl = useMemo(
+    () => getApiUrl(),
+    [
+      searchQuery,
+      selectedServices,
+      selectedStatuses,
+      minDuration,
+      maxDuration,
+      attributeKey,
+      timeRange,
+      limit,
+      sortField,
+      sortDirection,
+      offset,
+      rootSpansOnly,
+    ]
+  );
   useEffect(() => {
     if (prevApiUrlRef.current !== apiUrl) {
       console.log(
@@ -390,19 +406,40 @@ export function useTraceData({
   // 실시간 모드 설정/해제
   const toggleRealtime = useCallback(
     (enabled: boolean) => {
-      // 스토어의 toggleRealtime 함수 호출
+      // 이미 진행 중인 요청 취소 확보
+      if (isRequestingRef.current) {
+        console.log("[useTraceData] 이미 요청 진행 중, 상태 변경 전 완료 대기");
+        setTimeout(() => toggleRealtime(enabled), 500);
+        return;
+      }
+
+      // 스토어 상태 업데이트
       storeToggleRealtime(enabled);
 
-      // 리프레시 간격 설정
+      // 실시간 모드 활성화 시 즉시 상태 업데이트
       if (enabled) {
+        // 현재 시간 기준으로 범위 설정
+        const now = Date.now();
+        const rangeInMs = currentRealtimeRange * 60 * 1000;
+        setTimeRange(now - rangeInMs, now);
+
+        // 갱신 간격 설정
         setCustomRefreshInterval(refreshInterval * 1000);
-        // 즉시 데이터 갱신
+
+        // 약간의 지연 후 데이터 로드 (DOM 업데이트 후)
         setTimeout(() => refresh(), 100);
       } else {
+        // 실시간 모드 비활성화
         setCustomRefreshInterval(undefined);
       }
     },
-    [refreshInterval, refresh, storeToggleRealtime]
+    [
+      currentRealtimeRange,
+      refreshInterval,
+      refresh,
+      setTimeRange,
+      storeToggleRealtime,
+    ]
   );
 
   // 스토어의 setRefreshInterval 함수 사용

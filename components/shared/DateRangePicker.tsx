@@ -31,14 +31,19 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
   // timestamp를 CalendarDateTime으로 안전하게 변환하는 함수
   const convertToCalendarDateTime = useCallback((timestamp: number) => {
     try {
-      if (!timestamp || timestamp <= 0) {
-        return null;
-      }
+      if (!timestamp || timestamp <= 0) return null;
 
       const date = new Date(timestamp);
-      // ISO 포맷으로 변환 후 파싱 - 더 안정적인 방식
-      const isoString = date.toISOString();
-      return parseDateTime(isoString);
+
+      // ISO 문자열 파싱 대신 직접 CalendarDateTime 객체 생성
+      return new CalendarDateTime(
+        date.getFullYear(),
+        date.getMonth() + 1, // JavaScript 월은 0부터 시작하므로 +1
+        date.getDate(),
+        date.getHours(),
+        date.getMinutes(),
+        date.getSeconds()
+      );
     } catch (error) {
       console.error(
         `[DateRangePicker] Error converting timestamp ${timestamp}:`,
@@ -81,7 +86,12 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
       const { startTime, endTime } = timeRange;
 
       if (startTime <= 0 || endTime <= 0) {
-        console.log("[DateRangePicker] Invalid timeRange, skipping UI update");
+        console.log(
+          "[DateRangePicker] 유효하지 않은 timeRange, 기본값으로 초기화"
+        );
+        const now = Date.now();
+        const oneHourAgo = now - 3600000;
+        setTimeRange(oneHourAgo, now);
         setValue(null);
         return;
       }
@@ -134,7 +144,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
         isInternalUpdateRef.current = false;
       }, 0);
     }
-  }, [timeRange, hasTimeRangeChanged, convertToCalendarDateTime]);
+  }, [timeRange, hasTimeRangeChanged, convertToCalendarDateTime, setTimeRange]);
 
   // 컴포넌트 마운트 시 초기화
   useEffect(() => {

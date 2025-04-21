@@ -48,19 +48,29 @@ export const useFilterStore = create<FilterStore>()(
 
         // 기본값으로 지난 1시간 데이터를 보도록 설정
         timeRange: getDefaultTimeRange(),
+        // 시간 범위 설정 함수 수정
         setTimeRange: (startTime, endTime) => {
-          // 유효성 검사 추가
-          if (startTime <= 0 || endTime <= 0 || startTime >= endTime) {
-            console.warn("[FilterStore] Invalid time range", {
+          // 유효성 검사 개선
+          if (
+            typeof startTime !== "number" ||
+            typeof endTime !== "number" ||
+            startTime <= 0 ||
+            endTime <= 0 ||
+            startTime >= endTime
+          ) {
+            console.warn("[FilterStore] 유효하지 않은 시간 범위:", {
               startTime,
               endTime,
             });
-            return;
+            // 유효하지 않은 경우 기본값 사용
+            const now = Date.now();
+            startTime = now - 3600000; // 1시간 전
+            endTime = now;
           }
 
           set({ timeRange: { startTime, endTime } });
           console.log(
-            `[FilterStore] Time range updated: ${new Date(startTime).toLocaleString()} - ${new Date(endTime).toLocaleString()}`
+            `[FilterStore] 시간 범위 업데이트: ${new Date(startTime).toLocaleString()} - ${new Date(endTime).toLocaleString()}`
           );
         },
 
