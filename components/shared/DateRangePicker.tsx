@@ -2,9 +2,10 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { DateRangePicker as HeroDateRangePicker } from "@heroui/date-picker";
 import { Clock } from "lucide-react";
 import {
-  parseDateTime,
-  getLocalTimeZone,
   CalendarDateTime,
+  getLocalTimeZone,
+  fromDate,
+  toCalendarDateTime,
 } from "@internationalized/date";
 import { RangeValue } from "@react-types/shared";
 
@@ -33,17 +34,10 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
     try {
       if (!timestamp || timestamp <= 0) return null;
 
+      // @internationalized/date 라이브러리 함수를 사용하여 변환
       const date = new Date(timestamp);
-
-      // ISO 문자열 파싱 대신 직접 CalendarDateTime 객체 생성
-      return new CalendarDateTime(
-        date.getFullYear(),
-        date.getMonth() + 1, // JavaScript 월은 0부터 시작하므로 +1
-        date.getDate(),
-        date.getHours(),
-        date.getMinutes(),
-        date.getSeconds()
-      );
+      const zonedDateTime = fromDate(date, getLocalTimeZone());
+      return toCalendarDateTime(zonedDateTime);
     } catch (error) {
       console.error(
         `[DateRangePicker] Error converting timestamp ${timestamp}:`,
@@ -173,7 +167,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
       setTimeRange(oneHourAgo, now);
       prevTimeRangeRef.current = { startTime: oneHourAgo, endTime: now };
 
-      // UI에도 직접 반영
+      // UI에도 직접 반영 - 개선된 방식으로 구현
       const startDateTime = convertToCalendarDateTime(oneHourAgo);
       const endDateTime = convertToCalendarDateTime(now);
 
@@ -223,7 +217,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
         // UI 상태 업데이트
         setValue(newValue);
 
-        // CalendarDateTime을 타임스탬프로 변환
+        // @internationalized/date 라이브러리를 사용하여 타임스탬프 추출
         const startTime = newValue.start.toDate(getLocalTimeZone()).getTime();
         const endTime = newValue.end.toDate(getLocalTimeZone()).getTime();
 

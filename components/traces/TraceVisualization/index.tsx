@@ -1,24 +1,29 @@
-'use client';
+"use client";
 
-import React, { useMemo, useCallback, useState } from 'react';
-import { Card, CardBody } from '@heroui/card';
-import { Tabs, Tab } from '@heroui/tabs';
-import { useIsSSR } from '@react-aria/ssr';
-import { useDisclosure } from '@heroui/modal';
-import { BarChart2, LineChart } from 'lucide-react';
+import React, { useMemo, useCallback, useState } from "react";
+import { Card, CardBody } from "@heroui/card";
+import { Tabs, Tab } from "@heroui/tabs";
+import { useIsSSR } from "@react-aria/ssr";
+import { useDisclosure } from "@heroui/modal";
+import { BarChart2, LineChart } from "lucide-react";
 
-import TraceChart from './TraceChart';
-import TraceAnalytics from './TraceAnalytics';
-import SelectedTracesModal from './SelectedTracesModal';
-import StatsSummary from './StatsSummary';
-import FilterControls from './FilterControls';
-import ThresholdDisplay from './ThresholdDisplay';
-import NoData from './NoData';
-import FilterSummary from './FilterSummary';
+import TraceChart from "./TraceChart";
+import TraceAnalytics from "./TraceAnalytics";
+import SelectedTracesModal from "./SelectedTracesModal";
+import StatsSummary from "./StatsSummary";
+import FilterControls from "./FilterControls";
+import ThresholdDisplay from "./ThresholdDisplay";
+import NoData from "./NoData";
+import FilterSummary from "./FilterSummary";
 
-import { useChartStore } from '@/lib/store/chartStore';
-import { buildServiceThresholds, calculateServiceStats, calculateLatencyStats, processTraceData } from './utils';
-import { DEFAULT_FILTER } from './constant';
+import { useChartStore } from "@/lib/store/chartStore";
+import {
+  buildServiceThresholds,
+  calculateServiceStats,
+  calculateLatencyStats,
+  processTraceData,
+} from "./utils";
+import { DEFAULT_FILTER } from "./constant";
 
 const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   traceData,
@@ -30,14 +35,10 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   onTraceSelect,
 }) => {
   const isSSR = useIsSSR();
-  const [activeTab, setActiveTab] = useState<string>('chart');
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("chart");
   const [selectedTraces, setSelectedTraces] = useState<SelectedTraceData[]>([]);
   const { legendState, dataFilters, updateDataFilters } = useChartStore();
-  
-  // 모달 상태 관리를 위한 useDisclosure 훅 사용
   const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
-
   // SSR 환경에서는 빈 배열을 사용하여 하이드레이션 이슈 방지
   const safeTraceData = useMemo(() => {
     return isSSR ? [] : Array.isArray(traceData) ? traceData : [];
@@ -67,13 +68,19 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
 
   // 서비스 통계 계산
   const serviceStats = useMemo(
-    () => (isSSR ? new Map() : calculateServiceStats(filteredData, serviceThresholds)),
+    () =>
+      isSSR
+        ? new Map()
+        : calculateServiceStats(filteredData, serviceThresholds),
     [filteredData, serviceThresholds, isSSR]
   );
 
   // 지연시간 통계 계산
   const latencyStats = useMemo(
-    () => (isSSR ? { min: 0, max: 0, avg: 0, p90: 0, p95: 0, p99: 0 } : calculateLatencyStats(filteredData)),
+    () =>
+      isSSR
+        ? { min: 0, max: 0, avg: 0, p90: 0, p95: 0, p99: 0 }
+        : calculateLatencyStats(filteredData),
     [filteredData, isSSR]
   );
 
@@ -86,10 +93,11 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         metadataMap: new Map(),
       };
     }
-
-    setIsProcessing(true);
-    const result = processTraceData(filteredData, config.latencyThreshold, serviceThresholds);
-    setIsProcessing(false);
+    const result = processTraceData(
+      filteredData,
+      config.latencyThreshold,
+      serviceThresholds
+    );
     return result;
   }, [filteredData, config.latencyThreshold, serviceThresholds, isSSR]);
 
@@ -128,13 +136,18 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   const handleDataPointClick = useCallback(
     (timestamp: number) => {
       // 해당 timestamp에 가장 가까운 트레이스 찾기
-      const closestTrace = filteredData.reduce((closest, trace) => {
-        const currentDiff = Math.abs(trace.startTime - timestamp);
-        const closestDiff = closest ? Math.abs(closest.startTime - timestamp) : Infinity;
-        
-        return currentDiff < closestDiff ? trace : closest;
-      }, null as TraceItem | null);
-      
+      const closestTrace = filteredData.reduce(
+        (closest, trace) => {
+          const currentDiff = Math.abs(trace.startTime - timestamp);
+          const closestDiff = closest
+            ? Math.abs(closest.startTime - timestamp)
+            : Infinity;
+
+          return currentDiff < closestDiff ? trace : closest;
+        },
+        null as TraceItem | null
+      );
+
       if (closestTrace && onTraceSelect) {
         onTraceSelect(closestTrace.traceId);
       }
@@ -143,19 +156,19 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   );
 
   // 계산된 값들
-  const errorCount = filteredData.filter((t) => t.status === 'ERROR').length;
-  const successCount = filteredData.filter((t) => t.status === 'OK').length;
+  const errorCount = filteredData.filter((t) => t.status === "ERROR").length;
+  const successCount = filteredData.filter((t) => t.status === "OK").length;
   const highLatencyCount = chartData.highLatencyData.length;
   const hasFilters =
-    dataFilters.serviceFilter !== 'all' ||
-    dataFilters.statusFilter !== 'all' ||
+    dataFilters.serviceFilter !== "all" ||
+    dataFilters.statusFilter !== "all" ||
     dataFilters.minDuration !== undefined ||
     dataFilters.maxDuration !== undefined;
 
-  const isLoading = isProcessing;
-
-  // 실시간 모드 감지
-  const isRealtime = useMemo(() => config.autoUpdate === true, [config.autoUpdate]);
+  const isRealtime = useMemo(
+    () => config.autoUpdate === true,
+    [config.autoUpdate]
+  );
 
   return (
     <div className="space-y-4">
@@ -170,9 +183,9 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
             hasFilters={hasFilters}
           />
         )}
-        
-        <Tabs 
-          aria-label="트레이스 시각화 모드" 
+
+        <Tabs
+          aria-label="트레이스 시각화 모드"
           selectedKey={activeTab}
           onSelectionChange={(key) => setActiveTab(key as string)}
           className="px-4 pt-2"
@@ -198,10 +211,10 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         </Tabs>
 
         <CardBody className="p-4">
-          {activeTab === 'chart' && (
+          {activeTab === "chart" && (
             <>
               {/* 통계 요약 - 데이터가 있을 때만 표시 */}
-              {filteredData.length > 0 && !isLoading && (
+              {filteredData.length > 0 && (
                 <StatsSummary
                   latencyStats={latencyStats}
                   highLatencyCount={highLatencyCount}
@@ -228,9 +241,9 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                   ...config,
                   brush: {
                     enabled: true,
-                    type: 'rect',
-                    mode: 'multiple',
-                    throttleType: 'debounce',
+                    type: "rect",
+                    mode: "multiple",
+                    throttleType: "debounce",
                     throttleDelay: 300,
                     ...config.brush,
                   },
@@ -238,21 +251,17 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                 }}
                 onBrushSelected={handleBrushSelected}
                 onDataPointClick={handleDataPointClick}
-                loading={isLoading}
                 legendState={legendState}
                 serviceThresholds={serviceThresholds}
               />
 
               {/* 데이터 없음 메시지 */}
-              {filteredData.length === 0 && !isLoading && (
-                <NoData 
-                  isRealtime={isRealtime} 
-                  hasFilters={hasFilters} 
-                />
+              {filteredData.length === 0 && (
+                <NoData isRealtime={isRealtime} hasFilters={hasFilters} />
               )}
 
               {/* 필터 요약 */}
-              {filteredData.length > 0 && !isLoading && (
+              {filteredData.length > 0 && (
                 <FilterSummary
                   filteredDataLength={filteredData.length}
                   dataFilters={dataFilters}
@@ -262,9 +271,9 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
               )}
             </>
           )}
-          
-          {activeTab === 'analytics' && (
-            <TraceAnalytics 
+
+          {activeTab === "analytics" && (
+            <TraceAnalytics
               traces={filteredData}
               onTraceSelect={onTraceSelect}
             />
@@ -284,6 +293,6 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   );
 };
 
-TraceVisualization.displayName = 'TraceVisualization';
+TraceVisualization.displayName = "TraceVisualization";
 
 export default TraceVisualization;

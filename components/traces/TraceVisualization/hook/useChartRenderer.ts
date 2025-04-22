@@ -451,7 +451,7 @@ export function useChartRenderer({
               animation: false,
             },
           };
-
+          console.debug("Chart update option:", updateOption);
           // 차트 인스턴스 업데이트
           chartInstanceRef.current.setOption(updateOption, {
             // Check before setOption
@@ -462,7 +462,7 @@ export function useChartRenderer({
           });
         }
       } else {
-        // 데이터가 없는 경우 빈 시리즈 설정
+        console.debug("No data available for chart update.");
         chartInstanceRef.current.setOption(
           {
             // Check before setOption

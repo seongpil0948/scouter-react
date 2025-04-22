@@ -69,10 +69,15 @@ export function useTraceData({
   const isRequestingRef = useRef(false);
 
   // 시간 범위가 설정되지 않았는지 확인 (기본값 또는 0인 경우)
-  const isTimeRangeEmpty =
-    !timeRange.startTime ||
-    !timeRange.endTime ||
-    (timeRange.startTime === 0 && timeRange.endTime === 0);
+  const isTimeRangeEmpty = useCallback(() => {
+    return (
+      !timeRange.startTime ||
+      !timeRange.endTime ||
+      timeRange.startTime <= 0 ||
+      timeRange.endTime <= 0 ||
+      timeRange.startTime >= timeRange.endTime
+    );
+  }, [timeRange]);
 
   // 현재 시간 기준으로 시간 범위 업데이트
   const updateRealtimeRange = useCallback(() => {
@@ -88,11 +93,17 @@ export function useTraceData({
 
     if (significantChange) {
       console.log(
-        `[useTraceData] 실시간 시간 범위 업데이트: ${new Date(startTime).toLocaleString()} ~ ${new Date(now).toLocaleString()}`
+        `[useTraceData] 실시간 시간 범위 업데이트: ${new Date(startTime).toLocaleTimeString()} ~ ${new Date(now).toLocaleTimeString()}`
       );
-      setTimeRange(startTime, now);
-      prevTimeRangeRef.current = { startTime, endTime: now };
-      return { startTime, endTime: now };
+
+      try {
+        setTimeRange(startTime, now);
+        prevTimeRangeRef.current = { startTime, endTime: now };
+        return { startTime, endTime: now };
+      } catch (error) {
+        console.error("[useTraceData] 시간 범위 업데이트 중 오류:", error);
+        return timeRange;
+      }
     }
 
     return timeRange;
@@ -109,21 +120,10 @@ export function useTraceData({
     const startTime = now - rangeInMs;
 
     // 시간 범위가 비어있거나 0인 경우에만 초기화
-    if (isTimeRangeEmpty) {
-      console.log("초기화: 시간 범위 설정", {
-        startTime: new Date(startTime).toLocaleString(),
-        endTime: new Date(now).toLocaleString(),
-      });
-
-      // 시간 범위 설정
+    if (isTimeRangeEmpty()) {
       setTimeRange(startTime, now);
       prevTimeRangeRef.current = { startTime, endTime: now };
     } else {
-      console.log("초기화: 기존 시간 범위 유지", {
-        startTime: new Date(timeRange.startTime).toLocaleString(),
-        endTime: new Date(timeRange.endTime).toLocaleString(),
-      });
-
       prevTimeRangeRef.current = { ...timeRange };
     }
 
@@ -145,7 +145,7 @@ export function useTraceData({
 
   // API URL 생성 전 현재 시간 범위 확인
   const getApiUrl = useCallback(() => {
-    if (!isInitialized.current || isTimeRangeEmpty) {
+    if (!isInitialized.current || isTimeRangeEmpty()) {
       const now = Date.now();
       const rangeInMs = currentRealtimeRange * 60 * 1000;
       const startTime = now - rangeInMs;
@@ -312,19 +312,24 @@ export function useTraceData({
     useSWR<TracesResponse>([apiUrl, lastRefreshed], customFetcher, {
       refreshInterval: customRefreshInterval,
       revalidateOnFocus: false,
-      dedupingInterval: 3000, // 중복 요청 방지 간격 3초
-      focusThrottleInterval: 5000, // 포커스 시 과도한 재요청 방지
-      keepPreviousData: true, // 새 데이터 로드 중에도 이전 데이터 유지
-      errorRetryCount: 3, // 오류 시 재시도 횟수 제한
+      dedupingInterval: 3000,
+      focusThrottleInterval: 5000,
+      keepPreviousData: true,
       onSuccess: (data) => {
         if (data?.traces) {
           console.log(
             `[useTraceData] 데이터 로드 성공: ${data.traces.length}개 트레이스`
           );
+
+          // 데이터 로드 성공 시 차트 업데이트 플래그 설정
+          setTimeout(() => {
+            isRequestingRef.current = false;
+          }, 200);
         }
       },
       onError: (err) => {
         console.error("[useTraceData] 데이터 로드 오류:", err);
+        isRequestingRef.current = false;
       },
       isPaused: () => {
         // URL이 비어있거나 요청 처리 중이면 일시 중지

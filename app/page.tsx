@@ -91,8 +91,7 @@ export default function Home() {
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
-  // useTraceData 훅 사용 - 실시간 관련 props 전달 제거
-  const { traces, error, refresh, isLoading } = useTraceData({
+  const { traces, error, refresh } = useTraceData({
     rootSpansOnly: true,
   });
 
