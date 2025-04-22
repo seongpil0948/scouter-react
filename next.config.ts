@@ -1,10 +1,11 @@
-import type { NextConfig } from 'next';
-import path from 'path';
+import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  output: "standalone",
+  basePath: "/apm",
   experimental: {
-    typedEnv: true
+    typedEnv: true,
   },
   // reactStrictMode: false,
   cleanDistDir: true,
@@ -15,7 +16,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   sassOptions: {
-    includePaths: [path.join(__dirname, 'styles')],
+    includePaths: [path.join(__dirname, "styles")],
   },
 };
 
