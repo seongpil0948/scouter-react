@@ -8,7 +8,7 @@ import {
   DrawerBody,
   DrawerHeader,
 } from "@heroui/drawer";
-import { X, BarChart2, ListFilter, ClockIcon } from "lucide-react";
+import { X, BarChart2, ListFilter, Clock, RefreshCw } from "lucide-react";
 
 import DateRangePicker from "@/components/shared/DateRangePicker";
 import { ThemeSwitch } from "@/components/shared/theme-switch";
@@ -22,23 +22,27 @@ import { Button } from "@heroui/button";
 import { useDisclosure } from "@heroui/modal";
 import { Tabs, Tab } from "@heroui/tabs";
 import { useFilterStore } from "@/lib/store/telemetryStore";
+import { useTraceDataStore } from "@/lib/store/traceDataStore";
 
 export default function TracesPage() {
   const router = useRouter();
-  // 드로어 및 탭 관련 상태
-  const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
-  const [activeTab, setActiveTab] = useState<string>("list");
 
-  // 시간 범위 변경 관련 상태
-  const [isChangingTimeRange, setIsChangingTimeRange] = useState(false);
+  // Drawer and tabs state
+  const [activeTab, setActiveTab] = useState<string>("list");
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+
+  // Manual refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Time range change debounce
   const timeRangeChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const filterChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 필터 스토어 접근
+  // Stores
   const { setTimeRange } = useFilterStore();
+  const { setSelectedTraceId, selectedTraceId } = useTraceDataStore();
 
-  // useTraceData 커스텀 훅 사용
+  // Use enhanced trace data hook
   const {
     traces,
     error,
@@ -54,9 +58,9 @@ export default function TracesPage() {
     rootSpansOnly: true,
   });
 
-  // 날짜 범위 변경 감지 로그
+  // Log current time range
   useEffect(() => {
-    console.log("[TracesPage] 현재 시간 범위:", {
+    console.log("[TracesPage] Current time range:", {
       startTime:
         timeRange.startTime > 0
           ? new Date(timeRange.startTime).toLocaleString()
@@ -68,69 +72,70 @@ export default function TracesPage() {
     });
   }, [timeRange]);
 
-  // 트레이스 클릭 핸들러 - Drawer 사용
+  // Trace selection handler
   const handleTraceClick = useCallback(
     (trace: TraceItem) => {
       setSelectedTraceId(trace.traceId);
-      onOpen(); // Drawer 열기
+      onOpen(); // Open drawer
     },
-    [onOpen]
+    [setSelectedTraceId, onOpen]
   );
 
-  // 시간 범위 변경 핸들러 - 디바운싱 적용
+  // Time range change handler
   const handleTimeRangeChange = useCallback(
     (startTime: number, endTime: number) => {
-      // 중복/빠른 연속 호출 방지
-      if (isChangingTimeRange) return;
-      setIsChangingTimeRange(true);
+      // Debounce time range changes
+      if (isRefreshing) return;
 
-      console.log(
-        "[TracesPage] 시간 범위 변경 요청:",
-        new Date(startTime).toLocaleString(),
-        new Date(endTime).toLocaleString()
-      );
-
-      // 이전 타이머 정리
+      // Clear previous timeout
       if (timeRangeChangeTimeoutRef.current) {
         clearTimeout(timeRangeChangeTimeoutRef.current);
       }
 
-      // 데이터 리프레시 전 약간의 지연 추가
-      timeRangeChangeTimeoutRef.current = setTimeout(() => {
-        // DateRangePicker에서 이미 setTimeRange를 호출했으므로 여기서는 중복 호출 제거
+      console.log(
+        "[TracesPage] Time range change requested:",
+        new Date(startTime).toLocaleString(),
+        new Date(endTime).toLocaleString()
+      );
 
-        // 즉시 데이터 새로고침 수행
+      // Set time range with short delay
+      timeRangeChangeTimeoutRef.current = setTimeout(() => {
+        setTimeRange(startTime, endTime);
         refresh();
-        setIsChangingTimeRange(false);
         timeRangeChangeTimeoutRef.current = null;
       }, 300);
-
-      return () => {
-        if (timeRangeChangeTimeoutRef.current) {
-          clearTimeout(timeRangeChangeTimeoutRef.current);
-          timeRangeChangeTimeoutRef.current = null;
-        }
-      };
     },
-    [refresh, isChangingTimeRange]
+    [refresh, isRefreshing, setTimeRange]
   );
 
-  // 필터 변경 핸들러 - 디바운싱 적용
+  // Filter change handler
   const handleFilterChange = useCallback(() => {
-    // 이미 타이머가 설정되어 있으면 제거
+    // Debounce filter changes
     if (filterChangeTimeoutRef.current) {
       clearTimeout(filterChangeTimeoutRef.current);
     }
 
-    // 필터 변경 시 약간의 지연 후 데이터 갱신
+    // Refresh data with short delay
     filterChangeTimeoutRef.current = setTimeout(() => {
-      console.log("[TracesPage] 필터 변경으로 데이터 리프레시");
+      console.log("[TracesPage] Filters changed, refreshing data");
       refresh();
       filterChangeTimeoutRef.current = null;
     }, 300);
   }, [refresh]);
 
-  // 컴포넌트 언마운트 시 타이머 정리
+  // Manual refresh handler
+  const handleManualRefresh = useCallback(() => {
+    if (isRefreshing) return;
+
+    setIsRefreshing(true);
+    console.log("[TracesPage] Manual refresh triggered");
+
+    refresh().finally(() => {
+      setTimeout(() => setIsRefreshing(false), 500);
+    });
+  }, [refresh, isRefreshing]);
+
+  // Clean up timeouts on unmount
   useEffect(() => {
     return () => {
       if (timeRangeChangeTimeoutRef.current) {
@@ -159,13 +164,26 @@ export default function TracesPage() {
           onChange={handleTimeRangeChange}
           isDisabled={isRealtime || (isLoading && traces.length === 0)}
         />
+
+        <Button
+          variant="light"
+          onPress={handleManualRefresh}
+          isDisabled={isRealtime || isLoading}
+          isLoading={isRefreshing}
+          startContent={<RefreshCw size={16} />}
+        >
+          새로고침
+        </Button>
       </div>
 
       <div className="w-full max-w-7xl space-y-4">
-        {/* 필터 컴포넌트 */}
-        <TraceFilter onFilterChange={handleFilterChange} onRefresh={refresh} />
+        {/* Filter component */}
+        <TraceFilter
+          onFilterChange={handleFilterChange}
+          onRefresh={handleManualRefresh}
+        />
 
-        {/* 오류 상태 */}
+        {/* Error state */}
         {error && (
           <Card>
             <CardBody className="p-8 text-center text-red-500">
@@ -175,7 +193,7 @@ export default function TracesPage() {
                 color="primary"
                 variant="light"
                 className="mt-4"
-                onPress={refresh}
+                onPress={handleManualRefresh}
               >
                 다시 시도
               </Button>
@@ -183,7 +201,7 @@ export default function TracesPage() {
           </Card>
         )}
 
-        {/* 탭 뷰 추가 */}
+        {/* Tabs */}
         <Card className="w-full">
           <Tabs
             aria-label="트레이스 보기 모드"
@@ -212,7 +230,7 @@ export default function TracesPage() {
           </Tabs>
 
           <CardBody className="p-4">
-            {/* 목록 탭 */}
+            {/* List tab */}
             {activeTab === "list" && (
               <TraceTable
                 traces={traces}
@@ -225,7 +243,7 @@ export default function TracesPage() {
               />
             )}
 
-            {/* 분석 탭 */}
+            {/* Analytics tab */}
             {activeTab === "analytics" && traces.length > 0 && (
               <TraceAnalytics
                 traces={traces}
@@ -237,7 +255,7 @@ export default function TracesPage() {
               />
             )}
 
-            {/* 분석 탭인데 데이터가 없는 경우 */}
+            {/* Empty analytics state */}
             {activeTab === "analytics" && traces.length === 0 && !isLoading && (
               <div className="text-center py-12 text-gray-500">
                 <p>분석할 데이터가 없습니다.</p>
@@ -247,7 +265,7 @@ export default function TracesPage() {
               </div>
             )}
 
-            {/* 로딩 중인 경우 */}
+            {/* Global loading state */}
             {isLoading && traces.length === 0 && (
               <div className="flex items-center justify-center p-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500" />
@@ -257,7 +275,7 @@ export default function TracesPage() {
           </CardBody>
         </Card>
 
-        {/* 표시 정보 */}
+        {/* Status info */}
         <div className="text-sm text-gray-500 text-right">
           총 {totalCount}개의 트레이스 중 {traces.length}개 표시 중
           {isRealtime && (
@@ -269,7 +287,7 @@ export default function TracesPage() {
         </div>
       </div>
 
-      {/* 트레이스 상세 정보 Drawer */}
+      {/* Trace detail drawer */}
       <Drawer
         isOpen={isOpen}
         onOpenChange={onOpenChange}
@@ -277,7 +295,7 @@ export default function TracesPage() {
         placement="right"
         classNames={{
           base: "max-w-[90%] sm:max-w-[800px]",
-          body: "p-0", // 패딩 제거하여 TraceDetail이 온전히 표시되도록
+          body: "p-0", // Remove padding for full TraceDetail display
         }}
       >
         <DrawerContent>

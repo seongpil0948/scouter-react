@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useCallback, useState } from "react";
+import React, { useMemo, useCallback, useState, useEffect } from "react";
 import { Card, CardBody } from "@heroui/card";
 import { Tabs, Tab } from "@heroui/tabs";
 import { useIsSSR } from "@react-aria/ssr";
@@ -17,6 +17,7 @@ import NoData from "./NoData";
 import FilterSummary from "./FilterSummary";
 
 import { useChartStore } from "@/lib/store/chartStore";
+import { useFilterStore } from "@/lib/store/telemetryStore";
 import {
   buildServiceThresholds,
   calculateServiceStats,
@@ -34,26 +35,36 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   onFilterChange,
   onTraceSelect,
 }) => {
+  // Check SSR environment
   const isSSR = useIsSSR();
+
+  // Local state
   const [activeTab, setActiveTab] = useState<string>("chart");
   const [selectedTraces, setSelectedTraces] = useState<SelectedTraceData[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Get state from stores
   const { legendState, dataFilters, updateDataFilters } = useChartStore();
+  const { isRealtime } = useFilterStore();
+
+  // Modal for selected traces
   const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
-  // SSR 환경에서는 빈 배열을 사용하여 하이드레이션 이슈 방지
+
+  // Safely handle trace data in SSR environment
   const safeTraceData = useMemo(() => {
     return isSSR ? [] : Array.isArray(traceData) ? traceData : [];
   }, [traceData, isSSR]);
 
-  // 서비스 임계값 계산
+  // Build service thresholds
   const serviceThresholds = useMemo(
     () => buildServiceThresholds(safeTraceData, propServiceThresholds),
     [safeTraceData, propServiceThresholds]
   );
 
-  // 필터링은 이제 백엔드에서 처리되므로 filteredData는 바로 safeTraceData 사용
+  // Use filtered data from props directly
   const filteredData = safeTraceData;
 
-  // Extract unique services for filtering
+  // Get unique services
   const services = useMemo(() => {
     if (isSSR) return [];
 
@@ -66,7 +77,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     return Array.from(serviceSet).sort();
   }, [safeTraceData, isSSR]);
 
-  // 서비스 통계 계산
+  // Calculate service statistics
   const serviceStats = useMemo(
     () =>
       isSSR
@@ -75,7 +86,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     [filteredData, serviceThresholds, isSSR]
   );
 
-  // 지연시간 통계 계산
+  // Calculate latency statistics
   const latencyStats = useMemo(
     () =>
       isSSR
@@ -84,58 +95,77 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     [filteredData, isSSR]
   );
 
-  // 차트 데이터 처리
+  // Process chart data
   const chartData = useMemo(() => {
-    if (isSSR) {
+    // Skip in SSR or while already processing
+    if (isSSR || isProcessing) {
       return {
         timeSeriesData: [],
         highLatencyData: [],
         metadataMap: new Map(),
       };
     }
-    const result = processTraceData(
-      filteredData,
-      config.latencyThreshold,
-      serviceThresholds
-    );
-    return result;
-  }, [filteredData, config.latencyThreshold, serviceThresholds, isSSR]);
 
-  // 브러시 선택 핸들러
+    try {
+      setIsProcessing(true);
+      const result = processTraceData(
+        filteredData,
+        config.latencyThreshold,
+        serviceThresholds
+      );
+      return result;
+    } catch (error) {
+      console.error("[TraceVisualization] Error processing trace data:", error);
+      return {
+        timeSeriesData: [],
+        highLatencyData: [],
+        metadataMap: new Map(),
+      };
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [
+    filteredData,
+    config.latencyThreshold,
+    serviceThresholds,
+    isSSR,
+    isProcessing,
+  ]);
+
+  // Handle brush selection
   const handleBrushSelected = useCallback(
     (selectedData: SelectedTraceData[]) => {
       if (isSSR) return;
 
-      // 선택된 항목이 있을 때만 상태 업데이트 및 모달 오픈
+      // Update selected traces and open modal
       if (selectedData.length > 0) {
         setSelectedTraces(selectedData);
-        onOpen(); // 모달 열기
+        onOpen();
       }
     },
     [isSSR, onOpen]
   );
 
-  // 선택 초기화 핸들러
+  // Clear selection
   const handleClearSelection = useCallback(() => {
     setSelectedTraces([]);
   }, []);
 
-  // 트레이스 상세 보기 핸들러
+  // View trace details
   const handleViewTraceDetails = useCallback(
     (traceId: string) => {
       if (onTraceSelect) {
         onTraceSelect(traceId);
-        // 모달 닫기
         onClose();
       }
     },
     [onTraceSelect, onClose]
   );
 
-  // 차트 데이터 포인트 클릭 핸들러
+  // Handle chart data point click
   const handleDataPointClick = useCallback(
     (timestamp: number) => {
-      // 해당 timestamp에 가장 가까운 트레이스 찾기
+      // Find closest trace to the clicked timestamp
       const closestTrace = filteredData.reduce(
         (closest, trace) => {
           const currentDiff = Math.abs(trace.startTime - timestamp);
@@ -155,7 +185,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     [filteredData, onTraceSelect]
   );
 
-  // 계산된 값들
+  // Calculate metrics
   const errorCount = filteredData.filter((t) => t.status === "ERROR").length;
   const successCount = filteredData.filter((t) => t.status === "OK").length;
   const highLatencyCount = chartData.highLatencyData.length;
@@ -165,7 +195,8 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     dataFilters.minDuration !== undefined ||
     dataFilters.maxDuration !== undefined;
 
-  const isRealtime = useMemo(
+  // Get realtime status from config
+  const isRealtimeMode = useMemo(
     () => config.autoUpdate === true,
     [config.autoUpdate]
   );
@@ -173,7 +204,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
   return (
     <div className="space-y-4">
       <Card className="w-full">
-        {/* 필터 컨트롤 */}
+        {/* Filter controls */}
         {showFilters && (
           <FilterControls
             services={services}
@@ -184,6 +215,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
           />
         )}
 
+        {/* Visualization tabs */}
         <Tabs
           aria-label="트레이스 시각화 모드"
           selectedKey={activeTab}
@@ -213,7 +245,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         <CardBody className="p-4">
           {activeTab === "chart" && (
             <>
-              {/* 통계 요약 - 데이터가 있을 때만 표시 */}
+              {/* Statistics summary */}
               {filteredData.length > 0 && (
                 <StatsSummary
                   latencyStats={latencyStats}
@@ -225,7 +257,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                 />
               )}
 
-              {/* 서비스별 임계값 표시 - 필터가 활성화된 경우에만 표시 */}
+              {/* Service thresholds */}
               {showFilters && filteredData.length > 0 && (
                 <ThresholdDisplay
                   serviceThresholds={serviceThresholds}
@@ -233,34 +265,36 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                 />
               )}
 
-              {/* 차트 컴포넌트 */}
-              <TraceChart
-                data={chartData}
-                height={config.height}
-                config={{
-                  ...config,
-                  brush: {
-                    enabled: true,
-                    type: "rect",
-                    mode: "multiple",
-                    throttleType: "debounce",
-                    throttleDelay: 300,
-                    ...config.brush,
-                  },
-                  realtimeRange: config.realtimeRange || 5,
-                }}
-                onBrushSelected={handleBrushSelected}
-                onDataPointClick={handleDataPointClick}
-                legendState={legendState}
-                serviceThresholds={serviceThresholds}
-              />
-
-              {/* 데이터 없음 메시지 */}
-              {filteredData.length === 0 && (
-                <NoData isRealtime={isRealtime} hasFilters={hasFilters} />
+              {/* Chart component */}
+              {filteredData.length > 0 ? (
+                <TraceChart
+                  data={chartData}
+                  height={config.height}
+                  config={{
+                    ...config,
+                    brush: {
+                      enabled: true,
+                      type: "rect",
+                      mode: "multiple",
+                      throttleType: "debounce",
+                      throttleDelay: 300,
+                      ...config.brush,
+                    },
+                    realtimeRange: config.realtimeRange || 5,
+                  }}
+                  onBrushSelected={handleBrushSelected}
+                  onDataPointClick={handleDataPointClick}
+                  legendState={legendState}
+                  serviceThresholds={serviceThresholds}
+                />
+              ) : (
+                <NoData
+                  isRealtime={isRealtimeMode || isRealtime}
+                  hasFilters={hasFilters}
+                />
               )}
 
-              {/* 필터 요약 */}
+              {/* Filter summary */}
               {filteredData.length > 0 && (
                 <FilterSummary
                   filteredDataLength={filteredData.length}
@@ -272,6 +306,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
             </>
           )}
 
+          {/* Analytics tab */}
           {activeTab === "analytics" && (
             <TraceAnalytics
               traces={filteredData}
@@ -281,7 +316,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
         </CardBody>
       </Card>
 
-      {/* 선택된 트레이스 모달 */}
+      {/* Selected traces modal */}
       <SelectedTracesModal
         selectedTraces={selectedTraces}
         isOpen={isOpen}
@@ -295,4 +330,4 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
 
 TraceVisualization.displayName = "TraceVisualization";
 
-export default TraceVisualization;
+export default React.memo(TraceVisualization);

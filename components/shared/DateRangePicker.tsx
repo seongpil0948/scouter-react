@@ -17,24 +17,30 @@ interface DateRangePickerProps {
   isDisabled?: boolean;
 }
 
+/**
+ * Enhanced DateRangePicker component with better state management
+ * for selecting time ranges for trace data
+ */
 const DateRangePicker: React.FC<DateRangePickerProps> = ({
   onChange,
   isDisabled = false,
 }) => {
+  // Get time range state from store
   const { timeRange, setTimeRange, isRealtime } = useFilterStore();
+
+  // State for picker value
   const [value, setValue] = useState<RangeValue<CalendarDateTime> | null>(null);
 
-  // 내부 상태 업데이트 플래그 - ref로 관리하여 렌더링 영향 없이 상태 추적
+  // Refs to track internal state
   const isInternalUpdateRef = useRef(false);
   const isComponentMountedRef = useRef(false);
   const prevTimeRangeRef = useRef({ startTime: 0, endTime: 0 });
 
-  // timestamp를 CalendarDateTime으로 안전하게 변환하는 함수
+  // Convert timestamp to CalendarDateTime safely
   const convertToCalendarDateTime = useCallback((timestamp: number) => {
     try {
       if (!timestamp || timestamp <= 0) return null;
 
-      // @internationalized/date 라이브러리 함수를 사용하여 변환
       const date = new Date(timestamp);
       const zonedDateTime = fromDate(date, getLocalTimeZone());
       return toCalendarDateTime(zonedDateTime);
@@ -47,20 +53,20 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
     }
   }, []);
 
-  // 두 타임스탬프를 비교하여 실질적인 변화가 있는지 확인
+  // Check if time range has significantly changed
   const hasTimeRangeChanged = useCallback(
     (oldStart: number, oldEnd: number, newStart: number, newEnd: number) => {
-      // 둘 다 유효한 값이 아니면 변화 없음으로 간주
+      // Skip if either is invalid
       if ((oldStart <= 0 && newStart <= 0) || (oldEnd <= 0 && newEnd <= 0)) {
         return false;
       }
 
-      // 둘 중 하나라도 유효하지 않으면 변화 있음으로 간주
+      // Consider changed if any is invalid
       if (oldStart <= 0 || oldEnd <= 0 || newStart <= 0 || newEnd <= 0) {
         return true;
       }
 
-      // 실질적인 차이가 1초 이상인 경우만 변화로 간주
+      // Consider changed if difference is > 1 second
       const startDiff = Math.abs(oldStart - newStart);
       const endDiff = Math.abs(oldEnd - newEnd);
 
@@ -69,9 +75,9 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
     []
   );
 
-  // timeRange를 UI에 반영하는 함수
+  // Update UI when timeRange changes in store
   const updateUIFromTimeRange = useCallback(() => {
-    // 이미 내부 업데이트 중이면 무시
+    // Skip if internal update is in progress
     if (isInternalUpdateRef.current) return;
 
     try {
@@ -79,10 +85,9 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
       const { startTime, endTime } = timeRange;
 
+      // Handle invalid time range
       if (startTime <= 0 || endTime <= 0) {
-        console.log(
-          "[DateRangePicker] 유효하지 않은 timeRange, 기본값으로 초기화"
-        );
+        console.log("[DateRangePicker] Invalid timeRange, using default");
         const now = Date.now();
         const oneHourAgo = now - 3600000;
         setTimeRange(oneHourAgo, now);
@@ -90,7 +95,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
         return;
       }
 
-      // 이전 값과 변화가 없으면 업데이트 건너뛰기
+      // Skip if no significant change
       if (
         !hasTimeRangeChanged(
           prevTimeRangeRef.current.startTime,
@@ -99,9 +104,6 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
           endTime
         )
       ) {
-        console.log(
-          "[DateRangePicker] No significant change in timeRange, skipping UI update"
-        );
         return;
       }
 
@@ -111,6 +113,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
         new Date(endTime).toLocaleString()
       );
 
+      // Convert timestamps to CalendarDateTime
       const startDateTime = convertToCalendarDateTime(startTime);
       const endDateTime = convertToCalendarDateTime(endTime);
 
@@ -120,7 +123,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
           end: endDateTime,
         });
 
-        // 이전 값 저장
+        // Save for comparison
         prevTimeRangeRef.current = { startTime, endTime };
       } else {
         console.warn(
@@ -133,18 +136,18 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
         error
       );
     } finally {
-      // 내부 업데이트 플래그 해제
+      // Reset internal update flag
       setTimeout(() => {
         isInternalUpdateRef.current = false;
-      }, 0);
+      }, 10);
     }
   }, [timeRange, hasTimeRangeChanged, convertToCalendarDateTime, setTimeRange]);
 
-  // 컴포넌트 마운트 시 초기화
+  // Initialize component
   useEffect(() => {
     isComponentMountedRef.current = true;
 
-    // 컴포넌트 마운트 시 timeRange가 유효하면 UI에 반영
+    // Initialize UI with existing timeRange or default
     if (timeRange.startTime > 0 && timeRange.endTime > 0) {
       console.log(
         "[DateRangePicker] Component mounted, using existing timeRange:",
@@ -153,7 +156,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
       );
       updateUIFromTimeRange();
     } else {
-      // timeRange가 유효하지 않으면 기본값 설정
+      // Set default time range
       const now = Date.now();
       const oneHourAgo = now - 3600000;
 
@@ -163,11 +166,11 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
         new Date(now).toLocaleString()
       );
 
-      // 기본값 설정
+      // Update store
       setTimeRange(oneHourAgo, now);
       prevTimeRangeRef.current = { startTime: oneHourAgo, endTime: now };
 
-      // UI에도 직접 반영 - 개선된 방식으로 구현
+      // Update UI directly
       const startDateTime = convertToCalendarDateTime(oneHourAgo);
       const endDateTime = convertToCalendarDateTime(now);
 
@@ -189,12 +192,11 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
     convertToCalendarDateTime,
   ]);
 
-  // timeRange 변경 감지하여 UI 업데이트
+  // Watch for timeRange changes in store
   useEffect(() => {
-    // 컴포넌트가 마운트되지 않았거나 내부 업데이트 중이면 무시
     if (!isComponentMountedRef.current || isInternalUpdateRef.current) return;
 
-    // 현재 타임스탬프와 저장된 타임스탬프가 다르면 UI 업데이트
+    // Update UI if store timeRange is different than local state
     if (
       timeRange.startTime !== prevTimeRangeRef.current.startTime ||
       timeRange.endTime !== prevTimeRangeRef.current.endTime
@@ -203,10 +205,10 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
     }
   }, [timeRange, updateUIFromTimeRange]);
 
-  // 사용자가 날짜 선택 시 호출되는 핸들러
+  // Handle user selection in the date picker
   const handleValueChange = useCallback(
     (newValue: RangeValue<CalendarDateTime> | null) => {
-      // 유효한 값이 아니거나 내부 업데이트 중이면 무시
+      // Skip if no valid selection or internal update in progress
       if (!newValue?.start || !newValue?.end || isInternalUpdateRef.current) {
         return;
       }
@@ -214,10 +216,10 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
       try {
         isInternalUpdateRef.current = true;
 
-        // UI 상태 업데이트
+        // Update UI state
         setValue(newValue);
 
-        // @internationalized/date 라이브러리를 사용하여 타임스탬프 추출
+        // Convert to timestamps
         const startTime = newValue.start.toDate(getLocalTimeZone()).getTime();
         const endTime = newValue.end.toDate(getLocalTimeZone()).getTime();
 
@@ -227,7 +229,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
           new Date(endTime).toLocaleString()
         );
 
-        // 변경 사항이 있을 때만 후속 작업 수행
+        // Update if changed
         if (
           hasTimeRangeChanged(
             timeRange.startTime,
@@ -236,11 +238,11 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
             endTime
           )
         ) {
-          // 스토어 상태 업데이트
+          // Update store
           setTimeRange(startTime, endTime);
           prevTimeRangeRef.current = { startTime, endTime };
 
-          // 부모 컴포넌트에 변경 알림
+          // Notify parent
           if (onChange) {
             onChange(startTime, endTime);
           }
@@ -251,7 +253,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
           error
         );
       } finally {
-        // 내부 업데이트 플래그 해제
+        // Reset flag
         setTimeout(() => {
           isInternalUpdateRef.current = false;
         }, 10);

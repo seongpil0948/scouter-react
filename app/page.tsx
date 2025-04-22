@@ -9,11 +9,12 @@ import {
   DrawerBody,
   DrawerHeader,
 } from "@heroui/drawer";
-import { X, List, ArrowRight, Clock, BarChart2 } from "lucide-react";
+import { X, List, ArrowRight, Clock, BarChart2, RefreshCw } from "lucide-react";
 
 import { useFilterStore } from "@/lib/store/telemetryStore";
 import { useChartStore } from "@/lib/store/chartStore";
 import { useTraceData } from "@/lib/hooks/useTraceData";
+import { useTraceDataStore } from "@/lib/store/traceDataStore";
 
 import { Card, CardBody } from "@heroui/card";
 import { ThemeSwitch } from "@/components/shared/theme-switch";
@@ -24,7 +25,7 @@ import { useDisclosure } from "@heroui/modal";
 import { Tabs, Tab } from "@heroui/tabs";
 import { siteConfig } from "@/config/site";
 
-// 클라이언트 사이드에서만 로드하도록 dynamic import
+// Client-side only imports
 const TraceFilter = dynamic(() => import("@/components/traces/TraceFilter"), {
   ssr: false,
   loading: () => (
@@ -39,7 +40,6 @@ const TraceFilter = dynamic(() => import("@/components/traces/TraceFilter"), {
   ),
 });
 
-// 클라이언트 사이드에서만 로드하도록 dynamic import
 const TraceVisualization = dynamic(
   () => import("@/components/traces/TraceVisualization"),
   {
@@ -55,7 +55,6 @@ const TraceVisualization = dynamic(
   }
 );
 
-// 트레이스 분석 컴포넌트도 dynamic import
 const TraceAnalytics = dynamic(
   () => import("@/components/traces/TraceVisualization/TraceAnalytics"),
   {
@@ -74,27 +73,39 @@ const TraceAnalytics = dynamic(
 const DateRangePicker = dynamic(
   () => import("@/components/shared/DateRangePicker"),
   {
-    ssr: true,
+    ssr: false,
     loading: () => <Skeleton className="h-10 w-80" />,
   }
 );
 
 export default function Home() {
   const router = useRouter();
-  const { isRealtime } = useFilterStore();
+
+  // Stores
+  const { isRealtime, setTimeRange } = useFilterStore();
   const { updateConfig } = useChartStore();
 
-  // 활성 탭 상태 관리
+  // Local state
   const [activeTab, setActiveTab] = useState<string>("visualization");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // 선택된 트레이스 ID 상태 관리
-  const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  // Drawer for trace details
+  const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
 
-  const { traces, error, refresh } = useTraceData({
+  // Use enhanced trace data hook
+  const {
+    traces,
+    error,
+    isLoading,
+    refresh,
+    selectedTraceId,
+    setSelectedTraceId,
+  } = useTraceData({
     rootSpansOnly: true,
+    autoRefresh: isRealtime,
   });
 
+  // Chart configuration
   const [chartConfig, setChartConfig] = useState<ChartConfig>({
     height: 500,
     title: "실시간 요청 지연 시간",
@@ -114,49 +125,68 @@ export default function Home() {
     autoUpdate: false,
   });
 
-  // 실시간 모드 상태 변경 시 chartConfig 업데이트
+  // Update chart config when realtime mode changes
   useEffect(() => {
     if (isRealtime !== chartConfig.autoUpdate) {
       setChartConfig((prev) => ({
         ...prev,
         autoUpdate: isRealtime,
       }));
-    }
-  }, [isRealtime, chartConfig.autoUpdate]);
 
-  // 트레이스 상세 보기 핸들러
+      // Also update the chart store
+      updateConfig({ autoUpdate: isRealtime });
+    }
+  }, [isRealtime, chartConfig.autoUpdate, updateConfig]);
+
+  // Trace selection handler
   const handleTraceSelect = useCallback(
     (traceId: string) => {
       setSelectedTraceId(traceId);
-      onOpen(); // Drawer 열기
+      onOpen(); // Open drawer
     },
-    [onOpen]
+    [setSelectedTraceId, onOpen]
   );
 
-  // 시간 범위 변경 처리
+  // Time range change handler
   const handleTimeRangeChange = useCallback(
     (startTime: number, endTime: number) => {
-      // 시간 범위가 변경되면 데이터 새로고침
-      setTimeout(() => {
-        refresh();
-      }, 200);
+      // Update time range in store
+      const changed = setTimeRange(startTime, endTime);
+
+      // Refresh data if time range changed
+      if (changed) {
+        setTimeout(() => {
+          refresh();
+        }, 100);
+      }
     },
-    [refresh]
+    [setTimeRange, refresh]
   );
 
-  // 필터 변경 핸들러
+  // Filter change handler
   const handleFilterChange = useCallback(() => {
+    // Short delay to allow all filter changes to complete
     setTimeout(() => {
       refresh();
     }, 300);
   }, [refresh]);
 
-  // 트레이스 목록 페이지로 이동
+  // Manual refresh handler with debounce
+  const handleManualRefresh = useCallback(() => {
+    if (isRefreshing) return;
+
+    setIsRefreshing(true);
+    refresh().finally(() => {
+      setTimeout(() => setIsRefreshing(false), 500);
+    });
+  }, [refresh, isRefreshing]);
+
+  // Navigation to traces page
   const navigateToTraces = useCallback(() => {
     router.push("/traces");
   }, [router]);
 
-  // 컴포넌트 마운트 시 차트 설정 초기화
+  // Initialize chart config on mount
   useEffect(() => {
     updateConfig(chartConfig);
   }, [chartConfig, updateConfig]);
@@ -165,9 +195,25 @@ export default function Home() {
     <section className="flex flex-col items-center justify-center gap-4 pb-4 md:pb-5">
       <div className="w-full flex justify-between items-center bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
         <h2 className="text-xl font-semibold">{siteConfig.name}</h2>
+
         <div className="flex items-center gap-4">
-          <DateRangePicker onChange={handleTimeRangeChange} />
+          <DateRangePicker
+            onChange={handleTimeRangeChange}
+            isDisabled={isRealtime}
+          />
+
+          <Button
+            isIconOnly
+            variant="light"
+            onPress={handleManualRefresh}
+            isDisabled={isRealtime || isLoading}
+            isLoading={isRefreshing}
+            title="데이터 새로고침"
+          >
+            <RefreshCw size={18} />
+          </Button>
         </div>
+
         <Button
           color="primary"
           endContent={<ArrowRight size={16} />}
@@ -176,13 +222,18 @@ export default function Home() {
           <List size={16} className="mr-1" />
           목록 보기
         </Button>
+
         <ThemeSwitch className="absolute top-4 right-4" />
       </div>
 
       <div className="w-full max-w-7xl space-y-4">
-        {/* TraceFilter에 불필요한 props 제거 */}
-        <TraceFilter onFilterChange={handleFilterChange} onRefresh={refresh} />
+        {/* Filter component */}
+        <TraceFilter
+          onFilterChange={handleFilterChange}
+          onRefresh={handleManualRefresh}
+        />
 
+        {/* Main content card */}
         <Card className="w-full">
           <Tabs
             aria-label="데이터 시각화 모드"
@@ -211,15 +262,39 @@ export default function Home() {
           </Tabs>
 
           <CardBody className="p-4">
-            {activeTab === "visualization" && (
+            {/* Show loading state */}
+            {isLoading && traces.length === 0 && (
+              <div className="flex justify-center items-center h-[500px]">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500" />
+                  <p className="text-gray-500">데이터를 불러오는 중...</p>
+                </div>
+              </div>
+            )}
+
+            {/* Show error state */}
+            {error && !isLoading && (
+              <div className="flex flex-col items-center justify-center h-[500px] text-center">
+                <div className="text-red-500 mb-4">
+                  데이터를 불러오는 중 오류가 발생했습니다
+                </div>
+                <div className="text-sm text-gray-500 mb-4">
+                  {error.message}
+                </div>
+                <Button color="primary" onPress={handleManualRefresh}>
+                  다시 시도
+                </Button>
+              </div>
+            )}
+
+            {/* Timeline visualization tab */}
+            {activeTab === "visualization" && !error && (
               <TraceVisualization
                 config={{
                   ...chartConfig,
-                  title: error
-                    ? "데이터 로드 중 오류 발생"
-                    : isRealtime
-                      ? `실시간 요청 지연 시간`
-                      : chartConfig.title,
+                  title: isRealtime
+                    ? `실시간 요청 지연 시간`
+                    : chartConfig.title,
                   autoUpdate: isRealtime,
                 }}
                 traceData={traces}
@@ -229,17 +304,33 @@ export default function Home() {
               />
             )}
 
-            {activeTab === "analytics" && (
+            {/* Analytics tab */}
+            {activeTab === "analytics" && !error && traces.length > 0 && (
               <TraceAnalytics
                 traces={traces}
                 onTraceSelect={handleTraceSelect}
               />
             )}
+
+            {/* Empty analytics state */}
+            {activeTab === "analytics" &&
+              !error &&
+              traces.length === 0 &&
+              !isLoading && (
+                <div className="flex justify-center items-center h-[300px] text-center">
+                  <div className="text-gray-500">
+                    <p className="mb-2">분석할 데이터가 없습니다</p>
+                    <p className="text-sm">
+                      시간 범위를 조정하거나 필터를 변경해보세요
+                    </p>
+                  </div>
+                </div>
+              )}
           </CardBody>
         </Card>
       </div>
 
-      {/* 드로어 부분 - 변경 없음 */}
+      {/* Trace detail drawer */}
       <Drawer
         isOpen={isOpen}
         onOpenChange={onOpenChange}

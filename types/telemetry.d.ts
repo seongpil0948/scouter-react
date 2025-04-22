@@ -82,7 +82,7 @@ interface FilterStore {
     startTime: number;
     endTime: number;
   };
-  setTimeRange: (startTime: number, endTime: number) => void;
+  setTimeRange: (startTime: number, endTime: number) => boolean;
 
   // 선택된 항목
   selectedTraceId: string | null;
