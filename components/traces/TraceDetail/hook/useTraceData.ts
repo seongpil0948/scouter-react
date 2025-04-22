@@ -47,13 +47,15 @@ export const useTraceData = (traceId: string) => {
     error,
     isLoading,
   } = useSWR<TraceData>(
-    traceId ? `/api/telemetry/traces/${traceId}` : null,
+    traceId
+      ? `${process.env.NEXT_PUBLIC_API_BASE_PATH}/telemetry/traces/${traceId}`
+      : null,
     fetcher,
     {
       revalidateOnFocus: false,
       dedupingInterval: 30000, // 30초 동안 중복 요청 방지
       errorRetryCount: 3,
-    },
+    }
   );
 
   // 시간 포맷팅

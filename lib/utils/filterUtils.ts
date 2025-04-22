@@ -151,7 +151,7 @@ export function buildServiceListApiUrl(timeRange: {
   params.append("startTime", timeRange.startTime.toString());
   params.append("endTime", timeRange.endTime.toString());
 
-  return `/api/telemetry/traces/services?${params.toString()}`;
+  return `${process.env.NEXT_PUBLIC_API_BASE_PATH}/telemetry/traces/services?${params.toString()}`;
 }
 
 export default {

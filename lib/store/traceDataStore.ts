@@ -102,7 +102,7 @@ export const useTraceDataStore = create<TraceDataState>()(
         try {
           // Build API URL with all filters
           const apiUrl = buildTraceApiUrl(
-            "/api/telemetry/traces",
+            `${process.env.NEXT_PUBLIC_API_BASE_PATH}/telemetry/traces`,
             {
               searchQuery,
               selectedServices,
