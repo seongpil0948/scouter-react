@@ -16,20 +16,6 @@ import {
   TableCell,
 } from "@heroui/table";
 
-interface Span {
-  id: string;
-  name: string;
-  serviceName: string;
-  startTime: number;
-  endTime: number;
-  duration: number;
-  parentSpanId?: string;
-  attributes?: Record<string, any>;
-  status?: string;
-  traceId: string;
-  spanId: string;
-}
-
 interface SpanListProps {
   spans: Span[];
   formatDuration: (duration: number) => string;
@@ -177,9 +163,11 @@ export const SpanList: React.FC<SpanListProps> = React.memo(
                 className="min-w-[150px]"
               >
                 <SelectItem key="all">All Services</SelectItem>
-                {services.map((service) => (
-                  <SelectItem key={service}>{service}</SelectItem>
-                )) as any}
+                {
+                  services.map((service) => (
+                    <SelectItem key={service}>{service}</SelectItem>
+                  )) as any
+                }
               </Select>
             </div>
           </div>

@@ -11,7 +11,6 @@ import { createDataSlice, DataSlice } from "./slices/dataSlice";
 import { buildTraceApiUrl } from "@/lib/utils/filterUtils";
 import { useFilterStore } from "./telemetryStore";
 import { useTraceFilterStore } from "./traceFilterStore";
-import { TraceItem, TracesResponse } from "./types";
 
 // 트레이스 데이터 상태 타입
 export interface TraceDataState

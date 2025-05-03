@@ -11,21 +11,6 @@ export interface LogItem {
   attributes?: Record<string, any>;
 }
 
-// 트레이스 아이템 인터페이스
-export interface TraceItem {
-  id: string;
-  traceId: string;
-  name: string;
-  startTime: number;
-  duration: number;
-  serviceName: string;
-  spanCount?: number;
-  status?: "UNSET" | "ERROR" | "OK";
-  attributes?: Record<string, any>;
-  services?: string[];
-  isRootSpan?: boolean;
-}
-
 // 스팬 인터페이스
 export interface Span {
   id: string;
@@ -39,19 +24,6 @@ export interface Span {
   status?: string;
   traceId: string;
   spanId: string;
-}
-
-// API 응답 타입
-export interface TracesResponse {
-  traces: TraceItem[];
-  total: number;
-  limit: number;
-  offset: number;
-  timeRange: {
-    startTime: number;
-    endTime: number;
-  };
-  rootSpansOnly: boolean;
 }
 
 export interface TraceDetailResponse {

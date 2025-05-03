@@ -15,6 +15,15 @@ interface Span {
   spanId: string;
 }
 
+interface Trace {
+  traceId: string;
+  spans: Span[];
+  startTime: number;
+  endTime: number;
+  services: string[];
+  total: number;
+}
+
 // 트레이스 상세 정보 인터페이스
 interface TraceDetail {
   traceId: string;
@@ -47,7 +56,7 @@ interface TimelineItem {
 }
 
 // 스팬 상태 유형
-type SpanStatus = 'OK' | 'ERROR' | 'UNSET';
+type SpanStatus = "OK" | "ERROR" | "UNSET";
 
 // 스팬 필터 인터페이스
 interface SpanFilter {
@@ -62,7 +71,7 @@ interface SpanFilter {
 type DataPoint = [number, number]; // [timestamp, latency]
 
 // 시각화 업데이트 방식
-type VisualizationUpdateMode = 'realtime' | 'batch' | 'manual';
+type VisualizationUpdateMode = "realtime" | "batch" | "manual";
 
 // 시계열 데이터 인터페이스
 interface TimeSeriesData {

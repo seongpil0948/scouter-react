@@ -4,38 +4,6 @@
 
 import { formatDuration } from "./dateFormatter";
 
-// 스팬 인터페이스
-export interface Span {
-  id: string;
-  name: string;
-  serviceName: string;
-  startTime: number;
-  endTime: number;
-  duration: number;
-  parentSpanId?: string;
-  traceId: string;
-  spanId: string;
-  status?: string;
-  attributes?: Record<string, any>;
-}
-
-// 트레이스 인터페이스
-export interface Trace {
-  traceId: string;
-  spans: Span[];
-  startTime: number;
-  endTime: number;
-  services: string[];
-  total: number;
-}
-
-// 스팬 노드 인터페이스 (계층 구조 표현용)
-export interface SpanNode {
-  span: Span;
-  children: SpanNode[];
-  depth: number;
-}
-
 /**
  * 트레이스 내 스팬들의 계층 구조 생성
  */
@@ -105,7 +73,7 @@ export interface TimelineItem {
  */
 export function generateTimelineItems(
   trace: Trace,
-  rootNodes: SpanNode[],
+  rootNodes: SpanNode[]
 ): TimelineItem[] {
   const items: TimelineItem[] = [];
   const traceDuration = trace.endTime - trace.startTime;
@@ -172,7 +140,7 @@ export function mergeSpanAttributes(spans: Span[]): Record<string, any> {
  */
 export function filterSpansByService(
   spans: Span[],
-  serviceName: string,
+  serviceName: string
 ): Span[] {
   return spans.filter((span) => span.serviceName === serviceName);
 }
