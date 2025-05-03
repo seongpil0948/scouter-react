@@ -7,7 +7,7 @@ interface SpanTreeProps {
   childrenMap: Record<string, Span[]>;
   selectedSpanId: string | null;
   setSelectedSpanId: (spanId: string) => void;
-  traceData: TraceData;
+  traceData: TraceDetailData["trace"];
   formatDuration: (duration: number) => string;
 }
 

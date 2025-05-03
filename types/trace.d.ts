@@ -24,15 +24,6 @@ interface Trace {
   total: number;
 }
 
-interface TraceData {
-  traceId: string;
-  spans: Span[];
-  startTime: number;
-  endTime: number;
-  services: string[];
-  total: number;
-}
-
 // 트레이스 상세 정보 인터페이스
 type TraceDetail = TraceData;
 // 스팬 노드 인터페이스 (계층 구조 표현용)

@@ -1,27 +1,38 @@
 // API 응답 타입 정의
+interface ApiResponse<T> {
+  data: T;
+  success: boolean;
+}
 
-// 트레이스 목록 응답 타입
-interface TracesResponse {
+interface TraceListData {
   traces: TraceItem[];
-  total: number;
-  limit: number;
-  offset: number;
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+  };
   timeRange: {
     startTime: number;
     endTime: number;
   };
-  rootSpansOnly: boolean; // 루트 스팬만 조회 여부 플래그
-}
-
-// 트레이스 상세 응답 타입
-interface TraceDetailResponse {
-  traceId: string;
-  spans: Span[];
-  startTime: number;
-  endTime: number;
   services: string[];
-  total: number;
+  totalDuration: number;
+  rootSpansOnly?: boolean;
 }
+type TracesResponse = ApiResponse<TraceListData>;
+
+interface TraceDetailData {
+  trace: {
+    traceId: string;
+    spans: Span[];
+    startTime: number;
+    endTime: number;
+    services: string[];
+    total: number;
+  };
+}
+// 트레이스 상세 응답 타입
+type TraceDetailResponse = ApiResponse<TraceDetailData>;
 
 // 서비스 목록 응답 타입
 interface ServicesResponse {

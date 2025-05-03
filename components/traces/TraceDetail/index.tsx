@@ -1,22 +1,22 @@
-'use client';
-import { Button } from '@heroui/button';
-import { Badge } from '@heroui/badge';
-import React, { useCallback, useState, useMemo } from 'react';
-import { Card, CardBody } from '@heroui/card';
-import { Tabs, Tab } from '@heroui/tabs';
-import { CopyIcon, ArrowLeft, BarChart2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { ErrorBoundary } from 'react-error-boundary';
+"use client";
+import { Button } from "@heroui/button";
+import { Badge } from "@heroui/badge";
+import React, { useCallback, useState, useMemo } from "react";
+import { Card, CardBody } from "@heroui/card";
+import { Tabs, Tab } from "@heroui/tabs";
+import { CopyIcon, ArrowLeft, BarChart2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ErrorBoundary } from "react-error-boundary";
 
-import { SpanTree } from './SpanTree';
-import { SpanDetail } from './SpanDetail';
-import { TraceSummary } from './TraceSummary';
-import { SpanList } from './SpanList';
-import { useTraceData } from './hook/useTraceData';
-import TraceAnalyticsSummary from './TraceAnalyticsSummary';
+import { SpanTree } from "./SpanTree";
+import { SpanDetail } from "./SpanDetail";
+import { TraceSummary } from "./TraceSummary";
+import { SpanList } from "./SpanList";
+import { useTraceData } from "./hook/useTraceData";
+import TraceAnalyticsSummary from "./TraceAnalyticsSummary";
 
-import { formatDateTime } from '@/lib/utils/dateFormatter';
-import { copyToClipboard } from '@/lib/utils/clipboard';
+import { formatDateTime } from "@/lib/utils/dateFormatter";
+import { copyToClipboard } from "@/lib/utils/clipboard";
 
 interface TraceDetailProps {
   traceId: string;
@@ -25,9 +25,16 @@ interface TraceDetailProps {
 
 const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
   const [selectedSpanId, setSelectedSpanId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string | number>('analytics');
+  const [activeTab, setActiveTab] = useState<string | number>("analytics");
 
-  const { traceData, error, isLoading, formatTime, formatDuration, spanHierarchy } = useTraceData(traceId);
+  const {
+    traceData,
+    error,
+    isLoading,
+    formatTime,
+    formatDuration,
+    spanHierarchy,
+  } = useTraceData(traceId);
 
   // 선택된 스팬 정보
   const selectedSpan = useMemo(() => {
@@ -51,7 +58,9 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
       <Card className="bg-white rounded-lg shadow-lg overflow-hidden">
         <CardBody className="p-6">
           <div className="flex flex-col items-center justify-center h-64">
-            <h3 className="text-xl font-medium text-red-600 mb-2">데이터를 불러오는 중 오류가 발생했습니다</h3>
+            <h3 className="text-xl font-medium text-red-600 mb-2">
+              데이터를 불러오는 중 오류가 발생했습니다
+            </h3>
             <p className="text-gray-500 mb-4">{error.message}</p>
             <Button variant="ghost" onPress={handleBack}>
               트레이스 목록으로 돌아가기
@@ -69,7 +78,9 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
         <CardBody className="p-6">
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500" />
-            <p className="ml-4 text-lg text-gray-600">트레이스 데이터를 불러오는 중...</p>
+            <p className="ml-4 text-lg text-gray-600">
+              트레이스 데이터를 불러오는 중...
+            </p>
           </div>
         </CardBody>
       </Card>
@@ -96,15 +107,21 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
       <h2 className="bg-gray-50 border-b px-6 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            {onBack && <Button title="뒤로 가기" variant="ghost" onPress={handleBack}>
-              <ArrowLeft size={18} />
-              <span className="sr-only">뒤로 가기</span>
-            </Button>}
+            {onBack && (
+              <Button title="뒤로 가기" variant="ghost" onPress={handleBack}>
+                <ArrowLeft size={18} />
+                <span className="sr-only">뒤로 가기</span>
+              </Button>
+            )}
             <h2 className="text-xl">트레이스 상세</h2>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onPress={() => copyToClipboard(traceData.traceId)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onPress={() => copyToClipboard(traceData.traceId)}
+            >
               <CopyIcon className="mr-1" size={16} />
               트레이스 ID 복사
             </Button>
@@ -112,15 +129,19 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
         </div>
       </h2>
 
-      <Tabs className="w-full" selectedKey={activeTab} onSelectionChange={setActiveTab}>
-        <Tab 
-          key="analytics" 
+      <Tabs
+        className="w-full"
+        selectedKey={activeTab}
+        onSelectionChange={setActiveTab}
+      >
+        <Tab
+          key="analytics"
           title={
             <div className="flex items-center">
               <BarChart2 size={16} className="mr-1" />
               분석 요약
             </div>
-          } 
+          }
         />
         <Tab key="timeline" title="타임라인" />
         <Tab key="list" title="스팬 목록" />
@@ -128,19 +149,29 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
       </Tabs>
 
       <CardBody className="p-0">
-        <ErrorBoundary fallback={<div className="p-4 bg-red-50 text-red-700 rounded-md">컴포넌트 렌더링 중 오류가 발생했습니다.</div>}>
+        <ErrorBoundary
+          fallback={
+            <div className="p-4 bg-red-50 text-red-700 rounded-md">
+              컴포넌트 렌더링 중 오류가 발생했습니다.
+            </div>
+          }
+        >
           {/* 새로운 분석 요약 탭 */}
-          {activeTab === 'analytics' && (
-            <TraceAnalyticsSummary 
-              spans={traceData.spans} 
+          {activeTab === "analytics" && (
+            <TraceAnalyticsSummary
+              spans={traceData.spans}
               onSelectSpan={setSelectedSpanId}
               onToggleView={handleToggleView}
             />
           )}
-          
-          {activeTab === 'timeline' && (
+
+          {activeTab === "timeline" && (
             <div className="p-6">
-              <TraceSummary formatDuration={formatDuration} formatTime={formatTime} traceData={traceData} />
+              <TraceSummary
+                formatDuration={formatDuration}
+                formatTime={formatTime}
+                traceData={traceData}
+              />
 
               <div className="overflow-x-auto">
                 <div className="min-w-[800px]">
@@ -168,43 +199,71 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
             </div>
           )}
 
-          {activeTab === 'list' && (
+          {activeTab === "list" && (
             <div className="p-6 space-y-6">
               <div>
                 <h3 className="text-lg font-medium mb-4">트레이스 정보</h3>
                 <table className="w-full border-collapse">
                   <tbody>
                     <tr className="border-b">
-                      <td className="py-2 px-4 bg-gray-50 font-medium">트레이스 ID</td>
+                      <td className="py-2 px-4 bg-gray-50 font-medium">
+                        트레이스 ID
+                      </td>
                       <td className="py-2 px-4 font-mono flex items-center">
                         {traceData.traceId}
-                        <Button className="ml-2" size="sm" variant="ghost" onPress={() => copyToClipboard(traceData.traceId)}>
+                        <Button
+                          className="ml-2"
+                          size="sm"
+                          variant="ghost"
+                          onPress={() => copyToClipboard(traceData.traceId)}
+                        >
                           <CopyIcon size={14} />
                           <span className="sr-only">복사</span>
                         </Button>
                       </td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-4 bg-gray-50 font-medium">시작 시간</td>
-                      <td className="py-2 px-4">{formatDateTime(traceData.startTime)}</td>
+                      <td className="py-2 px-4 bg-gray-50 font-medium">
+                        시작 시간
+                      </td>
+                      <td className="py-2 px-4">
+                        {formatDateTime(traceData.startTime)}
+                      </td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-4 bg-gray-50 font-medium">종료 시간</td>
-                      <td className="py-2 px-4">{formatDateTime(traceData.endTime)}</td>
+                      <td className="py-2 px-4 bg-gray-50 font-medium">
+                        종료 시간
+                      </td>
+                      <td className="py-2 px-4">
+                        {formatDateTime(traceData.endTime)}
+                      </td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-4 bg-gray-50 font-medium">총 지연 시간</td>
-                      <td className="py-2 px-4">{formatDuration(traceData.endTime - traceData.startTime)}</td>
+                      <td className="py-2 px-4 bg-gray-50 font-medium">
+                        총 지연 시간
+                      </td>
+                      <td className="py-2 px-4">
+                        {formatDuration(
+                          traceData.endTime - traceData.startTime
+                        )}
+                      </td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-4 bg-gray-50 font-medium">스팬 수</td>
+                      <td className="py-2 px-4 bg-gray-50 font-medium">
+                        스팬 수
+                      </td>
                       <td className="py-2 px-4">{traceData.spans.length}</td>
                     </tr>
                     <tr>
-                      <td className="py-2 px-4 bg-gray-50 font-medium">서비스</td>
+                      <td className="py-2 px-4 bg-gray-50 font-medium">
+                        서비스
+                      </td>
                       <td className="py-2 px-4">
                         {traceData.services.map((service) => (
-                          <Badge key={service} className="mr-1 bg-blue-100 text-blue-800">
+                          <Badge
+                            key={service}
+                            className="mr-1 bg-blue-100 text-blue-800"
+                          >
                             {service}
                           </Badge>
                         ))}
@@ -214,11 +273,15 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
                 </table>
               </div>
 
-              <SpanList formatDuration={formatDuration} setSelectedSpanId={setSelectedSpanId} spans={traceData.spans} />
+              <SpanList
+                formatDuration={formatDuration}
+                setSelectedSpanId={setSelectedSpanId}
+                spans={traceData.spans}
+              />
             </div>
           )}
 
-          {activeTab === 'span' && selectedSpan && (
+          {activeTab === "span" && selectedSpan && (
             <div className="p-6">
               <SpanDetail formatDuration={formatDuration} span={selectedSpan} />
             </div>

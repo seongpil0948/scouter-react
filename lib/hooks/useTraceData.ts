@@ -24,7 +24,7 @@ export function useTraceData({
 }: UseTraceDataOptions = {}) {
   // Get store states and actions
   const {
-    traces,
+    data: traces,
     totalCount,
     status,
     error,
@@ -46,7 +46,7 @@ export function useTraceData({
     setTimeRange,
   } = useFilterStore();
 
-  const { refreshData: triggerFilterRefresh } = useTraceFilterStore();
+  const { triggerRefresh: triggerFilterRefresh } = useTraceFilterStore();
 
   // Local state
   const { selectedTraceId, setSelectedTraceId } = useTraceDataStore();

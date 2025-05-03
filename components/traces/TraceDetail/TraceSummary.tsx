@@ -16,16 +16,16 @@ import {
 import { formatDateTime } from "@/lib/utils/dateFormatter";
 
 interface TraceSummaryProps {
-  traceData: TraceData;
+  traceData: TraceDetailData["trace"];
   formatTime: (timestamp: number) => string;
   formatDuration: (duration: number) => string;
 }
 
 export const TraceSummary: React.FC<TraceSummaryProps> = React.memo(
   ({ traceData, formatTime, formatDuration }) => {
-    const errorCount = traceData.spans.filter(
-      (span) => span.status === "ERROR"
-    ).length;
+    const d = traceData;
+    console.log("TraceSummary", d);
+    const errorCount = d.spans.filter((span) => span.status === "ERROR").length;
 
     return (
       <Card className="mb-4">
@@ -41,25 +41,25 @@ export const TraceSummary: React.FC<TraceSummaryProps> = React.memo(
                   트레이스 ID
                 </TableCell>
                 <TableCell className="font-mono">
-                  {traceData.traceId.substring(0, 8)}...
+                  {d.traceId.substring(0, 8)}...
                 </TableCell>
               </TableRow>
               <TableRow>
                 <TableCell className="text-gray-500">시작 시간</TableCell>
                 <TableCell className="font-mono">
-                  {formatDateTime(traceData.startTime)}
+                  {formatDateTime(d.startTime)}
                 </TableCell>
               </TableRow>
               <TableRow>
                 <TableCell className="text-gray-500">총 지연 시간</TableCell>
                 <TableCell className="font-mono">
-                  {formatDuration(traceData.endTime - traceData.startTime)}
+                  {formatDuration(d.endTime - d.startTime)}
                 </TableCell>
               </TableRow>
               <TableRow>
                 <TableCell className="text-gray-500">스팬 수</TableCell>
                 <TableCell className="font-mono flex items-center">
-                  {traceData.spans.length}
+                  {d.spans.length}
                   {errorCount > 0 && (
                     <Tooltip content={`${errorCount}개의 오류 스팬이 있습니다`}>
                       <Badge className="ml-2" color="danger">

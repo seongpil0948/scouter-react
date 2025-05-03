@@ -23,7 +23,7 @@ export const useTraceData = (traceId: string) => {
     data: traceData,
     error,
     isLoading,
-  } = useSWR<TraceData>(
+  } = useSWR<TraceDetailResponse>(
     traceId
       ? `${process.env.NEXT_PUBLIC_API_BASE_PATH}/telemetry/traces/${traceId}`
       : null,
@@ -68,9 +68,8 @@ export const useTraceData = (traceId: string) => {
 
     const rootSpans: Span[] = [];
     const childrenMap: Record<string, Span[]> = {};
-
     // 먼저 모든 자식 스팬 맵 생성
-    traceData.spans.forEach((span) => {
+    traceData.data.trace.spans.forEach((span) => {
       if (span.parentSpanId) {
         if (!childrenMap[span.parentSpanId]) {
           childrenMap[span.parentSpanId] = [];
@@ -93,7 +92,7 @@ export const useTraceData = (traceId: string) => {
   }, [traceData]);
 
   return {
-    traceData,
+    traceData: traceData?.data.trace,
     error,
     isLoading,
     formatTime,

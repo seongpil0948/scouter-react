@@ -172,5 +172,10 @@ export const createFilterSlice: StateCreator<
     });
   },
 
-  triggerRefresh: () => set({ lastRefreshed: Date.now() }),
+  triggerRefresh: () => {
+    set({ lastRefreshed: Date.now() });
+    console.log(
+      `[FilterSlice] Refresh triggered at ${new Date().toISOString()}`
+    );
+  },
 });

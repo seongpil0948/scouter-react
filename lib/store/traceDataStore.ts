@@ -120,8 +120,8 @@ export const useTraceDataStore = create<TraceDataState>()(
 
           // 상태 업데이트
           set({
-            data: response.traces || [],
-            totalCount: response.total || 0,
+            data: response.data.traces || [], // data 속성에 traces 배열 저장
+            totalCount: response.data.pagination.total || 0,
             status: "success",
             error: null,
             lastFetched: Date.now(),
@@ -130,12 +130,12 @@ export const useTraceDataStore = create<TraceDataState>()(
 
           // hasMore 업데이트
           currentState.updateHasMore(
-            response.total || 0,
+            response.data.pagination.total || 0,
             currentState.currentPage
           );
 
           console.log(
-            `[traceDataStore] Fetched ${response.traces?.length || 0} traces out of ${response.total || 0}`
+            `[traceDataStore] Fetched ${response.data.traces?.length || 0} traces out of ${response.data.pagination.total || 0}`
           );
         } catch (error) {
           console.error("[traceDataStore] Error fetching traces:", error);

@@ -331,7 +331,6 @@ export function useChartRenderer({
     };
   }, [isSSR, initChart]);
 
-  // 데이터 또는 설정 변경 시 차트 업데이트
   useEffect(() => {
     if (!chartInstanceRef.current || !isReady || isSSR) return;
 
@@ -368,6 +367,14 @@ export function useChartRenderer({
           // 타임스탬프 범위 계산
           const timestamps = allPoints.map((point) => point[0]);
           const latencies = allPoints.map((point) => point[1]);
+
+          // 빈 배열 체크 추가
+          if (timestamps.length === 0 || latencies.length === 0) {
+            console.warn("[useChartRenderer] Empty data points array");
+            setIsLoading(false);
+            return;
+          }
+
           const currentMinTime = Math.min(...timestamps);
           const currentMaxTime = Math.max(...timestamps);
           const maxLatency = Math.max(...latencies, 1) * 1.2; // 20% 여유
@@ -451,7 +458,11 @@ export function useChartRenderer({
               animation: false,
             },
           };
-          console.debug("Chart update option:", updateOption);
+
+          console.debug(
+            `[useChartRenderer] Updating chart with ${data.timeSeriesData?.length || 0} points`
+          );
+
           // 차트 인스턴스 업데이트
           chartInstanceRef.current.setOption(updateOption, {
             // Check before setOption
@@ -460,9 +471,11 @@ export function useChartRenderer({
             lazyUpdate: true,
             silent: isRealtime, // 실시간 모드에서는 불필요한 이벤트 발생 최소화
           });
+        } else {
+          console.debug("[useChartRenderer] No points to display");
         }
       } else {
-        console.debug("No data available for chart update.");
+        console.debug("[useChartRenderer] No data available for chart update");
         chartInstanceRef.current.setOption(
           {
             // Check before setOption
@@ -486,7 +499,7 @@ export function useChartRenderer({
         );
       }
     } catch (error) {
-      console.error("차트 업데이트 중 오류:", error);
+      console.error("[useChartRenderer] Chart update error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -494,12 +507,10 @@ export function useChartRenderer({
     data,
     isReady,
     legendState,
-    handleBrushSelected, // Keep handleBrushSelected dependency
+    handleBrushSelected,
     onBrushSelected,
     isRealtime,
     isSSR,
-    // mergedConfig,
-    // serviceThresholdsMap // Add if needed
   ]);
 
   // 테마 변경 시 차트 재초기화

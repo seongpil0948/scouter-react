@@ -14,7 +14,6 @@ import { X, List, ArrowRight, Clock, BarChart2, RefreshCw } from "lucide-react";
 import { useFilterStore } from "@/lib/store/telemetryStore";
 import { useChartStore } from "@/lib/store/chartStore";
 import { useTraceData } from "@/lib/hooks/useTraceData";
-import { useTraceDataStore } from "@/lib/store/traceDataStore";
 
 import { Card, CardBody } from "@heroui/card";
 import { ThemeSwitch } from "@/components/shared/theme-switch";
