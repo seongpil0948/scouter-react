@@ -244,7 +244,7 @@ export default function TracesPage() {
             )}
 
             {/* Analytics tab */}
-            {activeTab === "analytics" && traces.length > 0 && (
+            {activeTab === "analytics" && traces?.length > 0 && (
               <TraceAnalytics
                 traces={traces}
                 onTraceSelect={(traceId) =>
@@ -279,7 +279,7 @@ export default function TracesPage() {
 
         {/* Status info */}
         <div className="text-sm text-gray-500 text-right">
-          총 {totalCount}개의 트레이스 중 {traces.length}개 표시 중
+          총 {totalCount}개의 트레이스 중 {traces?.length}개 표시 중
           {isRealtime && (
             <span className="ml-2 text-blue-500">(실시간 갱신 중)</span>
           )}

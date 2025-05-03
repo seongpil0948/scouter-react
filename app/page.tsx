@@ -305,7 +305,7 @@ export default function Home() {
             )}
 
             {/* Analytics tab */}
-            {activeTab === "analytics" && !error && traces.length > 0 && (
+            {activeTab === "analytics" && !error && traces?.length > 0 && (
               <TraceAnalytics
                 traces={traces}
                 onTraceSelect={handleTraceSelect}

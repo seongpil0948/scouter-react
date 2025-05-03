@@ -192,7 +192,7 @@ export function findTraceByTimestamp(
   traces: TraceItem[],
   timestamp: number
 ): TraceItem | null {
-  if (!traces || !traces.length) return null;
+  if (!traces || !traces?.length) return null;
 
   return traces.reduce(
     (closest, trace) => {
@@ -213,7 +213,7 @@ export function findTraceByTimestamp(
  * @returns statistics object with min, max, avg and percentiles
  */
 export function calculateLatencyStats(traces: TraceItem[]) {
-  if (!traces || traces.length === 0) {
+  if (!traces || traces?.length === 0) {
     return { min: 0, max: 0, avg: 0, p90: 0, p95: 0, p99: 0 };
   }
 
