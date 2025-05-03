@@ -263,7 +263,7 @@ export default function Home() {
 
           <CardBody className="p-4">
             {/* Show loading state */}
-            {isLoading && traces.length === 0 && (
+            {isLoading && traces?.length === 0 && (
               <div className="flex justify-center items-center h-[500px]">
                 <div className="flex flex-col items-center gap-4">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500" />
@@ -315,7 +315,7 @@ export default function Home() {
             {/* Empty analytics state */}
             {activeTab === "analytics" &&
               !error &&
-              traces.length === 0 &&
+              traces?.length === 0 &&
               !isLoading && (
                 <div className="flex justify-center items-center h-[300px] text-center">
                   <div className="text-gray-500">

@@ -162,7 +162,7 @@ export default function TracesPage() {
       <div className="flex flex-col md:flex-row items-center justify-between w-full max-w-7xl">
         <DateRangePicker
           onChange={handleTimeRangeChange}
-          isDisabled={isRealtime || (isLoading && traces.length === 0)}
+          isDisabled={isRealtime || (isLoading && traces?.length === 0)}
         />
 
         <Button
@@ -249,24 +249,26 @@ export default function TracesPage() {
                 traces={traces}
                 onTraceSelect={(traceId) =>
                   handleTraceClick(
-                    traces.find((t) => t.traceId === traceId) || traces[0]
+                    traces.find((t: any) => t.traceId === traceId) || traces[0]
                   )
                 }
               />
             )}
 
             {/* Empty analytics state */}
-            {activeTab === "analytics" && traces.length === 0 && !isLoading && (
-              <div className="text-center py-12 text-gray-500">
-                <p>분석할 데이터가 없습니다.</p>
-                <p className="text-sm mt-2">
-                  필터를 조정하여 더 많은 데이터를 불러오세요.
-                </p>
-              </div>
-            )}
+            {activeTab === "analytics" &&
+              traces?.length === 0 &&
+              !isLoading && (
+                <div className="text-center py-12 text-gray-500">
+                  <p>분석할 데이터가 없습니다.</p>
+                  <p className="text-sm mt-2">
+                    필터를 조정하여 더 많은 데이터를 불러오세요.
+                  </p>
+                </div>
+              )}
 
             {/* Global loading state */}
-            {isLoading && traces.length === 0 && (
+            {isLoading && traces?.length === 0 && (
               <div className="flex items-center justify-center p-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500" />
                 <p className="ml-4 text-gray-600">데이터를 불러오는 중...</p>

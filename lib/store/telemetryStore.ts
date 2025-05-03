@@ -2,92 +2,37 @@
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 
-// Get default time range (last hour)
-const getDefaultTimeRange = () => {
-  const now = Date.now();
-  return {
-    startTime: now - 3600000, // 1 hour ago
-    endTime: now,
-  };
-};
+import { createLoadingSlice, LoadingSlice } from "./slices/loadingSlice";
+import { createTimeRangeSlice, TimeRangeSlice } from "./slices/timeRangeSlice";
+import { createRealtimeSlice, RealtimeSlice } from "./slices/realtimeSlice";
 
-// Default filter values
-const genDefaultFilter = () => ({
-  service: null,
-  severity: null,
-  search: "",
-  status: null,
-  hasTrace: false,
-  startTime: 0,
-  endTime: 0,
-  attributeKey: null,
-});
+// 필요한 슬라이스들을 합쳐서 전체 스토어 타입 정의
+export interface TelemetryStoreState
+  extends LoadingSlice,
+    TimeRangeSlice,
+    RealtimeSlice {
+  // 추가적인 원격 측정 관련 상태나 액션
+  selectedTraceId: string | null;
+  setSelectedTraceId: (id: string | null) => void;
 
-const DEFAULT_LOG_FILTERS: LogFilters = genDefaultFilter();
-const DEFAULT_TRACE_FILTERS = genDefaultFilter() as TraceFilters;
+  selectedLogId: string | null;
+  setSelectedLogId: (id: string | null) => void;
 
-// Create filter store with improved time range management
-export const useFilterStore = create<FilterStore>()(
+  selectedService: string | null;
+  setSelectedService: (name: string | null) => void;
+}
+
+// 원격 측정 스토어 생성
+export const useFilterStore = create<TelemetryStoreState>()(
   devtools(
     persist(
-      (set, get) => ({
-        // Log filters
-        logFilters: DEFAULT_LOG_FILTERS,
-        setLogFilters: (filters) =>
-          set((state) => ({
-            logFilters: { ...state.logFilters, ...filters },
-          })),
-        resetLogFilters: () => set({ logFilters: DEFAULT_LOG_FILTERS }),
+      (set, get, api) => ({
+        // 각 슬라이스 연결
+        ...createLoadingSlice(set, get, api),
+        ...createTimeRangeSlice(set, get, api),
+        ...createRealtimeSlice(set, get, api),
 
-        // Trace filters
-        traceFilters: DEFAULT_TRACE_FILTERS,
-        setTraceFilters: (filters) =>
-          set((state) => ({
-            traceFilters: { ...state.traceFilters, ...filters },
-          })),
-        resetTraceFilters: () => set({ traceFilters: DEFAULT_TRACE_FILTERS }),
-
-        // Time range with validation
-        timeRange: getDefaultTimeRange(),
-        setTimeRange: (startTime, endTime) => {
-          // Input validation
-          if (
-            typeof startTime !== "number" ||
-            typeof endTime !== "number" ||
-            startTime <= 0 ||
-            endTime <= 0 ||
-            startTime >= endTime
-          ) {
-            console.warn("[FilterStore] Invalid time range:", {
-              startTime,
-              endTime,
-            });
-
-            // Use default range if invalid
-            const defaultRange = getDefaultTimeRange();
-            startTime = defaultRange.startTime;
-            endTime = defaultRange.endTime;
-          }
-
-          // Update time range
-          const prevTimeRange = get().timeRange;
-          const hasChanged =
-            Math.abs(prevTimeRange.startTime - startTime) > 1000 ||
-            Math.abs(prevTimeRange.endTime - endTime) > 1000;
-
-          if (hasChanged) {
-            console.log(
-              `[FilterStore] Time range updated: ${new Date(startTime).toLocaleString()} - ${new Date(endTime).toLocaleString()}`
-            );
-
-            set({ timeRange: { startTime, endTime } });
-            return true;
-          }
-
-          return false;
-        },
-
-        // Selection state
+        // 추가 상태와 액션
         selectedTraceId: null,
         setSelectedTraceId: (id) => set({ selectedTraceId: id }),
 
@@ -96,58 +41,15 @@ export const useFilterStore = create<FilterStore>()(
 
         selectedService: null,
         setSelectedService: (name) => set({ selectedService: name }),
-
-        // Realtime mode state
-        isRealtime: false,
-        setIsRealtime: (isRealtime) => set({ isRealtime }),
-
-        // Realtime settings
-        refreshInterval: 5 as RefreshIntervalOption,
-        setRefreshInterval: (interval) => set({ refreshInterval: interval }),
-
-        realtimeRange: 5 as RealtimeRangeOption,
-        setRealtimeRange: (range) => set({ realtimeRange: range }),
-
-        // Toggle realtime mode with proper time range update
-        toggleRealtime: (enabled) => {
-          const currentIsRealtime = get().isRealtime;
-          const newIsRealtime =
-            enabled !== undefined ? enabled : !currentIsRealtime;
-
-          // Skip if no change
-          if (newIsRealtime === currentIsRealtime) return;
-
-          console.log(
-            `[FilterStore] Realtime mode ${newIsRealtime ? "enabled" : "disabled"}`
-          );
-
-          // Update time range when enabling realtime
-          if (newIsRealtime) {
-            const now = Date.now();
-            const rangeInMs = get().realtimeRange * 60 * 1000;
-
-            set({
-              isRealtime: true,
-              timeRange: {
-                startTime: now - rangeInMs,
-                endTime: now,
-              },
-            });
-          } else {
-            // Just disable realtime mode
-            set({ isRealtime: false });
-          }
-        },
       }),
       {
         name: "telemetry-filter-storage",
         partialize: (state) => ({
-          logFilters: state.logFilters,
-          traceFilters: state.traceFilters,
+          // 영속화할 상태만 선택
           timeRange: state.timeRange,
           refreshInterval: state.refreshInterval,
           realtimeRange: state.realtimeRange,
-          isRealtime: false, // Always start with realtime disabled
+          isRealtime: false, // 항상 실시간 모드 비활성화로 시작
         }),
       }
     )

@@ -1,43 +1,35 @@
 // lib/store/traceDataStore.ts
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
+
+import { LoadingSlice, createLoadingSlice } from "./slices/loadingSlice";
+import {
+  PaginationSlice,
+  createPaginationSlice,
+} from "./slices/paginationSlice";
+import { createDataSlice, DataSlice } from "./slices/dataSlice";
 import { buildTraceApiUrl } from "@/lib/utils/filterUtils";
 import { useFilterStore } from "./telemetryStore";
 import { useTraceFilterStore } from "./traceFilterStore";
+import { TraceItem, TracesResponse } from "./types";
 
-// Types
-export type TraceDataFetchStatus = "idle" | "loading" | "success" | "error";
+// 트레이스 데이터 상태 타입
+export interface TraceDataState
+  extends LoadingSlice,
+    PaginationSlice,
+    DataSlice<TraceItem> {
+  // 선택 상태
+  selectedTraceId: string | null;
+  setSelectedTraceId: (id: string | null) => void;
 
-interface TraceDataState {
-  // Data
-  traces: TraceItem[];
-  totalCount: number;
-
-  // Fetch status
-  status: TraceDataFetchStatus;
-  error: Error | null;
-  lastFetched: number;
+  // 데이터 가져오기 상태
   isValidating: boolean;
 
-  // Pagination
-  currentPage: number;
-  pageSize: number;
-
-  // Selection
-  selectedTraceId: string | null;
-
-  // Actions
+  // 액션
   fetchTraces: (forceRefresh?: boolean) => Promise<void>;
-  setTraces: (traces: TraceItem[], total: number) => void;
-  setError: (error: Error | null) => void;
-  setStatus: (status: TraceDataFetchStatus) => void;
-  setCurrentPage: (page: number) => void;
-  setPageSize: (size: number) => void;
-  setSelectedTraceId: (id: string | null) => void;
-  resetTraceData: () => void;
 }
 
-// API fetcher
+// API 데이터 페처
 const fetchTraceData = async (url: string): Promise<TracesResponse> => {
   try {
     const response = await fetch(url);
@@ -51,26 +43,27 @@ const fetchTraceData = async (url: string): Promise<TracesResponse> => {
   }
 };
 
-// Create the store
+// 트레이스 스토어 생성
 export const useTraceDataStore = create<TraceDataState>()(
   devtools(
-    (set, get) => ({
-      // Initial state
-      traces: [],
-      totalCount: 0,
-      status: "idle",
-      error: null,
-      lastFetched: 0,
-      isValidating: false,
-      currentPage: 1,
-      pageSize: 100,
-      selectedTraceId: null,
+    (set, get, api) => ({
+      // 슬라이스 연결
+      ...createLoadingSlice(set, get, api),
+      ...createPaginationSlice(set, get, api),
+      ...createDataSlice<TraceItem>([])(set, get, api),
 
-      // Actions
+      // 선택 상태 초기화
+      selectedTraceId: null,
+      setSelectedTraceId: (id) => set({ selectedTraceId: id }),
+
+      // 데이터 가져오기 상태
+      isValidating: false,
+
+      // 데이터 가져오기 액션
       fetchTraces: async (forceRefresh = false) => {
         const currentState = get();
 
-        // Avoid duplicate fetches when already loading
+        // 이미 로딩 중이고 강제 갱신이 아니면 중복 요청 방지
         if (currentState.status === "loading" && !forceRefresh) {
           console.log(
             "[traceDataStore] Already fetching data, skipping duplicate request"
@@ -78,7 +71,7 @@ export const useTraceDataStore = create<TraceDataState>()(
           return;
         }
 
-        // Get current filter state from other stores
+        // 현재 필터 상태 가져오기
         const { timeRange, isRealtime } = useFilterStore.getState();
         const {
           searchQuery,
@@ -86,21 +79,21 @@ export const useTraceDataStore = create<TraceDataState>()(
           selectedStatuses,
           minDuration,
           maxDuration,
+          attributeKey,
+          rootSpansOnly,
           limit,
           sortField,
           sortDirection,
-          attributeKey,
-          rootSpansOnly,
         } = useTraceFilterStore.getState();
 
-        // Calculate offset from current page
+        // 페이지네이션 오프셋 계산
         const offset = (currentState.currentPage - 1) * currentState.pageSize;
 
-        // Set loading state
+        // 로딩 상태 설정
         set({ status: "loading", isValidating: true });
 
         try {
-          // Build API URL with all filters
+          // API URL 구성
           const apiUrl = buildTraceApiUrl(
             `${process.env.NEXT_PUBLIC_API_BASE_PATH}/telemetry/traces`,
             {
@@ -124,18 +117,24 @@ export const useTraceDataStore = create<TraceDataState>()(
             apiUrl.slice(0, 100) + "..."
           );
 
-          // Fetch data from API
+          // 데이터 가져오기
           const response = await fetchTraceData(apiUrl);
 
-          // Update state with fetched data
+          // 상태 업데이트
           set({
-            traces: response.traces || [],
+            data: response.traces || [],
             totalCount: response.total || 0,
             status: "success",
             error: null,
             lastFetched: Date.now(),
             isValidating: false,
           });
+
+          // hasMore 업데이트
+          currentState.updateHasMore(
+            response.total || 0,
+            currentState.currentPage
+          );
 
           console.log(
             `[traceDataStore] Fetched ${response.traces?.length || 0} traces out of ${response.total || 0}`
@@ -149,62 +148,16 @@ export const useTraceDataStore = create<TraceDataState>()(
           });
         }
       },
-
-      setTraces: (traces, total) =>
-        set({
-          traces,
-          totalCount: total,
-          status: "success",
-          lastFetched: Date.now(),
-        }),
-
-      setError: (error) =>
-        set({ error, status: error ? "error" : get().status }),
-
-      setStatus: (status) => set({ status }),
-
-      setCurrentPage: (page) => {
-        if (page !== get().currentPage) {
-          set({ currentPage: page });
-          get().fetchTraces();
-        }
-      },
-
-      setPageSize: (size) => {
-        if (size !== get().pageSize) {
-          set({ pageSize: size, currentPage: 1 });
-          get().fetchTraces();
-        }
-      },
-
-      setSelectedTraceId: (id) => set({ selectedTraceId: id }),
-
-      resetTraceData: () =>
-        set({
-          traces: [],
-          totalCount: 0,
-          status: "idle",
-          error: null,
-          currentPage: 1,
-        }),
     }),
     { name: "trace-data-store" }
   )
 );
 
-// Selector hooks for easier access to specific parts of the state
-export const useTraces = () => useTraceDataStore((state) => state.traces);
+// 선택기 함수
+export const useTraces = () => useTraceDataStore((state) => state.data);
 export const useTraceStatus = () => useTraceDataStore((state) => state.status);
 export const useTraceError = () => useTraceDataStore((state) => state.error);
 export const useSelectedTraceId = () =>
   useTraceDataStore((state) => state.selectedTraceId);
-export const useTracePagination = () =>
-  useTraceDataStore((state) => ({
-    currentPage: state.currentPage,
-    totalCount: state.totalCount,
-    pageSize: state.pageSize,
-    setCurrentPage: state.setCurrentPage,
-    setPageSize: state.setPageSize,
-  }));
 
 export default useTraceDataStore;
