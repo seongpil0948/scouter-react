@@ -87,7 +87,6 @@ export const useTraceDataStore = create<TraceDataState>()(
 
         // 페이지네이션 오프셋 계산
         const offset = (currentState.currentPage - 1) * currentState.pageSize;
-
         // 로딩 상태 설정
         set({ status: "loading", isValidating: true });
 
