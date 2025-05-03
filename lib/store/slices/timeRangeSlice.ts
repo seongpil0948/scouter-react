@@ -1,10 +1,4 @@
 import { StateCreator } from "zustand";
-import {
-  TimeRangeOption,
-  RefreshIntervalOption,
-  RealtimeRangeOption,
-  TIME_RANGE_MS,
-} from "./commonTypes";
 
 export interface TimeRangeSlice {
   // 시간 범위

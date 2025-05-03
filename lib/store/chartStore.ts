@@ -1,7 +1,6 @@
 // lib/store/chartStore.ts
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import { SelectFilter } from "./slices/commonTypes";
 import {
   createChartConfigSlice,
   ChartConfigSlice,

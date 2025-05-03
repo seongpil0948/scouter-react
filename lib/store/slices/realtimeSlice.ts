@@ -1,5 +1,4 @@
 import { StateCreator } from "zustand";
-import { RefreshIntervalOption, RealtimeRangeOption } from "./commonTypes";
 
 export interface RealtimeSlice {
   // 실시간 모드 설정

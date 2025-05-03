@@ -1,5 +1,4 @@
 import { StateCreator } from "zustand";
-import { LimitOption } from "./commonTypes";
 
 export interface PaginationSlice {
   currentPage: number;

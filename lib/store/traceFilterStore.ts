@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { createFilterSlice, FilterSlice } from "./slices/filterSlice";
-import { LimitOption, SortField, SortDirection } from "./slices/commonTypes";
 
 // 트레이스 필터 스토어 타입
 export interface TraceFilterStore extends FilterSlice {

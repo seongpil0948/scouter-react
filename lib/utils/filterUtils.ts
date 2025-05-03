@@ -1,5 +1,4 @@
 // lib/utils/filterUtils.ts
-import { SelectFilter } from "@/lib/store/chartStore";
 
 export function buildTraceApiUrl(
   baseUrl: string,

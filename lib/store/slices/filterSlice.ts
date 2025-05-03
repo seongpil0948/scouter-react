@@ -1,5 +1,4 @@
 import { StateCreator } from "zustand";
-import { SelectFilter, SortField, SortDirection } from "./commonTypes";
 
 export interface FilterSlice {
   // 검색어
