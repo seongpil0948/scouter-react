@@ -61,7 +61,6 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
     [safeTraceData, propServiceThresholds]
   );
 
-  // Use filtered data from props directly
   const filteredData = safeTraceData;
 
   // Get unique services
@@ -237,6 +236,7 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
               <div className="flex items-center">
                 <BarChart2 size={16} className="mr-1" />
                 분석 보기
+                {filteredData?.length}
               </div>
             }
           />
@@ -265,7 +265,6 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                 />
               )}
 
-              {/* Chart component */}
               {filteredData.length > 0 ? (
                 <TraceChart
                   data={chartData}
@@ -294,7 +293,6 @@ const TraceVisualization: React.FC<TraceVisualizationProps> = ({
                 />
               )}
 
-              {/* Filter summary */}
               {filteredData.length > 0 && (
                 <FilterSummary
                   filteredDataLength={filteredData.length}

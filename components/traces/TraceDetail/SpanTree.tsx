@@ -1,37 +1,6 @@
 "use client";
 import React, { useCallback } from "react";
-import { Badge } from "@heroui/badge";
-import { 
-  Table, 
-  TableHeader, 
-  TableColumn, 
-  TableBody, 
-  TableRow, 
-  TableCell 
-} from "@heroui/table";
-
-interface Span {
-  id: string;
-  name: string;
-  serviceName: string;
-  startTime: number;
-  endTime: number;
-  duration: number;
-  parentSpanId?: string;
-  attributes?: Record<string, any>;
-  status?: string;
-  traceId: string;
-  spanId: string;
-}
-
-interface TraceData {
-  traceId: string;
-  spans: Span[];
-  startTime: number;
-  endTime: number;
-  services: string[];
-  total: number;
-}
+import { Table, TableHeader, TableColumn, TableBody } from "@heroui/table";
 
 interface SpanTreeProps {
   rootSpans: Span[];
@@ -41,7 +10,6 @@ interface SpanTreeProps {
   traceData: TraceData;
   formatDuration: (duration: number) => string;
 }
-
 
 export const SpanTree: React.FC<SpanTreeProps> = React.memo(
   ({
@@ -63,11 +31,7 @@ export const SpanTree: React.FC<SpanTreeProps> = React.memo(
     );
 
     return (
-      <Table 
-        aria-label="스팬 트리" 
-        removeWrapper
-        className="min-w-[800px]"
-      >
+      <Table aria-label="스팬 트리" removeWrapper className="min-w-[800px]">
         <TableHeader>
           <TableColumn>이름</TableColumn>
           <TableColumn>서비스</TableColumn>

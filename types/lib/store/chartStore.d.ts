@@ -12,46 +12,60 @@ type TimeRangeOption =
 type Key = string | number;
 type SelectionFilter = "all" | Set<Key>;
 
-interface ChartState {
-  // Chart configuration
+interface ChartConfig {
+  title?: string;
+  height?: string | number;
+  latencyThreshold?: number;
+  autoUpdate?: boolean;
+  updateInterval?: number;
+  colors?: {
+    low?: string;
+    medium?: string;
+    high?: string;
+    critical?: string;
+    effectScatter?: string;
+    error?: string;
+  };
+  symbolSizes?: {
+    min?: number;
+    max?: number;
+    effectMin?: number;
+    effectMax?: number;
+  };
+  brush?: {
+    enabled: boolean;
+    type: "rect" | "polygon" | "lineX" | "lineY";
+    mode: "single" | "multiple";
+    throttleType?: "debounce" | "throttle";
+    throttleDelay?: number;
+  };
+  realtimeRange?: number;
+}
+
+interface ChartConfigSlice {
   config: ChartConfig;
   updateConfig: (newConfig: Partial<ChartConfig>) => void;
+}
 
-  // Selected trace
+interface ChartStoreState extends ChartConfigSlice {
+  // 선택된 트레이스
   selectedTrace: TraceItem | null;
   setSelectedTrace: (trace: TraceItem | null) => void;
 
-  // Chart refresh state
-  isRefreshing: boolean;
-  setRefreshing: (isRefreshing: boolean) => void;
-
-  // Legend state for chart series
+  // 범례 상태
   legendState: {
     normal: boolean;
     highLatency: boolean;
   };
   toggleLegend: (type: "normal" | "highLatency") => void;
 
-  // Data filters
+  // 데이터 필터
   dataFilters: {
     minDuration?: number;
     maxDuration?: number;
-    serviceFilter: SelectionFilter;
-    statusFilter: SelectionFilter;
+    serviceFilter: SelectFilter;
+    statusFilter: SelectFilter;
   };
-  updateDataFilters: (filters: Partial<ChartState["dataFilters"]>) => void;
+  updateDataFilters: (filters: Partial<ChartStoreState["dataFilters"]>) => void;
   resetFilters: () => void;
-
-  // Time range configuration - NEW
-  timeRange: TimeRangeOption;
-  setTimeRange: (range: TimeRangeOption) => void;
-
-  // Refresh interval configuration - NEW
-  refreshInterval: RefreshIntervalOption;
-  setRefreshInterval: (interval: RefreshIntervalOption) => void;
-
-  // Auto-refresh enabled status - NEW
-  autoRefreshEnabled: boolean;
-  toggleAutoRefresh: () => void;
-  setAutoRefreshEnabled: (enabled: boolean) => void;
 }

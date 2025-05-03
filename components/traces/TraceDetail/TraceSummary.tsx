@@ -4,18 +4,16 @@ import { Badge } from "@heroui/badge";
 import { Card, CardBody } from "@heroui/card";
 import { Tooltip } from "@heroui/tooltip";
 import { Chip } from "@heroui/chip";
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
+import {
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@heroui/table";
 
 import { formatDateTime } from "@/lib/utils/dateFormatter";
-
-interface TraceData {
-  traceId: string;
-  spans: any[];
-  startTime: number;
-  endTime: number;
-  services: string[];
-  total: number;
-}
 
 interface TraceSummaryProps {
   traceData: TraceData;
@@ -26,7 +24,7 @@ interface TraceSummaryProps {
 export const TraceSummary: React.FC<TraceSummaryProps> = React.memo(
   ({ traceData, formatTime, formatDuration }) => {
     const errorCount = traceData.spans.filter(
-      (span) => span.status === "ERROR",
+      (span) => span.status === "ERROR"
     ).length;
 
     return (
@@ -39,7 +37,9 @@ export const TraceSummary: React.FC<TraceSummaryProps> = React.memo(
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell className="text-gray-500 w-1/4">트레이스 ID</TableCell>
+                <TableCell className="text-gray-500 w-1/4">
+                  트레이스 ID
+                </TableCell>
                 <TableCell className="font-mono">
                   {traceData.traceId.substring(0, 8)}...
                 </TableCell>
@@ -74,7 +74,12 @@ export const TraceSummary: React.FC<TraceSummaryProps> = React.memo(
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
                     {traceData.services.map((service) => (
-                      <Chip key={service} size="sm" color="primary" variant="flat">
+                      <Chip
+                        key={service}
+                        size="sm"
+                        color="primary"
+                        variant="flat"
+                      >
                         {service}
                       </Chip>
                     ))}
@@ -86,7 +91,7 @@ export const TraceSummary: React.FC<TraceSummaryProps> = React.memo(
         </CardBody>
       </Card>
     );
-  },
+  }
 );
 
 TraceSummary.displayName = "TraceSummary";

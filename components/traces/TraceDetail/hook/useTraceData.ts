@@ -2,29 +2,6 @@
 import { useCallback, useMemo } from "react";
 import useSWR from "swr";
 
-interface Span {
-  id: string;
-  name: string;
-  serviceName: string;
-  startTime: number;
-  endTime: number;
-  duration: number;
-  parentSpanId?: string;
-  attributes?: Record<string, any>;
-  status?: string;
-  traceId: string;
-  spanId: string;
-}
-
-interface TraceData {
-  traceId: string;
-  spans: Span[];
-  startTime: number;
-  endTime: number;
-  services: string[];
-  total: number;
-}
-
 // API 요청 처리 함수
 const fetcher = (url: string) =>
   fetch(url)

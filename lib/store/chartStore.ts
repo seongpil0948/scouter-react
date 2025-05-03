@@ -1,34 +1,7 @@
 // lib/store/chartStore.ts
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import {
-  createChartConfigSlice,
-  ChartConfigSlice,
-} from "./slices/chartConfigSlice";
-
-// 차트 스토어 상태 인터페이스
-export interface ChartStoreState extends ChartConfigSlice {
-  // 선택된 트레이스
-  selectedTrace: TraceItem | null;
-  setSelectedTrace: (trace: TraceItem | null) => void;
-
-  // 범례 상태
-  legendState: {
-    normal: boolean;
-    highLatency: boolean;
-  };
-  toggleLegend: (type: "normal" | "highLatency") => void;
-
-  // 데이터 필터
-  dataFilters: {
-    minDuration?: number;
-    maxDuration?: number;
-    serviceFilter: SelectFilter;
-    statusFilter: SelectFilter;
-  };
-  updateDataFilters: (filters: Partial<ChartStoreState["dataFilters"]>) => void;
-  resetFilters: () => void;
-}
+import { createChartConfigSlice } from "./slices/chartConfigSlice";
 
 // 기본 필터값
 const DEFAULT_FILTER = Object.freeze({

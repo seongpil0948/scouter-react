@@ -19,9 +19,9 @@ export const DEFAULT_CONFIG: ChartConfig = {
   },
 };
 
-export const DEFAULT_FILTER = Object.freeze<ChartState['dataFilters']>({
-      minDuration: undefined,
-      maxDuration: undefined,
-      serviceFilter: 'all',
-      statusFilter: 'all',
-    })
+export const DEFAULT_FILTER = Object.freeze<ChartStoreState["dataFilters"]>({
+  minDuration: undefined,
+  maxDuration: undefined,
+  serviceFilter: "all",
+  statusFilter: "all",
+});

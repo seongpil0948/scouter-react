@@ -1,36 +1,5 @@
 import { StateCreator } from "zustand";
 
-// 차트 설정 타입
-export interface ChartConfig {
-  title?: string;
-  height?: string | number;
-  latencyThreshold?: number;
-  autoUpdate?: boolean;
-  updateInterval?: number;
-  colors?: {
-    low?: string;
-    medium?: string;
-    high?: string;
-    critical?: string;
-    effectScatter?: string;
-    error?: string;
-  };
-  symbolSizes?: {
-    min?: number;
-    max?: number;
-    effectMin?: number;
-    effectMax?: number;
-  };
-  brush?: {
-    enabled: boolean;
-    type: "rect" | "polygon" | "lineX" | "lineY";
-    mode: "single" | "multiple";
-    throttleType?: "debounce" | "throttle";
-    throttleDelay?: number;
-  };
-  realtimeRange?: number;
-}
-
 // 기본 설정 값
 export const DEFAULT_CHART_CONFIG: ChartConfig = {
   title: "실시간 지연 시간 모니터링",
@@ -60,11 +29,6 @@ export const DEFAULT_CHART_CONFIG: ChartConfig = {
     throttleDelay: 300,
   },
 };
-
-export interface ChartConfigSlice {
-  config: ChartConfig;
-  updateConfig: (newConfig: Partial<ChartConfig>) => void;
-}
 
 export const createChartConfigSlice: StateCreator<
   ChartConfigSlice,
