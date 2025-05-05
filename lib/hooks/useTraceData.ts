@@ -60,7 +60,7 @@ export function useTraceData({
   // Initialize the hook
   useEffect(() => {
     if (!isInitialized) {
-      console.log("[useTraceData] Initializing hook");
+      // Initializing hook
 
       // Set root spans only filter if needed
       if (rootSpansOnly !== undefined) {
@@ -105,9 +105,7 @@ export function useTraceData({
 
     // Set up interval for realtime updates
     if (isRealtime && refreshInterval > 0) {
-      console.log(
-        `[useTraceData] Starting realtime updates, interval: ${refreshInterval}s`
-      );
+      // Starting realtime updates
 
       refreshTimerRef.current = setInterval(() => {
         if (!isRefreshingRef.current) {
@@ -130,7 +128,7 @@ export function useTraceData({
   // Stop realtime updates
   const stopRealtimeUpdates = useCallback(() => {
     if (refreshTimerRef.current) {
-      console.log("[useTraceData] Stopping realtime updates");
+      // Stopping realtime updates
       clearInterval(refreshTimerRef.current);
       refreshTimerRef.current = null;
     }
@@ -139,11 +137,11 @@ export function useTraceData({
   // Manual refresh function
   const refresh = useCallback(async () => {
     if (isRefreshingRef.current) {
-      console.log("[useTraceData] Refresh already in progress, skipping");
+      // Refresh already in progress, skipping
       return;
     }
 
-    console.log("[useTraceData] Manual refresh triggered");
+    // Manual refresh triggered
     isRefreshingRef.current = true;
 
     try {

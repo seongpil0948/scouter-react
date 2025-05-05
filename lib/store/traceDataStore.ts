@@ -37,7 +37,7 @@ const fetchTraceData = async (url: string): Promise<TracesResponse> => {
     }
     return await response.json();
   } catch (error) {
-    console.error("[traceDataStore] Error fetching trace data:", error);
+    // Error fetching trace data
     throw error;
   }
 };
@@ -64,9 +64,7 @@ export const useTraceDataStore = create<TraceDataState>()(
 
         // 이미 로딩 중이고 강제 갱신이 아니면 중복 요청 방지
         if (currentState.status === "loading" && !forceRefresh) {
-          console.log(
-            "[traceDataStore] Already fetching data, skipping duplicate request"
-          );
+          // Skip duplicate fetch
           return;
         }
 
@@ -110,10 +108,7 @@ export const useTraceDataStore = create<TraceDataState>()(
             { rootSpansOnly }
           );
 
-          console.log(
-            "[traceDataStore] Fetching trace data:",
-            apiUrl.slice(0, 100) + "..."
-          );
+          // Fetching trace data
 
           // 데이터 가져오기
           const response = await fetchTraceData(apiUrl);
@@ -134,11 +129,9 @@ export const useTraceDataStore = create<TraceDataState>()(
             currentState.currentPage
           );
 
-          console.log(
-            `[traceDataStore] Fetched ${response.data.traces?.length || 0} traces out of ${response.data.pagination.total || 0}`
-          );
+          // Trace data fetched
         } catch (error) {
-          console.error("[traceDataStore] Error fetching traces:", error);
+          // Error fetching traces
           set({
             status: "error",
             error: error instanceof Error ? error : new Error(String(error)),

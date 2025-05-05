@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+// Removed unused useRouter import
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Drawer,
@@ -8,7 +8,7 @@ import {
   DrawerBody,
   DrawerHeader,
 } from "@heroui/drawer";
-import { X, BarChart2, ListFilter, Clock, RefreshCw } from "lucide-react";
+import { X, BarChart2, ListFilter, RefreshCw } from "lucide-react"; // Removed unused Clock icon
 
 import DateRangePicker from "@/components/shared/DateRangePicker";
 import { ThemeSwitch } from "@/components/shared/theme-switch";
@@ -25,7 +25,7 @@ import { useFilterStore } from "@/lib/store/telemetryStore";
 import { useTraceDataStore } from "@/lib/store/traceDataStore";
 
 export default function TracesPage() {
-  const router = useRouter();
+  // Removed unused router
 
   // Drawer and tabs state
   const [activeTab, setActiveTab] = useState<string>("list");
@@ -59,18 +59,7 @@ export default function TracesPage() {
   });
 
   // Log current time range
-  useEffect(() => {
-    console.log("[TracesPage] Current time range:", {
-      startTime:
-        timeRange.startTime > 0
-          ? new Date(timeRange.startTime).toLocaleString()
-          : "unset",
-      endTime:
-        timeRange.endTime > 0
-          ? new Date(timeRange.endTime).toLocaleString()
-          : "unset",
-    });
-  }, [timeRange]);
+  // Logging removed for production
 
   // Trace selection handler
   const handleTraceClick = useCallback(
@@ -92,11 +81,7 @@ export default function TracesPage() {
         clearTimeout(timeRangeChangeTimeoutRef.current);
       }
 
-      console.log(
-        "[TracesPage] Time range change requested:",
-        new Date(startTime).toLocaleString(),
-        new Date(endTime).toLocaleString()
-      );
+      // Debounced time range update
 
       // Set time range with short delay
       timeRangeChangeTimeoutRef.current = setTimeout(() => {
@@ -117,7 +102,7 @@ export default function TracesPage() {
 
     // Refresh data with short delay
     filterChangeTimeoutRef.current = setTimeout(() => {
-      console.log("[TracesPage] Filters changed, refreshing data");
+      // Debounced filter update
       refresh();
       filterChangeTimeoutRef.current = null;
     }, 300);
@@ -128,7 +113,7 @@ export default function TracesPage() {
     if (isRefreshing) return;
 
     setIsRefreshing(true);
-    console.log("[TracesPage] Manual refresh triggered");
+    // Manual refresh triggered
 
     refresh().finally(() => {
       setTimeout(() => setIsRefreshing(false), 500);

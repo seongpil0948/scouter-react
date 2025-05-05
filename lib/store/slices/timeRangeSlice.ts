@@ -63,12 +63,7 @@ export const createTimeRangeSlice: StateCreator<
       endTime <= 0 ||
       startTime >= endTime
     ) {
-      console.warn("[TimeRangeSlice] Invalid time range:", {
-        startTime,
-        endTime,
-      });
-
-      // 유효하지 않은 경우 기본 범위로 설정
+      // Invalid time range, resetting to defaults
       const defaultRange = getDefaultTimeRange();
       startTime = defaultRange.startTime;
       endTime = defaultRange.endTime;
@@ -81,10 +76,7 @@ export const createTimeRangeSlice: StateCreator<
       Math.abs(prevTimeRange.endTime - endTime) > 1000;
 
     if (hasChanged) {
-      console.log(
-        `[TimeRangeSlice] Time range updated: ${new Date(startTime).toLocaleString()} - ${new Date(endTime).toLocaleString()}`
-      );
-
+      // Time range updated
       set({ timeRange: { startTime, endTime } });
       return true;
     }

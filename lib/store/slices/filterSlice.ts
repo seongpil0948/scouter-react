@@ -73,14 +73,12 @@ export const createFilterSlice: StateCreator<
 
   setSearchQuery: (query) => {
     set({ searchQuery: query });
-    console.log(`[FilterSlice] Search query set to: "${query}"`);
+    // Search query updated
   },
 
   setSelectedServices: (services) => {
     set({ selectedServices: services });
-    console.log(
-      `[FilterSlice] Selected services: ${services.join(", ") || "none"}`
-    );
+    // Selected services updated
   },
 
   addService: (service) =>
@@ -100,9 +98,7 @@ export const createFilterSlice: StateCreator<
 
   setSelectedStatuses: (statuses) => {
     set({ selectedStatuses: statuses });
-    console.log(
-      `[FilterSlice] Selected statuses: ${statuses.join(", ") || "none"}`
-    );
+    // Selected statuses updated
   },
 
   addStatus: (status) =>
@@ -122,25 +118,23 @@ export const createFilterSlice: StateCreator<
 
   setMinDuration: (duration) => {
     set({ minDuration: duration });
-    console.log(`[FilterSlice] Min duration set to: ${duration ?? "none"}`);
+    // Min duration updated
   },
 
   setMaxDuration: (duration) => {
     set({ maxDuration: duration });
-    console.log(`[FilterSlice] Max duration set to: ${duration ?? "none"}`);
+    // Max duration updated
   },
 
   setAttributeKey: (key) => {
     const trimmedKey = key.trim();
     set({ attributeKey: trimmedKey });
-    if (trimmedKey) {
-      console.log(`[FilterSlice] Attribute key set to: "${trimmedKey}"`);
-    }
+    // Attribute key updated
   },
 
   setRootSpansOnly: (rootOnly) => {
     set({ rootSpansOnly: rootOnly });
-    console.log(`[FilterSlice] Root spans only: ${rootOnly}`);
+    // Root spans only updated
   },
 
   setSorting: (field, direction) =>
@@ -165,7 +159,7 @@ export const createFilterSlice: StateCreator<
   },
 
   resetAllFilters: () => {
-    console.log("[FilterSlice] Resetting all filters to defaults");
+    // Resetting all filters to defaults
     set({
       ...DEFAULT_FILTERS,
       lastRefreshed: Date.now(),
@@ -174,8 +168,6 @@ export const createFilterSlice: StateCreator<
 
   triggerRefresh: () => {
     set({ lastRefreshed: Date.now() });
-    console.log(
-      `[FilterSlice] Refresh triggered at ${new Date().toISOString()}`
-    );
+    // Refresh triggered
   },
 });

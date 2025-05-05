@@ -41,7 +41,6 @@ export const useTraceFilterStore = create<TraceFilterStore>()(
         limit: DEFAULT_FILTERS.limit,
         setLimit: (limit) => {
           set({ limit });
-          console.log(`[TraceFilterStore] Result limit set to: ${limit}`);
         },
 
         setSorting: (field, direction) => {
@@ -49,9 +48,6 @@ export const useTraceFilterStore = create<TraceFilterStore>()(
             sortField: field,
             sortDirection: direction,
           });
-          console.log(
-            `[TraceFilterStore] Sorting changed to: ${field} ${direction}`
-          );
         },
       }),
       {

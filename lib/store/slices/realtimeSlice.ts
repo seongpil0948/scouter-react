@@ -55,10 +55,6 @@ export const createRealtimeSlice: StateCreator<
     // 변경 없으면 무시
     if (newIsRealtime === currentIsRealtime) return;
 
-    console.log(
-      `[RealtimeSlice] Realtime mode ${newIsRealtime ? "enabled" : "disabled"}`
-    );
-
     get().setIsRealtime(newIsRealtime);
   },
 
@@ -106,9 +102,7 @@ export const createRealtimeSlice: StateCreator<
       // timeRange는 telemetryStore에서 관리하므로 여기서는 직접 업데이트하지 않음
     });
 
-    console.log(
-      `[RealtimeSlice] Realtime mode enabled with range: ${get().realtimeRange}분`
-    );
+    // Realtime mode enabled
 
     return timeRange;
   },
@@ -120,6 +114,6 @@ export const createRealtimeSlice: StateCreator<
       isRefreshing: false,
     });
 
-    console.log("[RealtimeSlice] Realtime mode disabled");
+    // Realtime mode disabled
   },
 });
