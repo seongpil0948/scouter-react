@@ -150,7 +150,7 @@ export function buildServiceListApiUrl(timeRange: {
   params.append("startTime", timeRange.startTime.toString());
   params.append("endTime", timeRange.endTime.toString());
 
-  return `${process.env.NEXT_PUBLIC_API_BASE_PATH}/telemetry/metrics/services?${params.toString()}`;
+  return `${process.env.NEXT_PUBLIC_API_BASE_PATH}/telemetry/traces/services?${params.toString()}`;
 }
 
 // lib/utils/filterUtils.ts (추가 부분)

@@ -55,6 +55,25 @@ type ServicesResponse = ApiResponse<{
   errorPercentage: number;
 }>;
 
+// 트레이스 서비스 항목 타입
+interface TraceServiceItem {
+  name: string;
+  count: number;
+  errorCount: number;
+  errorRate: number;
+  avgLatency: number;
+}
+
+// 트레이스 서비스 목록 데이터 타입
+interface TraceServiceListData {
+  services: TraceServiceItem[];
+  total: number;
+  took: number;
+}
+
+// 트레이스 서비스 응답 타입
+type TraceServiceResponse = ApiResponse<TraceServiceListData>;
+
 // 메트릭 응답 타입
 interface MetricsResponse {
   topLatencyServices: {

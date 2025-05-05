@@ -96,7 +96,7 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
   );
 
   // Fetch service list
-  const { data: serviceData } = useSWR<ServicesResponse>(
+  const { data: serviceData } = useSWR<TraceServiceResponse>(
     buildServiceListApiUrl(timeRange),
     fetcher,
     {
@@ -112,11 +112,9 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
     return serviceData.data.services.map((service) => ({
       id: service.name,
       label: service.name,
-      count: service.requestCount,
+      count: service.count,
       errorRate: service.errorRate,
       avgLatency: service.avgLatency,
-      p95Latency: service.p95Latency,
-      p99Latency: service.p99Latency,
     }));
   }, [serviceData]);
 
