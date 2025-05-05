@@ -154,7 +154,7 @@ const TraceTable: React.FC<TraceTableProps> = ({
               return (
                 <TableRow
                   key={trace.id}
-                  className={`cursor-pointer hover:bg-gray-50 ${sqlAttrs ? "border-l-4 border-l-indigo-500" : ""}`}
+                  className={`cursor-pointer hover: ${sqlAttrs ? "border-l-4 border-l-indigo-500" : ""}`}
                 >
                   <TableCell>
                     <div className="flex flex-col">

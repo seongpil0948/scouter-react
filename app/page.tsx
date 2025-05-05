@@ -28,7 +28,7 @@ import { siteConfig } from "@/config/site";
 const TraceFilter = dynamic(() => import("@/components/traces/TraceFilter"), {
   ssr: false,
   loading: () => (
-    <div className="w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+    <div className="w-full   rounded-lg shadow-sm p-4">
       <Skeleton className="h-10 w-40 mb-2" />
       <div className="flex flex-wrap gap-2">
         <Skeleton className="h-8 w-32" />
@@ -192,7 +192,7 @@ export default function Home() {
 
   return (
     <section className="flex flex-col items-center justify-center gap-4 pb-4 md:pb-5">
-      <div className="w-full flex justify-between items-center bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+      <div className="w-full flex justify-between items-center  rounded-lg shadow-sm p-4">
         <h2 className="text-xl font-semibold">{siteConfig.name}</h2>
 
         <div className="flex items-center gap-4">

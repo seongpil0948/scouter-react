@@ -4,7 +4,7 @@ import { Badge } from "@heroui/badge";
 import React, { useCallback, useState, useMemo } from "react";
 import { Card, CardBody } from "@heroui/card";
 import { Tabs, Tab } from "@heroui/tabs";
-import { CopyIcon, ArrowLeft, BarChart2 } from "lucide-react";
+import { CopyIcon, ArrowLeft, BarChart2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ErrorBoundary } from "react-error-boundary";
 
@@ -17,6 +17,17 @@ import TraceAnalyticsSummary from "./TraceAnalyticsSummary";
 
 import { formatDateTime } from "@/lib/utils/dateFormatter";
 import { copyToClipboard } from "@/lib/utils/clipboard";
+import LogDetail from "@/components/logs/LogDetail";
+import LogTable from "@/components/logs/LogTable";
+import useLogData from "@/lib/hooks/useLogData";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerBody,
+} from "@heroui/drawer";
+import { useDisclosure } from "@heroui/modal";
+import { Chip } from "@heroui/chip";
 
 interface TraceDetailProps {
   traceId: string;
@@ -55,7 +66,7 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
   // 오류 발생 시
   if (error) {
     return (
-      <Card className="bg-white rounded-lg shadow-lg overflow-hidden">
+      <Card className="rounded-lg shadow-lg overflow-hidden">
         <CardBody className="p-6">
           <div className="flex flex-col items-center justify-center h-64">
             <h3 className="text-xl font-medium text-red-600 mb-2">
@@ -74,7 +85,7 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
   // 로딩 중
   if (isLoading) {
     return (
-      <Card className="bg-white rounded-lg shadow-lg overflow-hidden">
+      <Card className="rounded-lg shadow-lg overflow-hidden">
         <CardBody className="p-6">
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500" />
@@ -90,9 +101,9 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
   // 데이터가 없는 경우
   if (!traceData) {
     return (
-      <Card className="bg-white rounded-lg shadow-lg overflow-hidden">
+      <Card className=" rounded-lg shadow-lg overflow-hidden">
         <CardBody className="p-6">
-          <div className="flex items-center justify-center h-64 bg-white rounded-lg">
+          <div className="flex items-center justify-center h-64rounded-lg">
             <p className="text-gray-500">트레이스를 찾을 수 없습니다</p>
           </div>
         </CardBody>
@@ -103,8 +114,8 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
   const { rootSpans, childrenMap } = spanHierarchy;
 
   return (
-    <Card className="bg-white rounded-lg shadow-lg overflow-hidden">
-      <h2 className="bg-gray-50 border-b px-6 py-4">
+    <Card className=" rounded-lg shadow-lg overflow-hidden">
+      <h2 className="px-6 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
             {onBack && (
@@ -134,17 +145,10 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
         selectedKey={activeTab}
         onSelectionChange={setActiveTab}
       >
-        <Tab
-          key="analytics"
-          title={
-            <div className="flex items-center">
-              <BarChart2 size={16} className="mr-1" />
-              분석 요약
-            </div>
-          }
-        />
+        <Tab key="analytics" title="분석 요약" />
         <Tab key="timeline" title="타임라인" />
         <Tab key="list" title="스팬 목록" />
+        <Tab key="logs" title="관련 로그" /> {/* 새 로그 탭 추가 */}
         {selectedSpan && <Tab key="span" title="선택된 스팬" />}
       </Tabs>
 
@@ -163,6 +167,12 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
               onSelectSpan={setSelectedSpanId}
               onToggleView={handleToggleView}
             />
+          )}
+
+          {activeTab === "logs" && (
+            <div className="p-6">
+              <TraceLogs traceId={traceId} />
+            </div>
           )}
 
           {activeTab === "timeline" && (
@@ -206,9 +216,7 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
                 <table className="w-full border-collapse">
                   <tbody>
                     <tr className="border-b">
-                      <td className="py-2 px-4 bg-gray-50 font-medium">
-                        트레이스 ID
-                      </td>
+                      <td className="py-2 px-4  font-medium">트레이스 ID</td>
                       <td className="py-2 px-4 font-mono flex items-center">
                         {traceData.traceId}
                         <Button
@@ -223,25 +231,19 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
                       </td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-4 bg-gray-50 font-medium">
-                        시작 시간
-                      </td>
+                      <td className="py-2 px-4  font-medium">시작 시간</td>
                       <td className="py-2 px-4">
                         {formatDateTime(traceData.startTime)}
                       </td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-4 bg-gray-50 font-medium">
-                        종료 시간
-                      </td>
+                      <td className="py-2 px-4  font-medium">종료 시간</td>
                       <td className="py-2 px-4">
                         {formatDateTime(traceData.endTime)}
                       </td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-4 bg-gray-50 font-medium">
-                        총 지연 시간
-                      </td>
+                      <td className="py-2 px-4  font-medium">총 지연 시간</td>
                       <td className="py-2 px-4">
                         {formatDuration(
                           traceData.endTime - traceData.startTime
@@ -249,23 +251,20 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
                       </td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-4 bg-gray-50 font-medium">
-                        스팬 수
-                      </td>
+                      <td className="py-2 px-4  font-medium">스팬 수</td>
                       <td className="py-2 px-4">{traceData.spans.length}</td>
                     </tr>
                     <tr>
-                      <td className="py-2 px-4 bg-gray-50 font-medium">
-                        서비스
-                      </td>
+                      <td className="py-2 px-4  font-medium">서비스</td>
                       <td className="py-2 px-4">
                         {traceData.services.map((service) => (
-                          <Badge
+                          <Chip
                             key={service}
-                            className="mr-1 bg-blue-100 text-blue-800"
+                            color="secondary"
+                            className="mr-2"
                           >
                             {service}
-                          </Badge>
+                          </Chip>
                         ))}
                       </td>
                     </tr>
@@ -293,3 +292,88 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
 };
 
 export default React.memo(TraceDetail);
+
+const TraceLogs: React.FC<{ traceId: string }> = ({ traceId }) => {
+  const {
+    logs,
+    isLoading,
+    error,
+    totalCount,
+    currentPage,
+    setCurrentPage,
+    filters,
+    refresh,
+  } = useLogData({ traceId, hasTrace: true });
+
+  const [selectedLog, setSelectedLog] = useState<LogItem | null>(null);
+  const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
+
+  const handleLogSelect = (log: LogItem) => {
+    setSelectedLog(log);
+    onOpen();
+  };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium">관련 로그</h3>
+
+      {error ? (
+        <div className="bg-red-50 text-red-700 p-4 rounded-lg">
+          <p>로그를 불러오는 중 오류가 발생했습니다: {error.message}</p>
+          <Button
+            color="primary"
+            variant="light"
+            className="mt-2"
+            onPress={() => refresh()}
+          >
+            다시 시도
+          </Button>
+        </div>
+      ) : (
+        <>
+          <LogTable
+            logs={logs}
+            isLoading={isLoading}
+            totalCount={totalCount}
+            currentPage={currentPage}
+            pageSize={filters.limit}
+            onPageChange={setCurrentPage}
+            onSelectLog={handleLogSelect}
+          />
+
+          {logs.length === 0 && !isLoading && (
+            <div className="text-center py-8 text-gray-500">
+              이 트레이스와 관련된 로그가 없습니다
+            </div>
+          )}
+
+          <div className="text-sm text-gray-500 text-right">
+            총 {totalCount}개 로그 중 {logs.length}개 표시
+          </div>
+
+          {/* Log detail modal */}
+          <Drawer
+            isOpen={isOpen}
+            onOpenChange={onOpenChange}
+            size="xl"
+            placement="right"
+          >
+            <DrawerContent>
+              <DrawerHeader className="flex justify-between items-center">
+                <h3 className="text-lg font-medium">로그 상세</h3>
+                <Button variant="light" isIconOnly onPress={onClose}>
+                  <X size={18} />
+                </Button>
+              </DrawerHeader>
+              <DrawerBody>
+                {selectedLog && (
+                  <LogDetail log={selectedLog} onBack={onClose} />
+                )}
+              </DrawerBody>
+            </DrawerContent>
+          </Drawer>
+        </>
+      )}
+    </div>
+  );
+};

@@ -45,7 +45,7 @@ const TraceChart: React.FC<ExtendedTraceChartProps> = ({
 
   if (isSSR) {
     return (
-      <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-800 rounded-sm">
+      <div className="flex items-center justify-center h-full   rounded-sm">
         <div className="animate-pulse text-gray-400">차트 로딩 중...</div>
       </div>
     );
@@ -57,7 +57,7 @@ const TraceChart: React.FC<ExtendedTraceChartProps> = ({
       style={{ height: typeof height === "number" ? `${height}px` : height }}
     >
       {(loading || isLoading) && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 dark:bg-gray-800 dark:bg-opacity-70 z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70  dark:bg-opacity-70 z-10">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
         </div>
       )}

@@ -180,25 +180,25 @@ export const SpanList: React.FC<SpanListProps> = React.memo(
           >
             <TableHeader>
               <TableColumn
-                className="cursor-pointer hover:bg-gray-100"
+                className="cursor-pointer hover:"
                 onClick={() => toggleSort("name")}
               >
                 Name{getSortIndicator("name")}
               </TableColumn>
               <TableColumn
-                className="cursor-pointer hover:bg-gray-100"
+                className="cursor-pointer hover:"
                 onClick={() => toggleSort("service")}
               >
                 Service{getSortIndicator("service")}
               </TableColumn>
               <TableColumn
-                className="cursor-pointer hover:bg-gray-100"
+                className="cursor-pointer hover:"
                 onClick={() => toggleSort("status")}
               >
                 Status{getSortIndicator("status")}
               </TableColumn>
               <TableColumn
-                className="cursor-pointer hover:bg-gray-100 text-right"
+                className="cursor-pointer hover: text-right"
                 onClick={() => toggleSort("duration")}
               >
                 Latency{getSortIndicator("duration")}
@@ -213,7 +213,7 @@ export const SpanList: React.FC<SpanListProps> = React.memo(
               }
             >
               {filteredSpans.map((span) => (
-                <TableRow key={span.spanId} className="hover:bg-gray-50">
+                <TableRow key={span.spanId} className="hover:">
                   <TableCell className="font-mono text-sm">
                     {span.name}
                   </TableCell>

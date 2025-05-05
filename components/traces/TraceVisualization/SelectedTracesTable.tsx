@@ -64,7 +64,7 @@ const SelectedTracesTable: React.FC<SelectedTracesTableProps> = ({
 
   return (
     <div
-      className={`mt-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm ${className}`}
+      className={`mt-4 bg-white  rounded-lg shadow-sm ${className}`}
       data-testid="selected-traces-table"
     >
       <div className="overflow-x-auto">

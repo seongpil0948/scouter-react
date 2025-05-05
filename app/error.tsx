@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@heroui/button";
 import { useEffect } from "react";
 
 export default function Error({
@@ -21,9 +22,9 @@ export default function Error({
       <p className="mb-4 text-gray-600">
         {error.message || "An unexpected error occurred"}
       </p>
-      <button
-        className="px-4 py-2 bg-blue-500 text-white rounded-sm hover:bg-blue-600"
-        onClick={() => {
+      <Button
+        className="px-4 py-2 "
+        onPress={() => {
           // Safely attempt to recover by trying to re-render the segment
           try {
             reset();
@@ -35,7 +36,7 @@ export default function Error({
         }}
       >
         Try again
-      </button>
+      </Button>
     </div>
   );
 }

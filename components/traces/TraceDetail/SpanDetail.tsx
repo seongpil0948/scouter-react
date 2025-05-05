@@ -57,7 +57,7 @@ export const SpanDetail: React.FC<SpanDetailProps> = React.memo(
     return (
       <div className="mt-4 space-y-6">
         {/* 스팬 요약 정보 */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+        <div className="  rounded-lg p-4">
           <div className="flex flex-wrap gap-x-8 gap-y-3">
             <div className="flex items-center">
               <span className="text-gray-500 mr-2">이름:</span>
@@ -132,11 +132,11 @@ export const SpanDetail: React.FC<SpanDetailProps> = React.memo(
         <div className="pt-2">
           {activeTab === "overview" && (
             <div className="space-y-4">
-              <div className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700">
-                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-750 border-b dark:border-gray-700 font-medium">
+              <div className="overflow-hidden  rounded-lg border">
+                <div className="px-4 py-3dark:bg-gray-750 border-b font-medium">
                   스팬 상세 정보
                 </div>
-                <div className="divide-y dark:divide-gray-700">
+                <div className="divide-y">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 mb-2">
@@ -262,8 +262,8 @@ export const SpanDetail: React.FC<SpanDetailProps> = React.memo(
 
               {/* 주요 속성 미리보기 */}
               {span.attributes && Object.keys(span.attributes).length > 0 && (
-                <div className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700">
-                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-750 border-b dark:border-gray-700 font-medium flex justify-between">
+                <div className="overflow-hidden  rounded-lg border ">
+                  <div className="px-4 py-3  border-b  font-medium flex justify-between">
                     <span>주요 속성</span>
                     <div className="flex gap-2">
                       {hasSqlAttributes && (
@@ -387,7 +387,7 @@ export const SpanDetail: React.FC<SpanDetailProps> = React.memo(
           )}
 
           {activeTab === "timeline" && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4">
+            <div className=" rounded-lg border  p-4">
               <div className="relative">
                 {/* 타임라인 눈금 */}
                 <div className="h-8 flex">
@@ -404,7 +404,7 @@ export const SpanDetail: React.FC<SpanDetailProps> = React.memo(
                 </div>
 
                 {/* 스팬 타임라인 표시 */}
-                <div className="h-12 relative bg-gray-100 dark:bg-gray-700 rounded-md">
+                <div className="h-12 relative   rounded-md">
                   <Tooltip
                     content={`${formatDuration(span.duration)} (${span.duration}ms)`}
                   >

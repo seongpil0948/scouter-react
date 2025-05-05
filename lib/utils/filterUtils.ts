@@ -150,7 +150,60 @@ export function buildServiceListApiUrl(timeRange: {
   params.append("startTime", timeRange.startTime.toString());
   params.append("endTime", timeRange.endTime.toString());
 
-  return `${process.env.NEXT_PUBLIC_API_BASE_PATH}/telemetry/traces/services?${params.toString()}`;
+  return `${process.env.NEXT_PUBLIC_API_BASE_PATH}/telemetry/metrics/services?${params.toString()}`;
+}
+
+// lib/utils/filterUtils.ts (추가 부분)
+export function buildLogApiUrl(
+  baseUrl: string,
+  filters: {
+    startTime: number;
+    endTime: number;
+    serviceName?: string | null;
+    severity?: string | null;
+    hasTrace?: boolean;
+    query?: string;
+    limit?: number;
+  },
+  offset: number = 0,
+  additionalParams: Record<string, string | number | boolean> = {}
+): string {
+  const params = new URLSearchParams();
+
+  // 시간 범위 추가
+  params.append("startTime", filters.startTime.toString());
+  params.append("endTime", filters.endTime.toString());
+
+  // 필터 추가
+  if (filters.serviceName) {
+    params.append("serviceName", filters.serviceName);
+  }
+
+  if (filters.severity) {
+    params.append("severity", filters.severity);
+  }
+
+  if (filters.hasTrace !== undefined) {
+    params.append("hasTrace", filters.hasTrace.toString());
+  }
+
+  if (filters.query) {
+    params.append("query", filters.query);
+  }
+
+  // 페이지네이션
+  params.append("limit", filters.limit?.toString() || "100");
+
+  if (offset > 0) {
+    params.append("offset", offset.toString());
+  }
+
+  // 추가 파라미터
+  Object.entries(additionalParams).forEach(([key, value]) => {
+    params.append(key, value.toString());
+  });
+
+  return `${baseUrl}?${params.toString()}`;
 }
 
 export default {

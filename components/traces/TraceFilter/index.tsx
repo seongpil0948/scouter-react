@@ -31,6 +31,7 @@ import { useDisclosure } from "@heroui/modal";
 import ModalBlushHelp from "../BrushHelp";
 import useSWR from "swr";
 import { Accordion, AccordionItem } from "@heroui/accordion";
+import { count } from "console";
 
 // API 응답 fetcher 함수 (여기서만 사용됨)
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -95,7 +96,7 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
   );
 
   // Fetch service list
-  const { data: serviceData } = useSWR<{ services: ServiceInfo[] }>(
+  const { data: serviceData } = useSWR<ServicesResponse>(
     buildServiceListApiUrl(timeRange),
     fetcher,
     {
@@ -106,13 +107,16 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
 
   // Generate service options
   const serviceOptions = useMemo(() => {
-    if (!serviceData?.services) return [];
+    if (!serviceData?.data?.services) return [];
 
-    return serviceData.services.map((service) => ({
+    return serviceData.data.services.map((service) => ({
       id: service.name,
       label: service.name,
-      count: service.count,
+      count: service.requestCount,
       errorRate: service.errorRate,
+      avgLatency: service.avgLatency,
+      p95Latency: service.p95Latency,
+      p99Latency: service.p99Latency,
     }));
   }, [serviceData]);
 
@@ -341,9 +345,7 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
             )
           }
         >
-          <div
-            className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 ${className}`}
-          >
+          <div className={` rounded-lg shadow-sm p-4 ${className}`}>
             <div className="flex flex-col gap-3">
               <div className="flex gap-3 items-start lg:items-center">
                 <Filter size={18} className="text-gray-500" />

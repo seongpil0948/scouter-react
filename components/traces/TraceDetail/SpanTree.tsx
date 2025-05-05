@@ -55,7 +55,7 @@ export const SpanTree: React.FC<SpanTreeProps> = React.memo(
           <React.Fragment key={span.spanId}>
             <TableRow
               key={span.spanId}
-              className={`${isSelected ? "bg-primary-50 dark:bg-primary-900/20" : ""} hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer`}
+              className={`${isSelected ? "bg-primary-50 dark:bg-primary-900/20" : ""} hover: dark:hover:bg-gray-750 cursor-pointer`}
               onClick={() => setSelectedSpanId(span.spanId)}
             >
               <TableCell className="font-mono text-sm">

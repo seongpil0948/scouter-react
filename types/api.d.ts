@@ -35,20 +35,25 @@ interface TraceDetailData {
 type TraceDetailResponse = ApiResponse<TraceDetailData>;
 
 // 서비스 목록 응답 타입
-interface ServicesResponse {
+type ServicesResponse = ApiResponse<{
   services: {
     name: string;
-    count: number;
+    requestCount: number;
     errorCount: number;
-    errorRate: number;
     avgLatency: number;
+    p95Latency: number;
+    p99Latency: number;
+    errorRate: number;
   }[];
-  total: number;
   timeRange: {
     startTime: number;
     endTime: number;
   };
-}
+  totalRequests: number;
+  totalErrors: number;
+  avgLatency: number;
+  errorPercentage: number;
+}>;
 
 // 메트릭 응답 타입
 interface MetricsResponse {
