@@ -81,9 +81,9 @@ const SqlAttributesViewer: React.FC<SqlAttributesViewerProps> = ({
   }
 
   return (
-    <div className={`${className} bg-white  rounded-lg overflow-hidden`}>
+    <div className={`${className}   rounded-lg overflow-hidden`}>
       <div className="border-b ">
-        <div className="px-4 py-3  dark:bg-gray-750 flex justify-between items-center">
+        <div className="px-4 py-3  flex justify-between items-center">
           <div className="font-medium flex items-center">
             <span>SQL 쿼리</span>
             {sqlElapsed && (
@@ -103,7 +103,7 @@ const SqlAttributesViewer: React.FC<SqlAttributesViewerProps> = ({
 
         {sqlQuery ? (
           <div className="p-4 overflow-auto max-h-96">
-            <pre className="font-mono text-sm whitespace-pre-wrap  dark:bg-gray-900 p-3 rounded-md border border-gray-200 ">
+            <pre className="font-mono text-sm whitespace-pre-wrap  p-3 rounded-md border">
               {String(sqlQuery)}
             </pre>
           </div>

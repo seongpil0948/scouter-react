@@ -185,14 +185,6 @@ const TraceDetail: React.FC<TraceDetailProps> = ({ traceId, onBack }) => {
 
               <div className="overflow-x-auto">
                 <div className="min-w-[800px]">
-                  {/* 타임라인 헤더 */}
-                  <div className="flex items-center pb-2 border-b font-semibold text-sm">
-                    <div className="w-3/12">이름</div>
-                    <div className="w-2/12">서비스</div>
-                    <div className="w-5/12">타임라인</div>
-                    <div className="w-2/12 text-right">지연 시간</div>
-                  </div>
-
                   {/* 스팬 타임라인 */}
                   <div className="mt-2">
                     <SpanTree

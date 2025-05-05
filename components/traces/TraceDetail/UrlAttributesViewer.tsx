@@ -112,9 +112,9 @@ const UrlAttributesViewer: React.FC<UrlAttributesViewerProps> = ({
   }
 
   return (
-    <div className={`${className} bg-white  rounded-lg overflow-hidden`}>
+    <div className={`${className}   rounded-lg overflow-hidden`}>
       <div className="border-b ">
-        <div className="px-4 py-3  dark:bg-gray-750 flex justify-between items-center">
+        <div className="px-4 py-3   flex justify-between items-center">
           <div className="font-medium flex items-center">
             <span>URL 정보</span>
             {httpMethod && (
@@ -150,7 +150,7 @@ const UrlAttributesViewer: React.FC<UrlAttributesViewerProps> = ({
 
         {fullUrl && (
           <div className="p-4">
-            <div className="font-mono text-sm break-all  dark:bg-gray-900 p-3 rounded-md border border-gray-200 ">
+            <div className="font-mono text-sm break-all   p-3 rounded-md border border-gray-200 ">
               {fullUrl}
             </div>
           </div>
@@ -163,9 +163,7 @@ const UrlAttributesViewer: React.FC<UrlAttributesViewerProps> = ({
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             경로 (Path)
           </h4>
-          <div className="font-mono text-sm  dark:bg-gray-900 p-3 rounded-md">
-            {urlPath}
-          </div>
+          <div className="font-mono text-sm   p-3 rounded-md">{urlPath}</div>
         </div>
       )}
 
@@ -175,7 +173,7 @@ const UrlAttributesViewer: React.FC<UrlAttributesViewerProps> = ({
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             쿼리 파라미터 (Query)
           </h4>
-          <div className="font-mono text-sm  dark:bg-gray-900 p-3 rounded-md">
+          <div className="font-mono text-sm   p-3 rounded-md">
             {formatQuery(urlQuery)}
           </div>
         </div>

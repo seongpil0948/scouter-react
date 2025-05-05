@@ -171,10 +171,7 @@ const TraceAnalytics: React.FC<TraceAnalyticsProps> = ({
                   </thead>
                   <tbody>
                     {analytics.topLatencySpans.slice(0, 5).map((span) => (
-                      <tr
-                        key={span.spanId}
-                        className="border-b hover: dark:hover:bg-gray-750"
-                      >
+                      <tr key={span.spanId} className="border-b hover: ">
                         <td className="px-4 py-2 font-mono text-sm">
                           <Tooltip content={span.name}>
                             <span className="truncate block max-w-xs">
@@ -251,7 +248,7 @@ const TraceAnalytics: React.FC<TraceAnalyticsProps> = ({
                       .map((sql, index) => (
                         <div
                           key={`${sql.spanId}-${index}`}
-                          className="border-b last:border-b-0 py-3 hover: dark:hover:bg-gray-750"
+                          className="border-b last:border-b-0 py-3 hover: "
                         >
                           <div className="flex justify-between mb-1">
                             <div className="flex items-center">
@@ -341,7 +338,7 @@ const TraceAnalytics: React.FC<TraceAnalyticsProps> = ({
                     {analytics.http.urls.slice(0, 10).map((http, index) => (
                       <div
                         key={`${http.spanId}-${index}`}
-                        className="border-b last:border-b-0 py-3 hover: dark:hover:bg-gray-750"
+                        className="border-b last:border-b-0 py-3 hover: "
                       >
                         <div className="flex justify-between mb-1">
                           <div className="flex items-center">
@@ -395,7 +392,7 @@ const TraceAnalytics: React.FC<TraceAnalyticsProps> = ({
                     {analytics.errors.messages.map((error, index) => (
                       <div
                         key={`${error.spanId}-${index}`}
-                        className="border-b last:border-b-0 py-3 hover: dark:hover:bg-gray-750"
+                        className="border-b last:border-b-0 py-3 hover: "
                       >
                         <div className="flex items-center mb-1">
                           <AlertTriangle
@@ -442,10 +439,7 @@ const TraceAnalytics: React.FC<TraceAnalyticsProps> = ({
                     {Object.entries(analytics.byService)
                       .sort((a, b) => b[1].count - a[1].count)
                       .map(([service, stats]) => (
-                        <tr
-                          key={service}
-                          className="border-b hover: dark:hover:bg-gray-750"
-                        >
+                        <tr key={service} className="border-b hover: ">
                           <td className="px-4 py-2">
                             <Badge color="primary" variant="flat">
                               {service}

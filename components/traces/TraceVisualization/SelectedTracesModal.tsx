@@ -50,7 +50,7 @@ const SelectedTracesModal: React.FC<SelectedTracesModalProps> = ({
           <>
             <ModalHeader
               {...moveProps}
-              className="flex justify-between items-center p-4  dark:bg-gray-750"
+              className="flex justify-between items-center p-4  "
             >
               <div className="flex items-center">
                 <h3 className="text-base font-medium">

@@ -106,7 +106,7 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
         {analytics.sql.queries.map((sql, index) => (
           <Card
             key={`${sql.spanId}-${index}`}
-            className="mb-3 cursor-pointer hover: dark:hover:bg-gray-750"
+            className="mb-3 cursor-pointer hover: "
             isPressable
             as={Link}
             onPress={() => {
@@ -200,7 +200,7 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
         {analytics.http.urls.map((http, index) => (
           <Card
             key={`${http.spanId}-${index}`}
-            className="mb-3 cursor-pointer hover: dark:hover:bg-gray-750"
+            className="mb-3 cursor-pointer hover: "
             isPressable
             onPress={() => onSelectSpan(http.spanId)}
           >
@@ -261,7 +261,7 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
         {analytics.errors.messages.map((error, index) => (
           <Card
             key={`${error.spanId}-${index}`}
-            className="mb-3 cursor-pointer hover: dark:hover:bg-gray-750"
+            className="mb-3 cursor-pointer hover: "
             isPressable
             onPress={() => onSelectSpan(error.spanId)}
           >
@@ -307,10 +307,7 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
           </TableHeader>
           <TableBody>
             {sortedServices.map(([service, stats]) => (
-              <TableRow
-                key={service}
-                className="border-b hover: dark:hover:bg-gray-750"
-              >
+              <TableRow key={service} className="border-b hover: ">
                 <TableCell>
                   <Badge color="primary" variant="flat">
                     {service}
@@ -349,10 +346,7 @@ const TraceAnalyticsSummary: React.FC<TraceAnalyticsSummaryProps> = ({
           </TableHeader>
           <TableBody>
             {analytics.topLatencySpans.map((span) => (
-              <TableRow
-                key={span.spanId}
-                className="border-b hover: dark:hover:bg-gray-750"
-              >
+              <TableRow key={span.spanId} className="border-b hover: ">
                 <TableCell className="font-mono text-sm">
                   <Tooltip content={span.name}>
                     <span className="truncate block max-w-xs">

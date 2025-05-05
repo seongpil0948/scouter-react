@@ -133,7 +133,7 @@ export const SpanDetail: React.FC<SpanDetailProps> = React.memo(
           {activeTab === "overview" && (
             <div className="space-y-4">
               <div className="overflow-hidden  rounded-lg border">
-                <div className="px-4 py-3dark:bg-gray-750 border-b font-medium">
+                <div className="px-4 py-3 border-b font-medium">
                   스팬 상세 정보
                 </div>
                 <div className="divide-y">
