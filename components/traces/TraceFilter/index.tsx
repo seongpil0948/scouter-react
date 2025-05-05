@@ -30,10 +30,6 @@ import RealtimeSettings from "./RealtimeSettings";
 import { useDisclosure } from "@heroui/modal";
 import ModalBlushHelp from "../BrushHelp";
 import useSWR from "swr";
-import {
-  RefreshIntervalOption,
-  RealtimeRangeOption,
-} from "@/lib/hooks/useTraceData";
 import { Accordion, AccordionItem } from "@heroui/accordion";
 
 // API 응답 fetcher 함수 (여기서만 사용됨)
@@ -65,7 +61,7 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
     maxDuration,
     setMaxDuration,
     resetAllFilters,
-    refreshData,
+    triggerRefresh: refreshData,
     sortField,
     sortDirection,
     setSorting,
@@ -313,24 +309,9 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
       onFilterChange,
     ]
   );
-
-  // 실시간 모드 토글 처리 - 디바운스 추가
-  const [isTogglingRealtime, setIsTogglingRealtime] = useState(false);
-
-  const handleToggleRealtime = useCallback(
-    (enabled: boolean) => {
-      if (isTogglingRealtime) return;
-      setIsTogglingRealtime(true);
-      toggleRealtime(enabled);
-      setTimeout(() => setIsTogglingRealtime(false), 500);
-    },
-    [isTogglingRealtime]
-  );
-
   const disclosureHelper = useDisclosure();
 
-  // Skip rendering during SSR or when service options are not loaded
-  if (isSSR || isEmpty(serviceOptions)) return null;
+  if (isSSR) return null;
 
   return (
     <>
@@ -509,7 +490,6 @@ const TraceFilter: React.FC<TraceFilterProps> = ({
                   </Select>
                 </div>
 
-                {/* 실시간 설정 컴포넌트 사용 */}
                 {
                   <div className="w-full sm:col-span-2 lg:col-span-1">
                     <RealtimeSettings
