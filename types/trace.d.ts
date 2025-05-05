@@ -1,4 +1,16 @@
 // types/trace.d.ts
+// 트레이스 항목 인터페이스
+interface TraceItem {
+  traceId: string;
+  spanCount: number;
+  duration: number;
+  startTime: number;
+  endTime: number;
+  serviceName: string;
+  spanName: string;
+  status: string;
+  hasError: boolean;
+}
 
 // 스팬 인터페이스 - 단일 작업 또는 API 호출을 나타냄
 interface Span {
@@ -15,6 +27,7 @@ interface Span {
   spanId: string;
 }
 
+// 트레이스 인터페이스
 interface Trace {
   traceId: string;
   spans: Span[];
@@ -24,8 +37,9 @@ interface Trace {
   total: number;
 }
 
-// 트레이스 상세 정보 인터페이스
-type TraceDetail = TraceData;
+// 트레이스 상세 정보 타입
+type TraceDetail = Trace;
+
 // 스팬 노드 인터페이스 (계층 구조 표현용)
 interface SpanNode {
   span: Span;
@@ -79,16 +93,6 @@ interface TraceVisualizationData {
   spanCounts: Record<string, number>; // 서비스별 스팬 카운트
   errorCounts: Record<string, number>; // 서비스별 오류 카운트
   latencyDistribution: Record<string, number[]>; // 서비스별 지연 시간 분포
-}
-
-// 트레이스 API 응답 타입
-interface TraceApiResponse {
-  traceId: string;
-  spans: Span[];
-  startTime: number;
-  endTime: number;
-  services: string[];
-  total: number;
 }
 
 // 범례 아이템 타입

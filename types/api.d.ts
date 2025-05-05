@@ -1,26 +1,16 @@
-// API 응답 타입 정의
-interface ApiResponse<T> {
-  data: T;
-  success: boolean;
-}
-
+// types/api.d.ts
+// 트레이스 목록 데이터 타입
 interface TraceListData {
   traces: TraceItem[];
-  pagination: {
-    total: number;
-    limit: number;
-    offset: number;
-  };
-  timeRange: {
-    startTime: number;
-    endTime: number;
-  };
+  pagination: Pagination;
+  timeRange: TimeRange;
   services: string[];
   totalDuration: number;
   rootSpansOnly?: boolean;
 }
 type TracesResponse = ApiResponse<TraceListData>;
 
+// 트레이스 상세 데이터 타입
 interface TraceDetailData {
   trace: {
     traceId: string;
@@ -34,26 +24,29 @@ interface TraceDetailData {
 // 트레이스 상세 응답 타입
 type TraceDetailResponse = ApiResponse<TraceDetailData>;
 
-// 서비스 목록 응답 타입
-type ServicesResponse = ApiResponse<{
-  services: {
-    name: string;
-    requestCount: number;
-    errorCount: number;
-    avgLatency: number;
-    p95Latency: number;
-    p99Latency: number;
-    errorRate: number;
-  }[];
-  timeRange: {
-    startTime: number;
-    endTime: number;
-  };
+// 서비스 항목 타입
+interface ServiceItem {
+  name: string;
+  requestCount: number;
+  errorCount: number;
+  avgLatency: number;
+  p95Latency: number;
+  p99Latency: number;
+  errorRate: number;
+}
+
+// 서비스 목록 데이터 타입
+interface ServiceListData {
+  services: ServiceItem[];
+  timeRange: TimeRange;
   totalRequests: number;
   totalErrors: number;
   avgLatency: number;
   errorPercentage: number;
-}>;
+}
+
+// 서비스 목록 응답 타입
+type ServicesResponse = ApiResponse<ServiceListData>;
 
 // 트레이스 서비스 항목 타입
 interface TraceServiceItem {
@@ -74,8 +67,8 @@ interface TraceServiceListData {
 // 트레이스 서비스 응답 타입
 type TraceServiceResponse = ApiResponse<TraceServiceListData>;
 
-// 메트릭 응답 타입
-interface MetricsResponse {
+// 메트릭 데이터 타입
+interface MetricsData {
   topLatencyServices: {
     name: string;
     requestCount: number;
@@ -96,29 +89,8 @@ interface MetricsResponse {
     name: string;
     errorCount: number;
   }[];
-  timeRange: {
-    startTime: number;
-    endTime: number;
-  };
+  timeRange: TimeRange;
 }
 
-// 로그 응답 타입
-interface LogsResponse {
-  logs: LogItem[];
-  services: {
-    name: string;
-    count: number;
-  }[];
-  severities: {
-    name: string;
-    count: number;
-  }[];
-  total: number;
-  took: number;
-}
-
-// 에러 응답 타입
-interface ErrorResponse {
-  error: string;
-  details?: string;
-}
+// 메트릭 응답 타입
+type MetricsResponse = ApiResponse<MetricsData>;

@@ -1,4 +1,5 @@
 // types/log.d.ts
+// 로그 항목 인터페이스
 interface LogItem {
   id: string;
   timestamp: number;
@@ -10,6 +11,7 @@ interface LogItem {
   attributes?: Record<string, any>;
 }
 
+// 로그 필터 인터페이스
 interface LogFilter {
   startTime: number;
   endTime: number;
@@ -21,42 +23,41 @@ interface LogFilter {
   offset: number;
 }
 
-// API 응답 인터페이스
-interface LogsResponse {
-  logs: LogItem[];
-  pagination: {
-    total: number;
-    limit: number;
-    offset: number;
-  };
-  timeRange: {
-    startTime: number;
-    endTime: number;
-  };
-  services: string[];
-  severities: string[];
-}
-
-interface LogSummary {
-  services: ServiceAggregation[];
-  severities: SeverityAggregation[];
-  timeRange: {
-    startTime: number;
-    endTime: number;
-  };
-}
-
+// 서비스 집계 타입
 interface ServiceAggregation {
   name: string;
   count: number;
 }
 
+// 심각도 집계 타입
 interface SeverityAggregation {
   name: string;
   count: number;
 }
 
-// 로그 스토어 인터페이스
+// 로그 API 응답 데이터 타입
+interface LogsData {
+  logs: LogItem[];
+  pagination: Pagination;
+  timeRange: TimeRange;
+  services: string[];
+  severities: string[];
+}
+
+// 로그 API 응답 타입
+type LogsResponse = ApiResponse<LogsData>;
+
+// 로그 요약 데이터 타입
+interface LogSummaryData {
+  services: ServiceAggregation[];
+  severities: SeverityAggregation[];
+  timeRange: TimeRange;
+}
+
+// 로그 요약 API 응답 타입
+type LogSummaryResponse = ApiResponse<LogSummaryData>;
+
+// 로그 스토어 상태 인터페이스
 interface LogStoreState {
   logs: LogItem[];
   isLoading: boolean;

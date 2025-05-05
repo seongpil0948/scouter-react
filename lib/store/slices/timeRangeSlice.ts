@@ -1,5 +1,17 @@
 import { StateCreator } from "zustand";
 
+// 시간 범위 상수 (ms 단위)
+export const TIME_RANGE_MS: Record<TimeRangeOption, number> = {
+  "1m": 1 * 60 * 1000,
+  "5m": 5 * 60 * 1000,
+  "10m": 10 * 60 * 1000,
+  "1h": 60 * 60 * 1000,
+  "3h": 3 * 60 * 60 * 1000,
+  "6h": 6 * 60 * 60 * 1000,
+  "12h": 12 * 60 * 60 * 1000,
+  "1d": 24 * 60 * 60 * 1000,
+};
+
 export interface TimeRangeSlice {
   // 시간 범위
   timeRange: {
