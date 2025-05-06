@@ -1,33 +1,19 @@
-// app/(routes)/logs/page.tsx
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerBody,
-  DrawerHeader,
-} from "@heroui/drawer";
-import { X } from "lucide-react";
-import { useDisclosure } from "@heroui/modal";
-import { Button } from "@heroui/button";
 import { ThemeSwitch } from "@/components/shared/theme-switch";
 import DateRangePicker from "@/components/shared/DateRangePicker";
 import { useFilterStore } from "@/lib/store/telemetryStore";
-import { useLogData } from "@/lib/hooks/useLogData";
+import { Button } from "@heroui/button";
+import { RefreshCw } from "lucide-react";
 import LogFilter from "@/components/logs/LogFilter";
-import LogTable from "@/components/logs/LogTable";
-import LogDetail from "@/components/logs/LogDetail";
+import LogVisualization from "@/components/logs/LogVisualization";
+import { useLogData } from "@/lib/hooks/useLogData";
 
 export default function LogsPage() {
   const router = useRouter();
-  const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
-  const { timeRange, setTimeRange, isRealtime, toggleRealtime } =
-    useFilterStore();
-  const [selectedLog, setSelectedLog] = useState<LogItem | null>(null);
-
-  // Use log data hook
+  const { isRealtime, toggleRealtime, setTimeRange } = useFilterStore();
   const {
     logs,
     isLoading,
@@ -40,11 +26,13 @@ export default function LogsPage() {
     filters,
     updateFilters,
     refresh,
+    selectedLogId,
+    setSelectedLogId,
   } = useLogData({
     autoRefresh: isRealtime,
   });
 
-  // Handle time range change
+  // 시간 범위 변경 처리
   const handleTimeRangeChange = useCallback(
     (startTime: number, endTime: number) => {
       setTimeRange(startTime, endTime);
@@ -53,38 +41,29 @@ export default function LogsPage() {
     [setTimeRange, refresh]
   );
 
-  // Handle filter change
+  // 필터 변경 처리
   const handleFilterChange = useCallback(() => {
     refresh();
   }, [refresh]);
 
-  // Handle log selection
+  // 로그 선택 처리
   const handleLogSelect = useCallback(
     (log: LogItem) => {
-      setSelectedLog(log);
-      onOpen();
+      setSelectedLogId(log.id);
     },
-    [onOpen]
+    [setSelectedLogId]
   );
 
-  // Handle view trace
+  const selectedLog = logs.find((log) => log.id === selectedLogId) || null;
   const handleViewTrace = useCallback(
     (traceId: string) => {
-      onClose();
       router.push(`/traces/${traceId}`);
     },
-    [onClose, router]
+    [router]
   );
 
   return (
     <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
-      <div className="inline-block max-w-lg text-center justify-center">
-        <h1 className="text-2xl font-bold">Logs</h1>
-        <p className="text-gray-500 mt-2">
-          View and search logs across services
-        </p>
-      </div>
-
       <ThemeSwitch className="absolute top-4 right-4" />
 
       <div className="w-full max-w-7xl">
@@ -93,6 +72,15 @@ export default function LogsPage() {
             onChange={handleTimeRangeChange}
             isDisabled={isRealtime}
           />
+
+          <Button
+            variant="light"
+            onPress={refresh}
+            isDisabled={isRealtime || isLoading}
+            startContent={<RefreshCw size={16} />}
+          >
+            새로고침
+          </Button>
         </div>
 
         <LogFilter
@@ -108,7 +96,9 @@ export default function LogsPage() {
 
         {error && (
           <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-4">
-            <p className="font-medium">Error loading logs</p>
+            <p className="font-medium">
+              로그를 불러오는 중 오류가 발생했습니다
+            </p>
             <p className="text-sm mt-1">{error.message}</p>
             <Button
               color="primary"
@@ -116,12 +106,12 @@ export default function LogsPage() {
               className="mt-2"
               onPress={() => refresh()}
             >
-              Try again
+              다시 시도
             </Button>
           </div>
         )}
 
-        <LogTable
+        <LogVisualization
           logs={logs}
           isLoading={isLoading}
           totalCount={totalCount}
@@ -129,54 +119,17 @@ export default function LogsPage() {
           pageSize={filters.limit}
           onPageChange={setCurrentPage}
           onSelectLog={handleLogSelect}
+          selectedLog={selectedLog}
+          onViewTrace={handleViewTrace}
         />
 
         <div className="mt-4 text-sm text-gray-500 text-right">
-          Showing {logs.length} of {totalCount} logs
+          총 {totalCount}개 로그 중 {logs.length}개 표시
           {isRealtime && (
-            <span className="ml-2 text-blue-500">
-              (Realtime updates enabled)
-            </span>
+            <span className="ml-2 text-blue-500">(실시간 업데이트 활성화)</span>
           )}
         </div>
       </div>
-
-      {/* Log detail drawer */}
-      <Drawer
-        isOpen={isOpen}
-        onOpenChange={onOpenChange}
-        size="xl"
-        placement="right"
-      >
-        <DrawerContent>
-          {() => (
-            <>
-              <DrawerHeader className="flex justify-between items-center">
-                <div className="flex items-center">
-                  <Button
-                    variant="light"
-                    isIconOnly
-                    onPress={onClose}
-                    className="mr-2"
-                  >
-                    <X size={18} />
-                  </Button>
-                  <h2 className="text-xl">Log Detail</h2>
-                </div>
-              </DrawerHeader>
-              <DrawerBody>
-                {selectedLog && (
-                  <LogDetail
-                    log={selectedLog}
-                    onBack={onClose}
-                    onViewTrace={handleViewTrace}
-                  />
-                )}
-              </DrawerBody>
-            </>
-          )}
-        </DrawerContent>
-      </Drawer>
     </section>
   );
 }

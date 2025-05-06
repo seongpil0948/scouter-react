@@ -153,7 +153,14 @@ export function buildServiceListApiUrl(timeRange: {
   return `${process.env.NEXT_PUBLIC_API_BASE_PATH}/telemetry/traces/services?${params.toString()}`;
 }
 
-// lib/utils/filterUtils.ts (추가 부분)
+/**
+ * 로그 API URL 구성 함수
+ * @param baseUrl - 기본 API URL
+ * @param filters - 필터 객체
+ * @param offset - 페이지네이션 오프셋
+ * @param additionalParams - 추가 파라미터
+ * @returns 완성된 API URL 문자열
+ */
 export function buildLogApiUrl(
   baseUrl: string,
   filters: {
@@ -170,11 +177,20 @@ export function buildLogApiUrl(
 ): string {
   const params = new URLSearchParams();
 
-  // 시간 범위 추가
-  params.append("startTime", filters.startTime.toString());
-  params.append("endTime", filters.endTime.toString());
+  // 시간 범위 유효성 검증 추가
+  const validStartTime =
+    filters.startTime > 0 ? filters.startTime : Date.now() - 3600000;
+  const validEndTime = filters.endTime > 0 ? filters.endTime : Date.now();
 
-  // 필터 추가
+  // 유효한 시간 값만 URL에 추가
+  params.append("startTime", validStartTime.toString());
+  params.append("endTime", validEndTime.toString());
+  params.append("limit", (filters.limit || 100).toString());
+
+  if (offset > 0) {
+    params.append("offset", offset.toString());
+  }
+
   if (filters.serviceName) {
     params.append("serviceName", filters.serviceName);
   }
@@ -191,14 +207,7 @@ export function buildLogApiUrl(
     params.append("query", filters.query);
   }
 
-  // 페이지네이션
-  params.append("limit", filters.limit?.toString() || "100");
-
-  if (offset > 0) {
-    params.append("offset", offset.toString());
-  }
-
-  // 추가 파라미터
+  // 추가 파라미터 처리
   Object.entries(additionalParams).forEach(([key, value]) => {
     params.append(key, value.toString());
   });

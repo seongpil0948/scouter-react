@@ -1,4 +1,30 @@
-// types/api.d.ts
+// types/api.d.ts (리팩토링)
+
+// 공통 응답 타입 정의
+interface ApiResponse<T> {
+  data: T;
+  success: boolean;
+  error?: {
+    message: string;
+    code?: string;
+    details?: any;
+  };
+}
+
+// 페이지네이션 타입
+interface Pagination {
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+// 시간 범위 타입
+interface TimeRange {
+  startTime: number;
+  endTime: number;
+}
+
+// 트레이스 및 로그 API 관련 타입
 // 트레이스 목록 데이터 타입
 interface TraceListData {
   traces: TraceItem[];
@@ -23,6 +49,18 @@ interface TraceDetailData {
 }
 // 트레이스 상세 응답 타입
 type TraceDetailResponse = ApiResponse<TraceDetailData>;
+
+// 로그 API 응답 데이터 타입
+interface LogsData {
+  logs: LogItem[];
+  pagination: Pagination;
+  timeRange: TimeRange;
+  services: string[];
+  severities: string[];
+}
+
+// 로그 API 응답 타입
+type LogsResponse = ApiResponse<LogsData>;
 
 // 서비스 항목 타입
 interface ServiceItem {
@@ -66,31 +104,3 @@ interface TraceServiceListData {
 
 // 트레이스 서비스 응답 타입
 type TraceServiceResponse = ApiResponse<TraceServiceListData>;
-
-// 메트릭 데이터 타입
-interface MetricsData {
-  topLatencyServices: {
-    name: string;
-    requestCount: number;
-    errorCount: number;
-    errorRate: number;
-    avgLatency: number;
-    p95Latency: number;
-    p99Latency: number;
-    timeSeriesData: any[];
-  }[];
-  recentTraces: TraceItem[];
-  summary: {
-    serviceCount: number;
-    totalErrors: number;
-    averageLatency: number;
-  };
-  topErrorServices: {
-    name: string;
-    errorCount: number;
-  }[];
-  timeRange: TimeRange;
-}
-
-// 메트릭 응답 타입
-type MetricsResponse = ApiResponse<MetricsData>;
