@@ -216,6 +216,107 @@ export function getRelativeDateRange(
   return { start, end };
 }
 
+/**
+ * ISO 8601 기간 문자열 파싱 (예: PT1H30M)
+ * @param isoDuration ISO 8601 기간 문자열
+ * @returns 밀리초 단위 기간
+ */
+export function parseIsoDuration(isoDuration: string): number {
+  const regex = /P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?/;
+  const matches = isoDuration.match(regex);
+
+  if (!matches) {
+    return 0;
+  }
+
+  const years = matches[1] ? parseInt(matches[1], 10) * 365 * 24 * 60 * 60 * 1000 : 0;
+  const months = matches[2] ? parseInt(matches[2], 10) * 30 * 24 * 60 * 60 * 1000 : 0;
+  const days = matches[3] ? parseInt(matches[3], 10) * 24 * 60 * 60 * 1000 : 0;
+  const hours = matches[4] ? parseInt(matches[4], 10) * 60 * 60 * 1000 : 0;
+  const minutes = matches[5] ? parseInt(matches[5], 10) * 60 * 1000 : 0;
+  const seconds = matches[6] ? parseFloat(matches[6]) * 1000 : 0;
+
+  return years + months + days + hours + minutes + seconds;
+}
+
+/**
+ * 밀리초 단위 기간을 ISO 8601 기간 문자열로 변환
+ * @param duration 밀리초 단위 기간
+ * @returns ISO 8601 기간 문자열
+ */
+export function formatIsoDuration(duration: number): string {
+  if (duration < 0) {
+    return "PT0S";
+  }
+
+  const seconds = Math.floor((duration / 1000) % 60);
+  const minutes = Math.floor((duration / (1000 * 60)) % 60);
+  const hours = Math.floor((duration / (1000 * 60 * 60)) % 24);
+  const days = Math.floor(duration / (1000 * 60 * 60 * 24));
+
+  let result = "P";
+  if (days > 0) {
+    result += `${days}D`;
+  }
+
+  if (hours > 0 || minutes > 0 || seconds > 0) {
+    result += "T";
+    if (hours > 0) {
+      result += `${hours}H`;
+    }
+    if (minutes > 0) {
+      result += `${minutes}M`;
+    }
+    if (seconds > 0 || (days === 0 && hours === 0 && minutes === 0)) {
+      result += `${seconds}S`;
+    }
+  } else if (days === 0) {
+    result += "T0S";
+  }
+
+  return result;
+}
+
+/**
+ * 두 날짜 사이의 일수 계산
+ * @param date1 첫 번째 날짜
+ * @param date2 두 번째 날짜
+ * @returns 일수 차이 (절대값)
+ */
+export function daysBetween(date1: Date | number | string, date2: Date | number | string): number {
+  const d1 = new Date(typeof date1 === 'number' || typeof date1 === 'string' ? normalizeTimestamp(date1) : date1);
+  const d2 = new Date(typeof date2 === 'number' || typeof date2 === 'string' ? normalizeTimestamp(date2) : date2);
+  
+  // 날짜만 비교하기 위해 시간을 00:00:00으로 설정
+  d1.setHours(0, 0, 0, 0);
+  d2.setHours(0, 0, 0, 0);
+  
+  // 밀리초 차이를 일수로 변환
+  const diffMs = Math.abs(d2.getTime() - d1.getTime());
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * 주어진 날짜의 주 번호 계산 (1-53)
+ * @param date 날짜
+ * @returns 해당 연도의 주 번호
+ */
+export function getWeekNumber(date: Date | number | string): number {
+  const d = new Date(typeof date === 'number' || typeof date === 'string' ? normalizeTimestamp(date) : date);
+  
+  // 1월 1일을 기준으로 설정
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  
+  // 연초에서 날짜까지의 일수 계산
+  const daysSinceYearStart = Math.floor((d.getTime() - yearStart.getTime()) / 86400000);
+  
+  // 주의 시작일 계산 (연초의 요일)
+  const weekDay = yearStart.getDay();
+  
+  // 주 번호 계산 (연초의 요일과 일수를 기반으로)
+  return Math.ceil((daysSinceYearStart + weekDay + 1) / 7);
+}
+
 export default {
   formatDateTime,
   formatDate,
@@ -227,4 +328,8 @@ export default {
   formatTimeRange,
   getRelativeDateRange,
   normalizeTimestamp,
+  parseIsoDuration,
+  formatIsoDuration,
+  daysBetween,
+  getWeekNumber
 };
