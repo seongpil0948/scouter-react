@@ -7,8 +7,6 @@ import {
   TableHeader,
   TableBody,
   TableColumn,
-  TableRow,
-  TableCell,
   TableProps,
 } from "@heroui/table";
 import { Pagination } from "@heroui/pagination";
