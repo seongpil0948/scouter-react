@@ -1,14 +1,16 @@
-import React, { useMemo } from "react";
-import { Card, CardBody, CardHeader } from "@heroui/card";
+import React from "react";
 import { Tabs, Tab } from "@heroui/tabs";
 import { Chip } from "@heroui/chip";
-import { CircularProgress } from "@heroui/progress";
-import { Activity, AlertTriangle, Info, Database, Clock } from "lucide-react";
-import { formatRelativeTime } from "@/lib/utils/dateFormatter";
-
+import { Activity, AlertTriangle, Info, Database } from "lucide-react";
 import LogDistributionChart from "./LogDistributionChart";
 import LogSeverityChart from "./LogSeverityChart";
 import LogServiceChart from "./LogServiceChart";
+import { formatRelativeTime } from "@/lib/utils/dateFormatter";
+import { computeLogStatistics, getRecentErrorLogs } from "@/lib/utils/logUtils";
+import SummaryCard from "@/components/shared/SummaryCard";
+import LoadingCard from "@/components/shared/LoadingCard";
+import EmptyStateCard from "@/components/shared/EmptyStateCard";
+import { Card, CardBody, CardHeader } from "@heroui/card";
 
 interface LogAnalyticsProps {
   logs: LogItem[];
@@ -19,149 +21,46 @@ const LogAnalytics: React.FC<LogAnalyticsProps> = ({
   logs,
   isLoading = false,
 }) => {
-  // 통계 계산
-  const statistics = useMemo(() => {
-    if (!logs || logs.length === 0) {
-      return {
-        totalLogs: 0,
-        errorCount: 0,
-        warningCount: 0,
-        infoCount: 0,
-        serviceCount: 0,
-        errorPercentage: 0,
-        lastLogTime: 0,
-        services: new Set<string>(),
-      };
-    }
+  const stats = computeLogStatistics(logs);
+  const recentErrors = getRecentErrorLogs(logs);
 
-    const services = new Set<string>();
-    let errorCount = 0;
-    let warningCount = 0;
-    let infoCount = 0;
-    let lastLogTime = 0;
-
-    logs.forEach((log) => {
-      services.add(log.serviceName);
-
-      const severity = log.severity.toUpperCase();
-      if (severity === "ERROR" || severity === "FATAL") {
-        errorCount++;
-      } else if (severity === "WARN" || severity === "WARNING") {
-        warningCount++;
-      } else if (severity === "INFO") {
-        infoCount++;
-      }
-
-      if (log.timestamp > lastLogTime) {
-        lastLogTime = log.timestamp;
-      }
-    });
-
-    return {
-      totalLogs: logs.length,
-      errorCount,
-      warningCount,
-      infoCount,
-      serviceCount: services.size,
-      errorPercentage: logs.length > 0 ? (errorCount / logs.length) * 100 : 0,
-      lastLogTime,
-      services,
-    };
-  }, [logs]);
-
-  // 최근 에러 로그
-  const recentErrorLogs = useMemo(() => {
-    if (!logs || logs.length === 0) return [];
-
-    return logs
-      .filter((log) => {
-        const severity = log.severity.toUpperCase();
-        return severity === "ERROR" || severity === "FATAL";
-      })
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 5);
-  }, [logs]);
-
-  if (isLoading) {
+  if (isLoading)
+    return <LoadingCard message="로그 데이터를 분석하는 중입니다..." />;
+  if (logs.length === 0)
     return (
-      <Card>
-        <CardBody className="flex flex-col items-center justify-center p-12">
-          <CircularProgress aria-label="로그 데이터 로딩 중" />
-          <p className="mt-4 text-gray-500">
-            로그 데이터를 분석하는 중입니다...
-          </p>
-        </CardBody>
-      </Card>
+      <EmptyStateCard
+        icon={<AlertTriangle size={32} className="mx-auto mb-2" />}
+        title="분석할 로그 데이터가 없습니다."
+        subtitle="필터를 조정하거나 다른 시간 범위를 선택해 보세요."
+      />
     );
-  }
-
-  if (!logs || logs.length === 0) {
-    return (
-      <Card>
-        <CardBody className="flex items-center justify-center p-12">
-          <div className="text-center text-gray-500">
-            <AlertTriangle size={32} className="mx-auto mb-2" />
-            <p>분석할 로그 데이터가 없습니다.</p>
-            <p className="text-sm mt-2">
-              필터를 조정하거나 다른 시간 범위를 선택해 보세요.
-            </p>
-          </div>
-        </CardBody>
-      </Card>
-    );
-  }
 
   return (
     <div className="space-y-4">
       {/* 요약 통계 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
         <div>
-          <Card className="w-full">
-            <CardBody className="flex flex-col items-center justify-center">
-              <div className="text-sm text-gray-500">총 로그 수</div>
-              <div className="text-3xl font-bold mt-2">
-                {statistics.totalLogs}
-              </div>
-            </CardBody>
-          </Card>
+          <SummaryCard title="총 로그 수" value={stats.totalLogs} />
         </div>
-
         <div>
-          <Card className="w-full">
-            <CardBody className="flex flex-col items-center justify-center">
-              <div className="text-sm text-gray-500">서비스 수</div>
-              <div className="text-3xl font-bold mt-2">
-                {statistics.serviceCount}
-              </div>
-            </CardBody>
-          </Card>
+          <SummaryCard title="서비스 수" value={stats.serviceCount} />
         </div>
-
         <div>
-          <Card className="w-full">
-            <CardBody className="flex flex-col items-center justify-center">
-              <div className="text-sm text-gray-500">에러 로그</div>
-              <div className="flex items-center mt-2">
-                <span className="text-3xl font-bold text-red-500">
-                  {statistics.errorCount}
-                </span>
-                <Chip className="ml-2" color="danger" size="sm">
-                  {statistics.errorPercentage.toFixed(1)}%
-                </Chip>
-              </div>
-            </CardBody>
-          </Card>
+          <SummaryCard
+            title="에러 로그"
+            value={<span className="text-red-500">{stats.errorCount}</span>}
+            badge={
+              <Chip color="danger" size="sm">
+                {stats.errorPercentage.toFixed(1)}%
+              </Chip>
+            }
+          />
         </div>
-
         <div>
-          <Card className="w-full">
-            <CardBody className="flex flex-col items-center justify-center">
-              <div className="text-sm text-gray-500">마지막 로그</div>
-              <div className="text-xl font-bold mt-2">
-                {formatRelativeTime(statistics.lastLogTime)}
-              </div>
-            </CardBody>
-          </Card>
+          <SummaryCard
+            title="마지막 로그"
+            value={formatRelativeTime(stats.lastLogTime)}
+          />
         </div>
       </div>
 
@@ -208,7 +107,7 @@ const LogAnalytics: React.FC<LogAnalyticsProps> = ({
           title={
             <div className="flex items-center">
               <AlertTriangle size={16} className="mr-1" />
-              최근 에러 ({recentErrorLogs.length})
+              최근 에러 ({recentErrors.length})
             </div>
           }
         >
@@ -217,9 +116,9 @@ const LogAnalytics: React.FC<LogAnalyticsProps> = ({
               <h3 className="text-lg font-medium">최근 에러 로그</h3>
             </CardHeader>
             <CardBody>
-              {recentErrorLogs.length > 0 ? (
+              {recentErrors.length > 0 ? (
                 <div className="space-y-4">
-                  {recentErrorLogs.map((log) => (
+                  {recentErrors.map((log) => (
                     <div key={log.id} className="border-b pb-4 last:border-b-0">
                       <div className="flex items-center mb-1">
                         <AlertTriangle
