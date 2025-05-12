@@ -2,14 +2,16 @@ import { StateCreator } from "zustand";
 
 // 시간 범위 상수 (ms 단위)
 export const TIME_RANGE_MS: Record<TimeRangeOption, number> = {
-  "1m": 1 * 60 * 1000,
-  "5m": 5 * 60 * 1000,
-  "10m": 10 * 60 * 1000,
-  "1h": 60 * 60 * 1000,
+  "15m": 15 * 60 * 1000,
+  "30m": 30 * 60 * 1000,
+  "1h": 1 * 60 * 60 * 1000,
   "3h": 3 * 60 * 60 * 1000,
   "6h": 6 * 60 * 60 * 1000,
   "12h": 12 * 60 * 60 * 1000,
-  "1d": 24 * 60 * 60 * 1000,
+  "24h": 24 * 60 * 60 * 1000,
+  "7d": 7 * 24 * 60 * 60 * 1000,
+  // 'custom' is handled separately, so we can set it to 0 or ignore it in calculations
+  custom: 0,
 };
 
 export interface TimeRangeSlice {
@@ -27,6 +29,7 @@ export interface TimeRangeSlice {
 
   // 빠른 시간 범위 선택
   timeRangeOption: TimeRangeOption;
+  setCurrentTimeRangeToDefault: () => void;
   setTimeRangeOption: (option: TimeRangeOption) => void;
 
   // 실시간 갱신 설정
@@ -116,6 +119,10 @@ export const createTimeRangeSlice: StateCreator<
   },
 
   timeRangeOption: "1h",
+  setCurrentTimeRangeToDefault: () => {
+    const defaultRange = getDefaultTimeRange();
+    get().setTimeRange(defaultRange.startTime, defaultRange.endTime);
+  },
   setTimeRangeOption: (option) => {
     set({ timeRangeOption: option });
 

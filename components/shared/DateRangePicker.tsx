@@ -53,20 +53,14 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
     }
   }, []);
 
-  // Check if time range has significantly changed
   const hasTimeRangeChanged = useCallback(
     (oldStart: number, oldEnd: number, newStart: number, newEnd: number) => {
-      // Skip if either is invalid
       if ((oldStart <= 0 && newStart <= 0) || (oldEnd <= 0 && newEnd <= 0)) {
         return false;
       }
-
-      // Consider changed if any is invalid
       if (oldStart <= 0 || oldEnd <= 0 || newStart <= 0 || newEnd <= 0) {
         return true;
       }
-
-      // Consider changed if difference is > 1 second
       const startDiff = Math.abs(oldStart - newStart);
       const endDiff = Math.abs(oldEnd - newEnd);
 
@@ -94,8 +88,6 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
         setValue(null);
         return;
       }
-
-      // Skip if no significant change
       if (
         !hasTimeRangeChanged(
           prevTimeRangeRef.current.startTime,

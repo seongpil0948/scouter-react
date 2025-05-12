@@ -22,7 +22,6 @@ import TraceDetail from "@/components/traces/TraceDetail";
 import { Button } from "@heroui/button";
 import { useDisclosure } from "@heroui/modal";
 import { Tabs, Tab } from "@heroui/tabs";
-import { siteConfig } from "@/config/site";
 
 // Client-side only imports
 const TraceFilter = dynamic(() => import("@/components/traces/TraceFilter"), {
@@ -89,7 +88,7 @@ export default function Home() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Drawer for trace details
-  const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
   // Use enhanced trace data hook
   const {
@@ -146,13 +145,9 @@ export default function Home() {
     [setSelectedTraceId, onOpen]
   );
 
-  // Time range change handler
   const handleTimeRangeChange = useCallback(
     (startTime: number, endTime: number) => {
-      // Update time range in store
       const changed = setTimeRange(startTime, endTime);
-
-      // Refresh data if time range changed
       if (changed) {
         setTimeout(() => {
           refresh();
@@ -193,8 +188,6 @@ export default function Home() {
   return (
     <section className="flex flex-col items-center justify-center gap-4 pb-4 md:pb-5">
       <div className="w-full flex justify-between items-center  rounded-lg shadow-sm p-4">
-        <h2 className="text-xl font-semibold">{siteConfig.name}</h2>
-
         <div className="flex items-center gap-4">
           <DateRangePicker
             onChange={handleTimeRangeChange}
@@ -222,7 +215,7 @@ export default function Home() {
           목록 보기
         </Button>
 
-        <ThemeSwitch className="absolute top-4 right-4" />
+        <ThemeSwitch className="absolute top-6 right-4" />
       </div>
 
       <div className="w-full max-w-7xl space-y-4">
